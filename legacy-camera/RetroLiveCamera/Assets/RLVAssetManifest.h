@@ -1,0 +1,50 @@
+#import <Foundation/Foundation.h>
+
+@interface RLVMediaResource : NSObject
+@property (nonatomic, copy) NSString *filename;
+@property (nonatomic, copy) NSString *mimeType;
+@property (nonatomic, assign) unsigned long long byteLength;
+@property (nonatomic, copy) NSString *sha256;
+@end
+
+@interface RLVImageResource : RLVMediaResource
+@property (nonatomic, assign) NSUInteger width;
+@property (nonatomic, assign) NSUInteger height;
+@end
+
+@interface RLVMotionResource : RLVMediaResource
+@property (nonatomic, assign) NSTimeInterval durationSeconds;
+@property (nonatomic, assign) NSUInteger width;
+@property (nonatomic, assign) NSUInteger height;
+@property (nonatomic, assign) double frameRate;
+@property (nonatomic, assign) BOOL hasAudio;
+@end
+
+@interface RLVCaptureMetadata : NSObject
+@property (nonatomic, copy) NSString *cameraPosition;
+@property (nonatomic, assign) NSUInteger orientation;
+@property (nonatomic, assign) BOOL mirrored;
+@property (nonatomic, copy) NSString *flashMode;
+@property (nonatomic, assign) NSTimeInterval stillImageTimeSeconds;
+@property (nonatomic, copy) NSString *stillImageTimeAccuracy;
+@property (nonatomic, assign) NSTimeInterval preRollSeconds;
+@property (nonatomic, assign) NSTimeInterval postRollSeconds;
+@end
+
+@interface RLVDeviceMetadata : NSObject
+@property (nonatomic, copy) NSString *modelIdentifier;
+@property (nonatomic, copy) NSString *systemVersion;
+@property (nonatomic, copy) NSString *appVersion;
+@end
+
+@interface RLVAssetManifest : NSObject
+@property (nonatomic, assign) NSInteger schemaVersion;
+@property (nonatomic, copy) NSString *assetId;
+@property (nonatomic, copy) NSString *createdAt;
+@property (nonatomic, assign) long long createdAtUnixMilliseconds;
+@property (nonatomic, strong) RLVCaptureMetadata *capture;
+@property (nonatomic, strong) RLVImageResource *photo;
+@property (nonatomic, strong) RLVMotionResource *motion;
+@property (nonatomic, strong) RLVImageResource *thumbnail;
+@property (nonatomic, strong) RLVDeviceMetadata *device;
+@end

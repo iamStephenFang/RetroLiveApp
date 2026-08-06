@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "assetId": "75A14CE4-3E3F-4BB1-BC27-EFE37D8C2A84",
+  "createdAt": "2026-08-06T01:20:14+08:00",
+  "createdAtUnixMilliseconds": 1785940814000,
+  "capture": { "cameraPosition": "back", "orientation": 6, "mirrored": false, "flashMode": "off", "stillImageTimeSeconds": 1.486, "stillImageTimeAccuracy": "measured", "preRollSeconds": 1.486, "postRollSeconds": 1.514 },
+  "photo": { "filename": "photo.jpg", "mimeType": "image/jpeg", "width": 3264, "height": 2448, "byteLength": 2456789, "sha256": "not-a-sha256" },
+  "motion": { "filename": "motion.mov", "mimeType": "video/quicktime", "durationSeconds": 3.0, "width": 1280, "height": 720, "frameRate": 30, "hasAudio": true, "byteLength": 6123456, "sha256": "458293a899b11659418f971801e7a32922091f6e8f816f38f2fb3afb596d93ee" },
+  "thumbnail": { "filename": "thumbnail.jpg", "mimeType": "image/jpeg", "width": 320, "height": 240, "byteLength": 45123, "sha256": "5ab891b101e8a3e41319899bf6847f48c60b8422139f396476647a52a3520c25" },
+  "device": { "modelIdentifier": "iPhone4,1", "systemVersion": "6.1.3", "appVersion": "1.0.0" }
+}

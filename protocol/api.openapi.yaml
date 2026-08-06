@@ -1,0 +1,206 @@
+openapi: 3.0.3
+info:
+  title: RetroLive Camera API
+  version: 1.0.0
+  description: Read-only LAN transfer API for RetroLive Protocol V1.
+servers:
+  - url: http://192.168.1.23:8080/api/v1
+paths:
+  /health:
+    get:
+      security: []
+      responses:
+        '200':
+          description: Server health
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+  /session:
+    post:
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PairingRequest'
+      responses:
+        '200':
+          description: Temporary session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /device:
+    get:
+      responses:
+        '200':
+          description: Camera device information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceInfo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /assets:
+    get:
+      parameters:
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Asset page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /assets/{assetId}/manifest:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: Manifest V1 JSON
+          content:
+            application/json:
+              schema:
+                $ref: './manifest.schema.json'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /assets/{assetId}/photo:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/Range'
+      responses:
+        '200': { $ref: '#/components/responses/Media' }
+        '206': { $ref: '#/components/responses/PartialMedia' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '416': { description: Requested range not satisfiable }
+  /assets/{assetId}/motion:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/Range'
+      responses:
+        '200': { $ref: '#/components/responses/Media' }
+        '206': { $ref: '#/components/responses/PartialMedia' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '416': { description: Requested range not satisfiable }
+  /assets/{assetId}/thumbnail:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/Range'
+      responses:
+        '200': { $ref: '#/components/responses/Media' }
+        '206': { $ref: '#/components/responses/PartialMedia' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '416': { description: Requested range not satisfiable }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    AssetId:
+      name: assetId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Range:
+      name: Range
+      in: header
+      required: false
+      schema: { type: string, example: bytes=1048576- }
+  responses:
+    Unauthorized:
+      description: Missing or invalid session token
+    NotFound:
+      description: Asset or resource not found
+    Media:
+      description: Complete immutable media resource
+      headers:
+        Accept-Ranges: { schema: { type: string, enum: [bytes] } }
+      content:
+        application/octet-stream:
+          schema: { type: string, format: binary }
+    PartialMedia:
+      description: Partial immutable media resource
+      headers:
+        Accept-Ranges: { schema: { type: string, enum: [bytes] } }
+        Content-Range: { schema: { type: string } }
+      content:
+        application/octet-stream:
+          schema: { type: string, format: binary }
+  schemas:
+    PairingRequest:
+      type: object
+      required: [pairingCode, clientName]
+      properties:
+        pairingCode: { type: string, pattern: '^[0-9]{6}$' }
+        clientName: { type: string, minLength: 1, maxLength: 100 }
+    Session:
+      type: object
+      required: [token, expiresInSeconds]
+      properties:
+        token: { type: string, minLength: 32 }
+        expiresInSeconds: { type: integer, minimum: 1 }
+    DeviceInfo:
+      type: object
+      required: [protocolVersion, deviceId, deviceName, modelIdentifier, systemVersion, appVersion, assetCount, capabilities]
+      properties:
+        protocolVersion: { type: integer, enum: [1] }
+        deviceId: { type: string, format: uuid }
+        deviceName: { type: string }
+        modelIdentifier: { type: string }
+        systemVersion: { type: string }
+        appVersion: { type: string }
+        assetCount: { type: integer, minimum: 0 }
+        capabilities:
+          type: object
+          required: [rangeDownload, batchExport, delete]
+          properties:
+            rangeDownload: { type: boolean }
+            batchExport: { type: boolean }
+            delete: { type: boolean }
+    AssetSummary:
+      type: object
+      required: [assetId, createdAt, thumbnailURL, manifestURL]
+      properties:
+        assetId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        thumbnailURL: { type: string }
+        manifestURL: { type: string }
+    AssetPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AssetSummary' }
+        nextCursor: { type: string, nullable: true }
+    Health:
+      type: object
+      required: [status, serverTime, freeDiskBytes]
+      properties:
+        status: { type: string, enum: [ok] }
+        serverTime: { type: string, format: date-time }
+        freeDiskBytes: { type: integer, minimum: 0 }
+security:
+  - bearerAuth: []
+

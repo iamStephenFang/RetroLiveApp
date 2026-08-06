@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://retrolive.local/schema/manifest-v1.json",
+  "title": "RetroLive Asset Manifest V1",
+  "type": "object",
+  "required": ["schemaVersion", "assetId", "createdAt", "createdAtUnixMilliseconds", "capture", "photo", "motion", "thumbnail", "device"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "assetId": { "type": "string", "format": "uuid" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "createdAtUnixMilliseconds": { "type": "integer", "minimum": 0 },
+    "capture": {
+      "type": "object",
+      "required": ["cameraPosition", "orientation", "mirrored", "flashMode", "stillImageTimeSeconds", "stillImageTimeAccuracy", "preRollSeconds", "postRollSeconds"],
+      "properties": {
+        "cameraPosition": { "enum": ["front", "back"] },
+        "orientation": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "mirrored": { "type": "boolean" },
+        "flashMode": { "enum": ["off", "on", "auto"] },
+        "stillImageTimeSeconds": { "type": "number", "minimum": 0 },
+        "stillImageTimeAccuracy": { "enum": ["measured", "estimated"] },
+        "preRollSeconds": { "type": "number", "minimum": 0 },
+        "postRollSeconds": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "photo": { "$ref": "#/definitions/imageResource" },
+    "motion": {
+      "allOf": [
+        { "$ref": "#/definitions/mediaResource" },
+        {
+          "type": "object",
+          "required": ["durationSeconds", "width", "height", "frameRate", "hasAudio"],
+          "properties": {
+            "durationSeconds": { "type": "number", "exclusiveMinimum": 0 },
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 },
+            "frameRate": { "type": "number", "exclusiveMinimum": 0 },
+            "hasAudio": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "thumbnail": { "$ref": "#/definitions/imageResource" },
+    "device": {
+      "type": "object",
+      "required": ["modelIdentifier", "systemVersion", "appVersion"],
+      "properties": {
+        "modelIdentifier": { "type": "string", "minLength": 1 },
+        "systemVersion": { "type": "string", "minLength": 1 },
+        "appVersion": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "mediaResource": {
+      "type": "object",
+      "required": ["filename", "mimeType", "byteLength", "sha256"],
+      "properties": {
+        "filename": { "type": "string", "minLength": 1, "pattern": "^(?!\\.{1,2}$)[^/\\\\]+$" },
+        "mimeType": { "type": "string", "minLength": 1 },
+        "byteLength": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "additionalProperties": true
+    },
+    "imageResource": {
+      "allOf": [
+        { "$ref": "#/definitions/mediaResource" },
+        {
+          "type": "object",
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    }
+  }
+}
