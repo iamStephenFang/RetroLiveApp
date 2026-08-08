@@ -1,6 +1,7 @@
 #import "RLVAssetStore.h"
 #import "RLVManifest.h"
 #import <ImageIO/ImageIO.h>
+#import <math.h>
 
 NSString * const RLVAssetStoreDidChangeNotification = @"RLVAssetStoreDidChangeNotification";
 NSString * const RLVAssetStoreErrorDomain = @"com.retrolive.asset-store";
@@ -73,6 +74,11 @@ static BOOL RLVIsBoolean(id value)
             error = [self errorWithCode:1 description:@"Captured data is not a valid JPEG image."];
         }
 
+        NSUUID *eventUUID = [[NSUUID alloc] initWithUUIDString:event.assetId];
+        if (error == nil && (eventUUID == nil || ![[eventUUID UUIDString] isEqualToString:event.assetId])) {
+            error = [self errorWithCode:4 description:@"Asset identifier must be a canonical UUID."];
+        }
+
         NSURL *stagingURL = [self.temporaryURL URLByAppendingPathComponent:event.assetId isDirectory:YES];
         NSURL *finalURL = [self.assetsURL URLByAppendingPathComponent:event.assetId isDirectory:YES];
         NSFileManager *manager = [NSFileManager defaultManager];
@@ -137,12 +143,23 @@ static BOOL RLVIsBoolean(id value)
 
 - (RLVAsset *)loadAssetWithIdentifier:(NSString *)assetId error:(NSError **)error
 {
-    return [self loadAssetAtURL:[self.assetsURL URLByAppendingPathComponent:assetId isDirectory:YES] error:error];
+    NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:assetId];
+    if (!uuid) {
+        if (error) *error = [self errorWithCode:4 description:@"Asset identifier is invalid."];
+        return nil;
+    }
+    return [self loadAssetAtURL:[self.assetsURL URLByAppendingPathComponent:[uuid UUIDString] isDirectory:YES] error:error];
 }
 
 - (BOOL)deleteAsset:(RLVAsset *)asset error:(NSError **)error
 {
+    NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:asset.assetId];
     NSURL *directory = [asset.photoURL URLByDeletingLastPathComponent];
+    NSURL *expectedDirectory = uuid ? [self.assetsURL URLByAppendingPathComponent:[uuid UUIDString] isDirectory:YES] : nil;
+    if (!expectedDirectory || ![[directory URLByStandardizingPath] isEqual:[expectedDirectory URLByStandardizingPath]]) {
+        if (error) *error = [self errorWithCode:4 description:@"Refusing to delete an asset outside the managed store."];
+        return NO;
+    }
     BOOL deleted = [[NSFileManager defaultManager] removeItemAtURL:directory error:error];
     if (deleted) [[NSNotificationCenter defaultCenter] postNotificationName:RLVAssetStoreDidChangeNotification object:self];
     return deleted;
@@ -189,9 +206,9 @@ static BOOL RLVIsBoolean(id value)
             RLVIsNumber(durationValue) && RLVIsNumber(motionWidth) && RLVIsNumber(motionHeight) && RLVIsNumber(frameRate) && RLVIsBoolean(hasAudio) &&
             RLVIsNumber(motionLength) && [motionHash isKindOfClass:[NSString class]] &&
             duration > 0.0 && RLVIsNumber(stillTimeValue) && RLVIsNumber(preRollValue) && RLVIsNumber(postRollValue) &&
-            stillTime >= 0.0 && stillTime <= duration && preRoll >= 0.0 && postRoll >= 0.0 &&
+            stillTime >= 0.0 && stillTime < duration && preRoll >= 0.0 && postRoll >= 0.0 &&
             [motionWidth unsignedIntegerValue] > 0 && [motionHeight unsignedIntegerValue] > 0 && [frameRate doubleValue] > 0.0 &&
-            [motionLength unsignedLongLongValue] == [motionData length] &&
+            [motionLength unsignedLongLongValue] > 0 && [motionLength unsignedLongLongValue] == [motionData length] &&
             [motionHash isEqualToString:[RLVManifest SHA256ForData:motionData]];
     } else if (motion == [NSNull null]) {
         motionValid = RLVIsNumber(stillTimeValue) && RLVIsNumber(preRollValue) && RLVIsNumber(postRollValue) &&
@@ -212,19 +229,21 @@ static BOOL RLVIsBoolean(id value)
         RLVIsNonEmptyString([device objectForKey:@"systemVersion"]) && RLVIsNonEmptyString([device objectForKey:@"appVersion"]);
     NSNumber *schemaVersion = [manifest objectForKey:@"schemaVersion"];
     NSNumber *createdMilliseconds = [manifest objectForKey:@"createdAtUnixMilliseconds"];
+    NSDate *createdDate = [RLVManifest dateFromISO8601String:[manifest objectForKey:@"createdAt"]];
+    double createdDifference = fabs([createdDate timeIntervalSince1970] * 1000.0 - [createdMilliseconds longLongValue]);
     NSNumber *photoWidth = [photo objectForKey:@"width"];
     NSNumber *photoHeight = [photo objectForKey:@"height"];
     NSNumber *photoLength = [photo objectForKey:@"byteLength"];
     NSString *photoHash = [photo objectForKey:@"sha256"];
     BOOL valid = RLVIsNumber(schemaVersion) && [schemaVersion integerValue] == 1 && RLVIsNonEmptyString(assetId) &&
         [[NSUUID alloc] initWithUUIDString:assetId] != nil && [assetId isEqualToString:[assetURL lastPathComponent]] &&
-        [RLVManifest dateFromISO8601String:[manifest objectForKey:@"createdAt"]] != nil &&
-        RLVIsNumber(createdMilliseconds) && [createdMilliseconds longLongValue] >= 0 &&
+        createdDate != nil && RLVIsNumber(createdMilliseconds) && [createdMilliseconds longLongValue] >= 0 &&
+        createdDifference <= 1.0 &&
         captureValid && deviceValid && [photo isKindOfClass:[NSDictionary class]] && photoData != nil &&
         [photoFilename isEqualToString:@"photo.jpg"] && [[photo objectForKey:@"mimeType"] isEqualToString:@"image/jpeg"] &&
         RLVIsNumber(photoWidth) && RLVIsNumber(photoHeight) &&
         [photoWidth unsignedIntegerValue] > 0 && [photoHeight unsignedIntegerValue] > 0 && RLVIsNumber(photoLength) &&
-        [photoLength unsignedLongLongValue] == [photoData length] && [photoHash isKindOfClass:[NSString class]] &&
+        [photoLength unsignedLongLongValue] > 0 && [photoLength unsignedLongLongValue] == [photoData length] && [photoHash isKindOfClass:[NSString class]] &&
         [photoHash isEqualToString:[RLVManifest SHA256ForData:photoData]] &&
         motionValid;
     if (!valid && error != NULL && *error == nil) {

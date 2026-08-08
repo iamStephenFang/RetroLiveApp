@@ -1,5 +1,11 @@
 import Photos
 
+protocol PhotoLibraryImporting: Sendable {
+    func authorizeForAdditions() async throws
+    func importPhoto(photoURL: URL) async throws -> String
+    func importLivePhoto(photoURL: URL, pairedVideoURL: URL) async throws -> String
+}
+
 enum PhotoLibraryImportError: Error, LocalizedError {
     case permissionDenied
     case missingPlaceholder
@@ -17,7 +23,11 @@ enum PhotoLibraryImportError: Error, LocalizedError {
     }
 }
 
-struct PhotoLibraryImporter: Sendable {
+struct PhotoLibraryImporter: PhotoLibraryImporting, Sendable {
+    func authorizeForAdditions() async throws {
+        try await authorize()
+    }
+
     func importPhoto(photoURL: URL) async throws -> String {
         try await authorize()
         return try await createAsset(photoURL: photoURL, pairedVideoURL: nil)
@@ -37,21 +47,25 @@ struct PhotoLibraryImporter: Sendable {
 
     private func createAsset(photoURL: URL, pairedVideoURL: URL?) async throws -> String {
         var placeholderIdentifier: String?
-        try await PHPhotoLibrary.shared().performChanges {
-            let request = PHAssetCreationRequest.forAsset()
-            let photoOptions = PHAssetResourceCreationOptions()
-            photoOptions.shouldMoveFile = false
-            request.addResource(with: .photo, fileURL: photoURL, options: photoOptions)
-            if let pairedVideoURL {
-                let videoOptions = PHAssetResourceCreationOptions()
-                videoOptions.shouldMoveFile = false
-                request.addResource(
-                    with: .pairedVideo,
-                    fileURL: pairedVideoURL,
-                    options: videoOptions
-                )
+        do {
+            try await PHPhotoLibrary.shared().performChanges {
+                let request = PHAssetCreationRequest.forAsset()
+                let photoOptions = PHAssetResourceCreationOptions()
+                photoOptions.shouldMoveFile = false
+                request.addResource(with: .photo, fileURL: photoURL, options: photoOptions)
+                if let pairedVideoURL {
+                    let videoOptions = PHAssetResourceCreationOptions()
+                    videoOptions.shouldMoveFile = false
+                    request.addResource(
+                        with: .pairedVideo,
+                        fileURL: pairedVideoURL,
+                        options: videoOptions
+                    )
+                }
+                placeholderIdentifier = request.placeholderForCreatedAsset?.localIdentifier
             }
-            placeholderIdentifier = request.placeholderForCreatedAsset?.localIdentifier
+        } catch {
+            throw PhotoLibraryImportError.photoKitFailed
         }
         guard let placeholderIdentifier else {
             throw PhotoLibraryImportError.missingPlaceholder

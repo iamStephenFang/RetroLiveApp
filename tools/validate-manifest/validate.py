@@ -112,8 +112,8 @@ def validate_resource(value, path, image=False):
         raise ValueError(f"{path}.filename: expected a safe basename")
     require(value, "mimeType", str, path)
     byte_length = require(value, "byteLength", int, path)
-    if byte_length < 0:
-        raise ValueError(f"{path}.byteLength: must be non-negative")
+    if byte_length <= 0:
+        raise ValueError(f"{path}.byteLength: must be positive")
     digest = require(value, "sha256", str, path)
     if not SHA256.fullmatch(digest):
         raise ValueError(f"{path}.sha256: expected 64 lowercase hexadecimal characters")
@@ -137,11 +137,14 @@ def validate_manifest(document):
 
     created_at = require(document, "createdAt", str, "$")
     try:
-        datetime.fromisoformat(created_at)
+        created_date = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
     except ValueError as error:
         raise ValueError("$.createdAt: expected ISO-8601 date-time") from error
-    if require(document, "createdAtUnixMilliseconds", int, "$") < 0:
+    created_milliseconds = require(document, "createdAtUnixMilliseconds", int, "$")
+    if created_milliseconds < 0:
         raise ValueError("$.createdAtUnixMilliseconds: must be non-negative")
+    if abs(created_date.timestamp() * 1000 - created_milliseconds) > 1:
+        raise ValueError("$.createdAtUnixMilliseconds: must describe the same instant as createdAt")
 
     capture = require(document, "capture", dict, "$")
     if require(capture, "cameraPosition", str, "$.capture") not in ("front", "back"):
@@ -177,8 +180,8 @@ def validate_manifest(document):
         duration = require(motion, "durationSeconds", float, "$.motion")
         if duration <= 0:
             raise ValueError("$.motion.durationSeconds: must be positive")
-        if still_time > duration:
-            raise ValueError("$.capture.stillImageTimeSeconds: exceeds motion duration")
+        if still_time >= duration:
+            raise ValueError("$.capture.stillImageTimeSeconds: must be before motion end")
         if require(motion, "width", int, "$.motion") <= 0 or require(motion, "height", int, "$.motion") <= 0:
             raise ValueError("$.motion: dimensions must be positive")
         if require(motion, "frameRate", float, "$.motion") <= 0:

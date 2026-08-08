@@ -80,8 +80,8 @@ The legacy project deliberately keeps its deployment target at iOS 6.0. Building
 - Real-camera timing, audio, orientation, and 20-shot stability still require the target devices.
 - Phase 3 routing, pairing, bearer authorization, pagination, immutable media access, and Range behavior are covered by a host integration test.
 - Bonjour discovery, real-device transfer, capture/download concurrency, and archived iOS 6 builds remain device acceptance checks.
-- Phase 4 API, discovery, pairing, pagination, resumable download, SHA-256 verification, and immutable cache code compile with the modern app test bundle.
-- Phase 5 JPEG/MOV identifier injection, still-image-time metadata, PhotoKit paired import, photo-only fallback, and idempotent history code compile with the modern app test bundle.
-- Modern importer unit tests require an available iOS Simulator to execute; current-host build-for-testing is not a substitute for the physical-device acceptance cases.
+- Phase 4 API, pagination, resumable download, SHA-256 verification, quarantine, and immutable-cache checks are included in the modern test bundle.
+- Phase 5 manifest boundaries, durable import journal migration/recovery, and duplicate-submission guards are included in the modern test bundle; generated-media and PhotoKit behavior still require focused fixture/mock and device tests.
+- The current simulator run discovered and passed 13 of 13 tests. Simulator success is not a substitute for the physical-device acceptance cases.
 
-See [docs/phase0-2-completion-audit.md](docs/phase0-2-completion-audit.md), [docs/phase2-plan.md](docs/phase2-plan.md), [docs/phase3-delivery.md](docs/phase3-delivery.md), [docs/phase4-5-delivery.md](docs/phase4-5-delivery.md), [docs/camera-ui-measurements.md](docs/camera-ui-measurements.md), and [docs/test-plan.md](docs/test-plan.md).
+See [docs/phase0-5-review.md](docs/phase0-5-review.md), [docs/phase0-2-completion-audit.md](docs/phase0-2-completion-audit.md), [docs/phase2-plan.md](docs/phase2-plan.md), [docs/phase3-delivery.md](docs/phase3-delivery.md), [docs/phase4-5-delivery.md](docs/phase4-5-delivery.md), [docs/camera-ui-measurements.md](docs/camera-ui-measurements.md), and [docs/test-plan.md](docs/test-plan.md).

@@ -11,10 +11,33 @@
 #import <net/if.h>
 #import <netinet/in.h>
 #import <sys/socket.h>
+#import <sys/stat.h>
 #import <unistd.h>
 
 NSString * const RLVTransferServiceDidChangeNotification = @"RLVTransferServiceDidChangeNotification";
 static NSString * const RLVTransferServiceErrorDomain = @"com.retrolive.transfer-service";
+static const NSUInteger RLVMaximumRequestBodyLength = 65536;
+
+static BOOL RLVContentLengthFromHeaders(NSDictionary *headers, NSUInteger *result)
+{
+    NSString *value = [headers objectForKey:@"content-length"];
+    if (value == nil) {
+        if (result) *result = 0;
+        return YES;
+    }
+    if (![value isKindOfClass:[NSString class]] || [value length] == 0) return NO;
+    NSUInteger parsed = 0;
+    for (NSUInteger index = 0; index < [value length]; index++) {
+        unichar character = [value characterAtIndex:index];
+        if (character < '0' || character > '9') return NO;
+        NSUInteger digit = (NSUInteger)(character - '0');
+        if (parsed > (RLVMaximumRequestBodyLength - digit) / 10) return NO;
+        parsed = parsed * 10 + digit;
+    }
+    if (parsed > RLVMaximumRequestBodyLength) return NO;
+    if (result) *result = parsed;
+    return YES;
+}
 
 @interface RLVTransferService () {
     int _listenSocket;
@@ -158,7 +181,12 @@ static NSString * const RLVTransferServiceErrorDomain = @"com.retrolive.transfer
                     NSData *headData = [requestData subdataWithRange:NSMakeRange(0, headerRange.location)];
                     NSString *head = [[NSString alloc] initWithData:headData encoding:NSISOLatin1StringEncoding];
                     NSDictionary *headers = [self headersFromLines:[head componentsSeparatedByString:@"\r\n"]];
-                    expectedLength = headerRange.location + 4 + [[headers objectForKey:@"content-length"] integerValue];
+                    NSUInteger bodyLength = 0;
+                    if (!RLVContentLengthFromHeaders(headers, &bodyLength)) {
+                        expectedLength = [requestData length];
+                    } else {
+                        expectedLength = headerRange.location + 4 + bodyLength;
+                    }
                 }
             }
             if (expectedLength != NSNotFound && [requestData length] >= expectedLength) break;
@@ -186,8 +214,11 @@ static NSString * const RLVTransferServiceErrorDomain = @"com.retrolive.transfer
     NSString *path = [requestLine objectAtIndex:1];
     NSDictionary *headers = [self headersFromLines:lines];
     NSUInteger bodyStart = split.location + split.length;
-    NSUInteger declaredLength = [[headers objectForKey:@"content-length"] integerValue];
-    if (bodyStart + declaredLength > [data length]) {
+    NSUInteger declaredLength = 0;
+    if (!RLVContentLengthFromHeaders(headers, &declaredLength)) {
+        return [RLVHTTPResponse JSONResponseWithStatusCode:400 object:[NSDictionary dictionaryWithObject:@"Invalid Content-Length." forKey:@"error"]];
+    }
+    if (declaredLength > [data length] - bodyStart) {
         return [RLVHTTPResponse JSONResponseWithStatusCode:400 object:[NSDictionary dictionaryWithObject:@"Incomplete request body." forKey:@"error"]];
     }
     NSData *body = declaredLength ? [data subdataWithRange:NSMakeRange(bodyStart, declaredLength)] : nil;
@@ -203,21 +234,40 @@ static NSString * const RLVTransferServiceErrorDomain = @"com.retrolive.transfer
         if (colon.location == NSNotFound) continue;
         NSString *key = [[[line substringToIndex:colon.location] lowercaseString] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
         NSString *value = [[line substringFromIndex:colon.location + 1] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-        if (key && value) [headers setObject:value forKey:key];
+        if ([key isEqualToString:@"content-length"] && [headers objectForKey:key] != nil) {
+            [headers setObject:@"" forKey:key];
+        } else if (key && value) {
+            [headers setObject:value forKey:key];
+        }
     }
     return headers;
 }
 
 - (void)writeResponse:(RLVHTTPResponse *)response toSocket:(int)client
 {
+    int file = -1;
+    if (response.fileURL) {
+        file = open([[response.fileURL path] fileSystemRepresentation], O_RDONLY);
+        struct stat fileStatus;
+        BOOL invalidFile = file < 0 || fstat(file, &fileStatus) != 0 || !S_ISREG(fileStatus.st_mode) || fileStatus.st_size < 0 ||
+            response.fileOffset > (unsigned long long)fileStatus.st_size ||
+            response.fileLength > (unsigned long long)fileStatus.st_size - response.fileOffset;
+        if (invalidFile) {
+            if (file >= 0) close(file);
+            file = -1;
+            response = [RLVHTTPResponse JSONResponseWithStatusCode:404 object:
+                [NSDictionary dictionaryWithObject:@"Asset resource is no longer available." forKey:@"error"]];
+        }
+    }
     unsigned long long length = response.fileURL ? response.fileLength : [response.body length];
     NSMutableString *head = [NSMutableString stringWithFormat:@"HTTP/1.1 %ld %@\r\n", (long)response.statusCode, [self reasonForStatus:response.statusCode]];
     for (NSString *key in response.headers) [head appendFormat:@"%@: %@\r\n", key, [response.headers objectForKey:key]];
     [head appendFormat:@"Content-Length: %llu\r\nConnection: close\r\n\r\n", length];
-    if (![self sendData:[head dataUsingEncoding:NSISOLatin1StringEncoding] socket:client]) return;
+    if (![self sendData:[head dataUsingEncoding:NSISOLatin1StringEncoding] socket:client]) {
+        if (file >= 0) close(file);
+        return;
+    }
     if (response.fileURL) {
-        int file = open([[response.fileURL path] fileSystemRepresentation], O_RDONLY);
-        if (file < 0) return;
         lseek(file, (off_t)response.fileOffset, SEEK_SET);
         unsigned long long remaining = response.fileLength;
         unsigned char bytes[65536];

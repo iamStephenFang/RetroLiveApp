@@ -63,21 +63,26 @@ The following preconditions are enforced before PhotoKit is called:
 
 ### Current baseline and remaining gap
 
-The current implementation is a Phase 5 vertical slice, not yet evidence that
-the delivery standard below has passed:
+The implementation now covers the main correctness boundaries in the Phase 5
+design:
 
-- `LivePhotoAssembler` already uses separate source/output roots, inserts the
-  JPEG and MOV identifiers, remuxes video and optional audio, writes a timed
-  metadata sample, and performs basic identifier/track validation.
-- `PhotoLibraryImporter` already requests add-only permission and chooses paired
-  or photo-only PhotoKit resources.
-- `ImportHistoryStore` already atomically writes confirmed records, and the
-  current view model avoids a new import when such a record is found.
-- Remaining work includes transactional assembly replacement, full generated
-  media validation, an injectable PhotoKit boundary, durable submitting/uncertain
-  states, a synchronous per-asset duplicate guard, recovery UI, and focused
-  assembly/coordinator tests. The existing `Phase45Tests` history test alone does
-  not prove Live Photo assembly or PhotoKit behavior.
+- `LivePhotoAssembler` uses attempt-scoped staging, removes abandoned attempts,
+  safely replaces committed output, and reopens generated JPEG/MOV resources to
+  validate identifiers, tracks, dimensions, transforms, duration, and timed
+  still-image metadata.
+- `PhotoLibraryImporter` is behind an injectable protocol, requests add-only
+  permission, and chooses paired or photo-only PhotoKit resources.
+- `ImportHistoryStore` persists `submitting` and `imported` journal states. The
+  view model uses a synchronous per-asset in-flight guard and restores uncertain
+  submissions as `needsConfirmation` rather than automatically duplicating an
+  import.
+- Focused tests cover manifest boundaries, pagination loops, journal migration,
+  relaunch recovery, and the download resume path.
+
+The remaining delivery gap is evidence rather than known transactional logic:
+synthetic-media assembly tests, mock PhotoKit coordinator tests, and the physical
+device acceptance matrix below are still required before declaring Phase 5
+production-complete.
 
 Implementation is delivered in the following merge order so each slice has an
 independent verification gate:

@@ -57,6 +57,51 @@ final class ManifestParserTests: XCTestCase {
         }
     }
 
+    func testZeroLengthResourceAndStillTimeAtMovieEndAreRejected() throws {
+        var zeroLength = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try fixtureData("photo-only-v1")) as? [String: Any]
+        )
+        var photo = try XCTUnwrap(zeroLength["photo"] as? [String: Any])
+        photo["byteLength"] = 0
+        zeroLength["photo"] = photo
+        XCTAssertThrowsError(
+            try parser.parse(try JSONSerialization.data(withJSONObject: zeroLength))
+        ) { error in
+            XCTAssertEqual(error as? ManifestParserError, .invalidField("$.photo.byteLength"))
+        }
+
+        var endFrame = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try fixtureData("valid-v1")) as? [String: Any]
+        )
+        let motion = try XCTUnwrap(endFrame["motion"] as? [String: Any])
+        var capture = try XCTUnwrap(endFrame["capture"] as? [String: Any])
+        capture["stillImageTimeSeconds"] = motion["durationSeconds"]
+        endFrame["capture"] = capture
+        XCTAssertThrowsError(
+            try parser.parse(try JSONSerialization.data(withJSONObject: endFrame))
+        ) { error in
+            XCTAssertEqual(
+                error as? ManifestParserError,
+                .invalidField("$.capture.stillImageTimeSeconds")
+            )
+        }
+    }
+
+    func testCreatedAtRepresentationsMustMatch() throws {
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try fixtureData("valid-v1")) as? [String: Any]
+        )
+        object["createdAtUnixMilliseconds"] = Int64(0)
+        XCTAssertThrowsError(
+            try parser.parse(try JSONSerialization.data(withJSONObject: object))
+        ) { error in
+            XCTAssertEqual(
+                error as? ManifestParserError,
+                .invalidField("$.createdAtUnixMilliseconds")
+            )
+        }
+    }
+
     private func fixtureData(_ name: String) throws -> Data {
         let bundle = Bundle(for: Self.self)
         guard let fixtureURL = bundle.url(

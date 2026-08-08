@@ -86,6 +86,7 @@ int main(void)
         NSArray *items = [page objectForKey:@"items"];
         RLVAssert(response.statusCode == 200 && [items count] == 1 &&
             [[[[items objectAtIndex:0] objectForKey:@"assetId"] description] isEqualToString:newerId] &&
+            [[items objectAtIndex:0] objectForKey:@"thumbnailURL"] == nil &&
             [[page objectForKey:@"nextCursor"] isEqualToString:newerId], @"first asset page");
 
         NSString *secondPage = [NSString stringWithFormat:@"/api/v1/assets?limit=1&cursor=%@", newerId];
@@ -104,8 +105,10 @@ int main(void)
         response = [router responseForMethod:@"GET" path:[base stringByAppendingString:@"/photo"] headers:rangeHeaders body:nil];
         RLVAssert(response.statusCode == 206 && response.fileOffset == 2 && response.fileLength == 4, @"bounded byte range");
         [rangeHeaders setObject:@"bytes=-3" forKey:@"range"];
-        response = [router responseForMethod:@"GET" path:[base stringByAppendingString:@"/thumbnail"] headers:rangeHeaders body:nil];
-        RLVAssert(response.statusCode == 206 && response.fileOffset == 7 && response.fileLength == 3, @"suffix range and thumbnail");
+        response = [router responseForMethod:@"GET" path:[base stringByAppendingString:@"/photo"] headers:rangeHeaders body:nil];
+        RLVAssert(response.statusCode == 206 && response.fileOffset == 7 && response.fileLength == 3, @"suffix range");
+        response = [router responseForMethod:@"GET" path:[base stringByAppendingString:@"/thumbnail"] headers:headers body:nil];
+        RLVAssert(response.statusCode == 404, @"missing optional thumbnail");
         [rangeHeaders setObject:@"bytes=99-" forKey:@"range"];
         response = [router responseForMethod:@"GET" path:[base stringByAppendingString:@"/photo"] headers:rangeHeaders body:nil];
         RLVAssert(response.statusCode == 416, @"unsatisfiable range");
@@ -113,6 +116,11 @@ int main(void)
         RLVAssert(response.statusCode == 404, @"missing optional motion");
         response = [router responseForMethod:@"GET" path:@"/api/v1/assets/not-a-uuid/photo" headers:headers body:nil];
         RLVAssert(response.statusCode == 404, @"malformed asset id");
+        response = [router responseForMethod:@"GET" path:@"/api/v1/assets?limit=1garbage" headers:headers body:nil];
+        RLVAssert(response.statusCode == 400, @"malformed pagination limit");
+        [rangeHeaders setObject:@"bytes=184467440737095516160-" forKey:@"range"];
+        response = [router responseForMethod:@"GET" path:[base stringByAppendingString:@"/photo"] headers:rangeHeaders body:nil];
+        RLVAssert(response.statusCode == 416, @"overflowing range rejected");
 
         RLVTransferRouter *limitedRouter = [[RLVTransferRouter alloc] initWithAssetStore:store deviceInfo:device pairingCode:@"123456"];
         for (NSUInteger attempt = 0; attempt < 5; attempt++) {
@@ -122,7 +130,7 @@ int main(void)
         RLVAssert(response.statusCode == 429, @"pairing attempt lockout");
 
         [[NSFileManager defaultManager] removeItemAtURL:documentsURL error:NULL];
-        printf("PASS transfer router: pairing, lockout, auth, pagination, resources, ranges, errors\n");
+        printf("PASS transfer router: pairing, lockout, auth, pagination, optional resources, ranges, errors\n");
     }
     return 0;
 }

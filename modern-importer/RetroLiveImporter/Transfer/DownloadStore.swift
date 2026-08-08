@@ -15,6 +15,7 @@ enum DownloadStoreError: Error, LocalizedError, Equatable {
     case lengthMismatch(resource: String)
     case hashMismatch(resource: String)
     case missingResource(String)
+    case invalidAssetIdentifier
 
     var errorDescription: String? {
         switch self {
@@ -30,6 +31,8 @@ enum DownloadStoreError: Error, LocalizedError, Equatable {
             "\(resource) 的 SHA-256 与 Manifest 不一致。"
         case .missingResource(let resource):
             "缓存中缺少 \(resource)。"
+        case .invalidAssetIdentifier:
+            "素材标识不是有效的 UUID。"
         }
     }
 }
@@ -58,13 +61,16 @@ actor DownloadStore {
     }
 
     func cachedAsset(assetId: String) throws -> CachedAsset? {
+        guard UUID(uuidString: assetId) != nil else {
+            throw DownloadStoreError.invalidAssetIdentifier
+        }
         let directory = assetsURL.appendingPathComponent(assetId, isDirectory: true)
         guard fileManager.fileExists(atPath: directory.path) else { return nil }
         do {
             return try validateAsset(at: directory)
         } catch {
-            try? fileManager.removeItem(at: directory)
-            throw error
+            try quarantineCorruptAsset(directory, assetId: assetId)
+            return nil
         }
     }
 
@@ -184,13 +190,22 @@ actor DownloadStore {
         guard http.statusCode == 200 || http.statusCode == 206 else {
             throw DownloadStoreError.invalidStatus(http.statusCode)
         }
-        if offset > 0, http.statusCode == 206 {
-            guard http.value(forHTTPHeaderField: "Content-Range")?.hasPrefix("bytes \(offset)-") == true else {
+        if http.statusCode == 206 {
+            guard validContentRange(
+                http.value(forHTTPHeaderField: "Content-Range"),
+                expectedStart: offset,
+                expectedLength: expectedLength
+            ) else {
                 throw DownloadStoreError.invalidContentRange
             }
         } else if http.statusCode == 200 {
             offset = 0
             try? fileManager.removeItem(at: partialURL)
+        }
+        let responseLength = http.expectedContentLength
+        let expectedResponseLength = expectedLength - offset
+        if responseLength >= 0, responseLength != expectedResponseLength {
+            throw DownloadStoreError.lengthMismatch(resource: endpoint)
         }
 
         if !fileManager.fileExists(atPath: partialURL.path) {
@@ -206,6 +221,10 @@ actor DownloadStore {
             try Task.checkCancellation()
             buffer.append(byte)
             if buffer.count == 64 * 1024 {
+                guard received <= expectedLength - Int64(buffer.count) else {
+                    try? fileManager.removeItem(at: partialURL)
+                    throw DownloadStoreError.lengthMismatch(resource: endpoint)
+                }
                 try handle.write(contentsOf: buffer)
                 received += Int64(buffer.count)
                 buffer.removeAll(keepingCapacity: true)
@@ -213,6 +232,10 @@ actor DownloadStore {
             }
         }
         if !buffer.isEmpty {
+            guard received <= expectedLength - Int64(buffer.count) else {
+                try? fileManager.removeItem(at: partialURL)
+                throw DownloadStoreError.lengthMismatch(resource: endpoint)
+            }
             try handle.write(contentsOf: buffer)
             received += Int64(buffer.count)
             progress(received)
@@ -287,6 +310,7 @@ actor DownloadStore {
     private func ensureDirectories() throws {
         try fileManager.createDirectory(at: assetsURL, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: temporaryURL, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: corruptURL, withIntermediateDirectories: true)
     }
 
     private var assetsURL: URL {
@@ -295,6 +319,38 @@ actor DownloadStore {
 
     private var temporaryURL: URL {
         rootURL.appendingPathComponent("Temporary", isDirectory: true)
+    }
+
+    private var corruptURL: URL {
+        rootURL.appendingPathComponent("Corrupt", isDirectory: true)
+    }
+
+    private func quarantineCorruptAsset(_ directory: URL, assetId: String) throws {
+        try fileManager.createDirectory(at: corruptURL, withIntermediateDirectories: true)
+        let quarantineURL = corruptURL.appendingPathComponent(
+            "\(assetId)-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try fileManager.moveItem(at: directory, to: quarantineURL)
+    }
+
+    private func validContentRange(
+        _ value: String?,
+        expectedStart: Int64,
+        expectedLength: Int64
+    ) -> Bool {
+        guard let value else { return false }
+        let pattern = /^bytes ([0-9]+)-([0-9]+)\/([0-9]+)$/
+        guard let match = value.wholeMatch(of: pattern),
+              let start = Int64(match.1),
+              let end = Int64(match.2),
+              let total = Int64(match.3) else {
+            return false
+        }
+        return start == expectedStart &&
+            end == expectedLength - 1 &&
+            total == expectedLength &&
+            end >= start
     }
 
     private func fileSize(_ url: URL) throws -> Int64 {

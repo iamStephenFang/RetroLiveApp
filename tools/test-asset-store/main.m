@@ -144,8 +144,16 @@ int main(void)
             fprintf(stderr, "FAIL asset reload: %s\n", [[commitError description] UTF8String]);
             return 1;
         }
+        RLVAsset *outsideAsset = [[RLVAsset alloc] init];
+        outsideAsset.assetId = photoEvent.assetId;
+        outsideAsset.photoURL = [documentsURL URLByAppendingPathComponent:@"outside/photo.jpg"];
+        commitError = nil;
+        if ([store deleteAsset:outsideAsset error:&commitError] || commitError == nil) {
+            fprintf(stderr, "FAIL delete escaped managed asset root\n");
+            return 1;
+        }
         [[NSFileManager defaultManager] removeItemAtURL:documentsURL error:NULL];
-        printf("PASS asset transactions: motion, photo-only, validation, filtering, recovery\n");
+        printf("PASS asset transactions: motion, photo-only, validation, filtering, recovery, deletion boundary\n");
     }
     return 0;
 }

@@ -94,6 +94,41 @@ final class Phase45Tests: XCTestCase {
         ])
     }
 
+    func testPaginationLoopIsRejected() async throws {
+        let session = mockSession()
+        let client = CameraAPIClient(
+            baseURL: URL(string: "http://camera.local:8080/api/v1")!,
+            session: session
+        )
+        let assetId = "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"
+        MockURLProtocol.handler = { request in
+            if request.url!.path.hasSuffix("/session") {
+                return Self.response(request, status: 200, json: [
+                    "token": "abcdefghijklmnopqrstuvwxyz123456",
+                    "expiresInSeconds": 900
+                ])
+            }
+            let hasCursor = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?
+                .queryItems?.contains(where: { $0.name == "cursor" }) == true
+            let items: [[String: String]] = hasCursor ? [] : [[
+                "assetId": assetId,
+                "createdAt": "2026-08-08T10:00:00.000Z",
+                "manifestURL": "/api/v1/assets/\(assetId)/manifest"
+            ]]
+            return Self.response(request, status: 200, json: [
+                "items": items,
+                "nextCursor": assetId
+            ])
+        }
+        try await client.pair(code: "123456", clientName: "Tests")
+        do {
+            _ = try await client.allAssets(pageSize: 1)
+            XCTFail("Expected repeated pagination cursor to fail")
+        } catch {
+            XCTAssertEqual(error as? CameraAPIError, .paginationLoop)
+        }
+    }
+
     func testRangeResumeValidationAndHistoryIdempotency() async throws {
         let temporary = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -177,6 +212,49 @@ final class Phase45Tests: XCTestCase {
         try await history.save(replacement)
         let records = try await history.allRecords()
         XCTAssertEqual(records, [replacement])
+    }
+
+    func testImportJournalPersistsUnconfirmedSubmissionAndMigratesLegacyHistory() async throws {
+        let temporary = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        let fileURL = temporary.appendingPathComponent("history.json")
+        let assetId = "EEEEEEEE-EEEE-4EEE-8EEE-EEEEEEEEEEEE"
+        let history = ImportHistoryStore(fileURL: fileURL)
+
+        let began = try await history.beginSubmission(assetId: assetId, kind: .livePhoto)
+        let beganTwice = try await history.beginSubmission(assetId: assetId, kind: .livePhoto)
+        let isUnconfirmed = try await history.hasUnconfirmedSubmission(for: assetId)
+        let pendingRecord = try await history.record(for: assetId)
+        XCTAssertTrue(began)
+        XCTAssertFalse(beganTwice)
+        XCTAssertTrue(isUnconfirmed)
+        XCTAssertNil(pendingRecord)
+
+        let relaunched = ImportHistoryStore(fileURL: fileURL)
+        let relaunchedIsUnconfirmed = try await relaunched.hasUnconfirmedSubmission(for: assetId)
+        XCTAssertTrue(relaunchedIsUnconfirmed)
+        try await relaunched.cancelSubmission(for: assetId)
+        let cancelledIsUnconfirmed = try await relaunched.hasUnconfirmedSubmission(for: assetId)
+        XCTAssertFalse(cancelledIsUnconfirmed)
+
+        let legacyRecord = ImportRecord(
+            assetId: assetId,
+            localIdentifier: "legacy-photo-id",
+            kind: .photo,
+            importedAt: Date(timeIntervalSince1970: 10)
+        )
+        try FileManager.default.createDirectory(
+            at: fileURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try JSONEncoder().encode([legacyRecord]).write(to: fileURL, options: .atomic)
+        let migrated = ImportHistoryStore(fileURL: fileURL)
+        let migratedRecord = try await migrated.record(for: assetId)
+        XCTAssertEqual(migratedRecord, legacyRecord)
+        try await migrated.save(legacyRecord)
+        let migratedRecords = try await migrated.allRecords()
+        XCTAssertEqual(migratedRecords, [legacyRecord])
     }
 
     private func mockSession() -> URLSession {

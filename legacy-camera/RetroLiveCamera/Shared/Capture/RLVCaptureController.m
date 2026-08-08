@@ -386,6 +386,11 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
             event.stillImageTimeSeconds = shutterOffset - start;
             event.preRollSeconds = event.stillImageTimeSeconds;
             event.postRollSeconds = MAX(0.0, event.motionDurationSeconds - event.stillImageTimeSeconds);
+            if (event.stillImageTimeSeconds < 0.0 || event.stillImageTimeSeconds >= event.motionDurationSeconds) {
+                [[NSFileManager defaultManager] removeItemAtURL:outputURL error:NULL];
+                [self finishMotionWithError:[self errorWithCode:13 description:@"The still frame falls outside the trimmed motion timeline."]];
+                return;
+            }
             [self completePendingCaptureWithMotionURL:outputURL];
         });
     }];

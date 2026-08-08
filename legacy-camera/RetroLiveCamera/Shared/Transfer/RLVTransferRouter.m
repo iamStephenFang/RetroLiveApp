@@ -15,6 +15,26 @@
 
 @implementation RLVTransferRouter
 
+static BOOL RLVParseUnsignedInteger(NSString *value, unsigned long long *result)
+{
+    if (![value isKindOfClass:[NSString class]] || [value length] == 0) return NO;
+    NSScanner *scanner = [NSScanner scannerWithString:value];
+    long long parsed = 0;
+    if (![scanner scanLongLong:&parsed] || ![scanner isAtEnd] || parsed < 0) return NO;
+    if (result) *result = (unsigned long long)parsed;
+    return YES;
+}
+
+static NSString *RLVPercentDecodedString(NSString *value)
+{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    // stringByRemovingPercentEncoding is unavailable on the iOS 6 deployment target.
+    NSString *decoded = [value stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+#pragma clang diagnostic pop
+    return decoded;
+}
+
 - (id)initWithAssetStore:(RLVAssetStore *)assetStore deviceInfo:(NSDictionary *)deviceInfo pairingCode:(NSString *)pairingCode
 {
     self = [super init];
@@ -31,7 +51,7 @@
     NSRange queryMark = [path rangeOfString:@"?"];
     NSString *route = queryMark.location == NSNotFound ? path : [path substringToIndex:queryMark.location];
     NSString *query = queryMark.location == NSNotFound ? nil : [path substringFromIndex:queryMark.location + 1];
-    route = [route stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+    route = RLVPercentDecodedString(route);
     if ([method isEqualToString:@"GET"] && [route isEqualToString:@"/api/v1/health"]) {
         NSDictionary *attributes = [[NSFileManager defaultManager] attributesOfFileSystemForPath:[self.assetStore.rootURL path] error:NULL];
         return [RLVHTTPResponse JSONResponseWithStatusCode:200 object:[NSDictionary dictionaryWithObjectsAndKeys:
@@ -102,7 +122,15 @@
 
 - (RLVHTTPResponse *)assetListResponseWithQuery:(NSDictionary *)query
 {
-    NSInteger limit = [query objectForKey:@"limit"] ? [[query objectForKey:@"limit"] integerValue] : 50;
+    NSInteger limit = 50;
+    NSString *limitValue = [query objectForKey:@"limit"];
+    if (limitValue) {
+        unsigned long long parsedLimit = 0;
+        if (!RLVParseUnsignedInteger(limitValue, &parsedLimit) || parsedLimit > NSIntegerMax) {
+            return [self errorResponseWithStatus:400 message:@"limit must be an integer between 1 and 100."];
+        }
+        limit = (NSInteger)parsedLimit;
+    }
     NSString *cursor = [query objectForKey:@"cursor"];
     if (limit < 1 || limit > 100) return [self errorResponseWithStatus:400 message:@"limit must be between 1 and 100."];
     NSArray *assets = [self.assetStore loadAssets:NULL] ?: [NSArray array];
@@ -127,7 +155,6 @@
         NSString *base = [NSString stringWithFormat:@"/api/v1/assets/%@", asset.assetId];
         [items addObject:[NSDictionary dictionaryWithObjectsAndKeys:asset.assetId, @"assetId",
             [manifest objectForKey:@"createdAt"] ?: [self ISO8601StringForDate:asset.createdAt], @"createdAt",
-            [base stringByAppendingString:@"/thumbnail"], @"thumbnailURL",
             [base stringByAppendingString:@"/manifest"], @"manifestURL", nil]];
     }
     id nextCursor = end < [assets count] && end > 0 ? [[assets objectAtIndex:end - 1] assetId] : [NSNull null];
@@ -151,7 +178,7 @@
     if ([resource isEqualToString:@"manifest"]) {
         fileURL = asset.manifestURL;
         contentType = @"application/json; charset=utf-8";
-    } else if ([resource isEqualToString:@"photo"] || [resource isEqualToString:@"thumbnail"]) {
+    } else if ([resource isEqualToString:@"photo"]) {
         fileURL = asset.photoURL;
         contentType = @"image/jpeg";
         supportsRange = YES;
@@ -195,19 +222,19 @@
     if ([bounds count] != 2) return NO;
     NSString *first = [bounds objectAtIndex:0];
     NSString *second = [bounds objectAtIndex:1];
-    NSCharacterSet *digits = [NSCharacterSet decimalDigitCharacterSet];
-    if (([first length] && [[first stringByTrimmingCharactersInSet:digits] length]) ||
-        ([second length] && [[second stringByTrimmingCharactersInSet:digits] length])) return NO;
     if ([first length] == 0) {
-        unsigned long long suffix = [second longLongValue];
+        unsigned long long suffix = 0;
+        if (!RLVParseUnsignedInteger(second, &suffix)) return NO;
         if (suffix == 0) return NO;
         *length = MIN(suffix, size);
         *offset = size - *length;
         return YES;
     }
-    unsigned long long start = [first longLongValue];
+    unsigned long long start = 0;
+    if (!RLVParseUnsignedInteger(first, &start)) return NO;
     if (start >= size) return NO;
-    unsigned long long end = [second length] ? [second longLongValue] : size - 1;
+    unsigned long long end = size - 1;
+    if ([second length] && !RLVParseUnsignedInteger(second, &end)) return NO;
     if (end < start) return NO;
     end = MIN(end, size - 1);
     *offset = start;
@@ -221,8 +248,8 @@
     for (NSString *pair in [query componentsSeparatedByString:@"&"]) {
         NSRange equals = [pair rangeOfString:@"="];
         if (equals.location == NSNotFound) continue;
-        NSString *key = [[pair substringToIndex:equals.location] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
-        NSString *value = [[pair substringFromIndex:equals.location + 1] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+        NSString *key = RLVPercentDecodedString([pair substringToIndex:equals.location]);
+        NSString *value = RLVPercentDecodedString([pair substringFromIndex:equals.location + 1]);
         if (key && value) [result setObject:value forKey:key];
     }
     return result;

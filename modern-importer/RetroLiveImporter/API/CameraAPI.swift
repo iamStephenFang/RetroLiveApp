@@ -49,21 +49,33 @@ struct CameraAssetPage: Codable, Equatable, Sendable {
 
 enum CameraAPIError: Error, LocalizedError, Equatable {
     case invalidResponse
+    case invalidRequest
     case unauthorized
     case lockedOut
     case notFound
+    case invalidPayload(String)
+    case paginationLoop
+    case duplicateAsset(String)
     case server(status: Int, message: String)
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
             "相机返回了无法识别的响应。"
+        case .invalidRequest:
+            "请求参数无效。"
         case .unauthorized:
             "配对已失效，请重新输入相机上的配对码。"
         case .lockedOut:
             "配对尝试过多，请稍后再试。"
         case .notFound:
             "相机上已找不到这个素材。"
+        case .invalidPayload(let field):
+            "相机返回的数据字段无效：\(field)。"
+        case .paginationLoop:
+            "相机返回了重复的分页游标，已停止读取。"
+        case .duplicateAsset(let assetId):
+            "相机返回了重复素材：\(assetId)。"
         case .server(let status, let message):
             "相机请求失败（\(status)）：\(message)"
         }
@@ -95,6 +107,10 @@ actor CameraAPIClient {
     }
 
     func pair(code: String, clientName: String) async throws {
+        guard code.count == 6, code.allSatisfy(\.isNumber),
+              !clientName.isEmpty, clientName.count <= 100 else {
+            throw CameraAPIError.invalidRequest
+        }
         var request = URLRequest(url: endpoint("session"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -102,7 +118,7 @@ actor CameraAPIClient {
         let (data, response) = try await session.data(for: request)
         try validate(response: response, data: data)
         let sessionResponse = try JSONDecoder().decode(SessionResponse.self, from: data)
-        guard !sessionResponse.token.isEmpty, sessionResponse.expiresInSeconds > 0 else {
+        guard sessionResponse.token.count >= 32, sessionResponse.expiresInSeconds > 0 else {
             throw CameraAPIError.invalidResponse
         }
         token = sessionResponse.token
@@ -113,12 +129,24 @@ actor CameraAPIClient {
     }
 
     func deviceInfo() async throws -> CameraDeviceInfo {
-        try await decode(CameraDeviceInfo.self, request: authorizedRequest(path: "device"))
+        let info = try await decode(CameraDeviceInfo.self, request: authorizedRequest(path: "device"))
+        guard info.protocolVersion == 1,
+              UUID(uuidString: info.deviceId) != nil,
+              !info.deviceName.isEmpty,
+              !info.modelIdentifier.isEmpty,
+              !info.systemVersion.isEmpty,
+              !info.appVersion.isEmpty,
+              info.assetCount >= 0 else {
+            throw CameraAPIError.invalidPayload("device")
+        }
+        return info
     }
 
     func allAssets(pageSize: Int = 100) async throws -> [CameraAssetSummary] {
         var result: [CameraAssetSummary] = []
         var cursor: String?
+        var seenCursors: Set<String> = []
+        var seenAssetIds: Set<String> = []
         repeat {
             var components = URLComponents(url: endpoint("assets"), resolvingAgainstBaseURL: false)!
             components.queryItems = [
@@ -131,14 +159,32 @@ actor CameraAPIClient {
                 CameraAssetPage.self,
                 request: authorizedRequest(url: components.url!)
             )
-            result.append(contentsOf: page.items)
+            for item in page.items {
+                guard UUID(uuidString: item.assetId) != nil,
+                      RetroLiveISO8601.date(from: item.createdAt) != nil,
+                      item.manifestURL == "/api/v1/assets/\(item.assetId)/manifest" else {
+                    throw CameraAPIError.invalidPayload("assets.items")
+                }
+                guard seenAssetIds.insert(item.assetId).inserted else {
+                    throw CameraAPIError.duplicateAsset(item.assetId)
+                }
+                result.append(item)
+            }
+            if let nextCursor = page.nextCursor {
+                guard !page.items.isEmpty,
+                      seenCursors.insert(nextCursor).inserted,
+                      nextCursor != cursor else {
+                    throw CameraAPIError.paginationLoop
+                }
+            }
             cursor = page.nextCursor
         } while cursor != nil
         return result
     }
 
     func manifestData(assetId: String) async throws -> Data {
-        let request = authorizedRequest(path: "assets/\(assetId)/manifest")
+        guard UUID(uuidString: assetId) != nil else { throw CameraAPIError.notFound }
+        let request = try authorizedRequest(path: "assets/\(assetId)/manifest")
         let (data, response) = try await session.data(for: request)
         try validate(response: response, data: data)
         return data
@@ -149,7 +195,7 @@ actor CameraAPIClient {
               ["photo", "motion", "thumbnail"].contains(resource) else {
             throw CameraAPIError.notFound
         }
-        var request = authorizedRequest(path: "assets/\(assetId)/\(resource)")
+        var request = try authorizedRequest(path: "assets/\(assetId)/\(resource)")
         if let rangeStart, rangeStart > 0 {
             request.setValue("bytes=\(rangeStart)-", forHTTPHeaderField: "Range")
         }
@@ -162,13 +208,14 @@ actor CameraAPIClient {
         return try JSONDecoder().decode(type, from: data)
     }
 
-    private func authorizedRequest(path: String) -> URLRequest {
-        authorizedRequest(url: endpoint(path))
+    private func authorizedRequest(path: String) throws -> URLRequest {
+        try authorizedRequest(url: endpoint(path))
     }
 
-    private func authorizedRequest(url: URL) -> URLRequest {
+    private func authorizedRequest(url: URL) throws -> URLRequest {
+        guard let token, !token.isEmpty else { throw CameraAPIError.unauthorized }
         var request = URLRequest(url: url)
-        request.setValue("Bearer \(token ?? "")", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         return request
     }
 

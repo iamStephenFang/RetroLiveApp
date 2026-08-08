@@ -1,5 +1,6 @@
 #import "RLVManifestParser.h"
 #import "RLVAssetManifest.h"
+#import <math.h>
 
 NSString * const RLVManifestParserErrorDomain = @"com.retrolive.manifest";
 
@@ -34,6 +35,7 @@ static BOOL RLVParserIsISO8601Date(id value)
 @interface RLVManifestParser ()
 - (void)setError:(NSError **)error code:(RLVManifestParserErrorCode)code message:(NSString *)message;
 - (BOOL)readResource:(NSDictionary *)dictionary into:(RLVMediaResource *)resource image:(BOOL)image error:(NSError **)error;
+- (NSDate *)dateFromISO8601String:(NSString *)value;
 @end
 
 
@@ -78,7 +80,10 @@ static BOOL RLVParserIsISO8601Date(id value)
         [self setError:error code:RLVManifestParserErrorMissingValue message:@"Manifest is missing one or more required values."];
         return nil;
     }
-    if ([[NSUUID alloc] initWithUUIDString:assetId] == nil || [createdMilliseconds longLongValue] < 0) {
+    NSDate *createdDate = [self dateFromISO8601String:createdAt];
+    double timestampDifference = fabs([createdDate timeIntervalSince1970] * 1000.0 - [createdMilliseconds longLongValue]);
+    if ([[NSUUID alloc] initWithUUIDString:assetId] == nil || [createdMilliseconds longLongValue] < 0 ||
+        createdDate == nil || timestampDifference > 1.0) {
         [self setError:error code:RLVManifestParserErrorInvalidValue message:@"assetId or createdAtUnixMilliseconds is invalid."];
         return nil;
     }
@@ -142,7 +147,7 @@ static BOOL RLVParserIsISO8601Date(id value)
         motion.height = [motionHeight unsignedIntegerValue];
         motion.frameRate = [frameRate doubleValue];
         motion.hasAudio = [hasAudio boolValue];
-        if (motion.durationSeconds <= 0 || motion.width == 0 || motion.height == 0 || motion.frameRate <= 0 || capture.stillImageTimeSeconds > motion.durationSeconds) {
+        if (motion.durationSeconds <= 0 || motion.width == 0 || motion.height == 0 || motion.frameRate <= 0 || capture.stillImageTimeSeconds >= motion.durationSeconds) {
             [self setError:error code:RLVManifestParserErrorInvalidValue message:@"motion contains an invalid value or still image time is out of range."];
             return nil;
         }
@@ -177,6 +182,19 @@ static BOOL RLVParserIsISO8601Date(id value)
     return manifest;
 }
 
+- (NSDate *)dateFromISO8601String:(NSString *)value
+{
+    NSArray *formats = [NSArray arrayWithObjects:@"yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ", @"yyyy-MM-dd'T'HH:mm:ssZZZZZ", nil];
+    for (NSString *format in formats) {
+        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+        formatter.locale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
+        formatter.dateFormat = format;
+        NSDate *date = [formatter dateFromString:value];
+        if (date) return date;
+    }
+    return nil;
+}
+
 - (BOOL)readResource:(NSDictionary *)dictionary into:(RLVMediaResource *)resource image:(BOOL)image error:(NSError **)error
 {
     NSString *filename = [dictionary objectForKey:@"filename"];
@@ -188,7 +206,7 @@ static BOOL RLVParserIsISO8601Date(id value)
     BOOL filenameValid = [filename isKindOfClass:[NSString class]] && [filename length] > 0 &&
         ![filename isEqualToString:@"."] && ![filename isEqualToString:@".."] &&
         [filename rangeOfString:@"/"].location == NSNotFound && [filename rangeOfString:@"\\"].location == NSNotFound;
-    if (!filenameValid || !RLVParserIsNonEmptyString(mimeType) || !RLVParserIsNumber(byteLength) || [byteLength longLongValue] < 0 || !hashValid) {
+    if (!filenameValid || !RLVParserIsNonEmptyString(mimeType) || !RLVParserIsNumber(byteLength) || [byteLength longLongValue] <= 0 || !hashValid) {
         [self setError:error code:RLVManifestParserErrorInvalidValue message:@"Media resource contains an invalid filename, length, MIME type, or SHA-256 value."];
         return NO;
     }

@@ -150,10 +150,15 @@ struct ContentView: View {
                     .font(.caption)
                     .foregroundStyle(.red)
             }
+            if state == .needsConfirmation {
+                Text("上次写入照片的结果无法确认。请先在“照片”中检查，避免重复导入。")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
             Button(state.title) {
                 model.importAsset(asset)
             }
-            .disabled(state.isBusy || state == .imported)
+            .disabled(state.isBusy || state == .imported || state == .needsConfirmation)
         }
         .padding(.vertical, 4)
     }

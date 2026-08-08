@@ -6,8 +6,10 @@ enum ImporterAssetState: Equatable {
     case downloading(Double)
     case cached
     case assembling
+    case authorizing
     case importing
     case imported
+    case needsConfirmation
     case failed(String)
 
     var title: String {
@@ -20,10 +22,14 @@ enum ImporterAssetState: Equatable {
             "已下载"
         case .assembling:
             "正在生成"
+        case .authorizing:
+            "等待照片权限"
         case .importing:
             "正在写入照片"
         case .imported:
             "已导入"
+        case .needsConfirmation:
+            "需要确认"
         case .failed:
             "重试"
         }
@@ -31,7 +37,7 @@ enum ImporterAssetState: Equatable {
 
     var isBusy: Bool {
         switch self {
-        case .downloading, .assembling, .importing:
+        case .downloading, .assembling, .authorizing, .importing:
             true
         default:
             false
@@ -54,8 +60,9 @@ final class ImporterViewModel: ObservableObject {
     private let discovery: DeviceDiscovery
     private let downloadStore: DownloadStore
     private let assembler: LivePhotoAssembler
-    private let photoImporter: PhotoLibraryImporter
+    private let photoImporter: any PhotoLibraryImporting
     private let history: ImportHistoryStore
+    private var inFlightAssetIds: Set<String> = []
     private var api: CameraAPIClient?
     private var cancellables: Set<AnyCancellable> = []
 
@@ -63,7 +70,7 @@ final class ImporterViewModel: ObservableObject {
         discovery: DeviceDiscovery = DeviceDiscovery(),
         downloadStore: DownloadStore = DownloadStore(),
         assembler: LivePhotoAssembler = LivePhotoAssembler(),
-        photoImporter: PhotoLibraryImporter = PhotoLibraryImporter(),
+        photoImporter: any PhotoLibraryImporting = PhotoLibraryImporter(),
         history: ImportHistoryStore = ImportHistoryStore()
     ) {
         self.discovery = discovery
@@ -121,8 +128,12 @@ final class ImporterViewModel: ObservableObject {
             let loaded = try await api.allAssets()
             assets = loaded
             for summary in loaded {
-                if try await history.record(for: summary.assetId) != nil {
+                if inFlightAssetIds.contains(summary.assetId) {
+                    continue
+                } else if try await history.record(for: summary.assetId) != nil {
                     assetStates[summary.assetId] = .imported
+                } else if try await history.hasUnconfirmedSubmission(for: summary.assetId) {
+                    assetStates[summary.assetId] = .needsConfirmation
                 } else if (try? await downloadStore.cachedAsset(assetId: summary.assetId)) != nil {
                     assetStates[summary.assetId] = .cached
                 } else {
@@ -136,12 +147,21 @@ final class ImporterViewModel: ObservableObject {
     }
 
     func importAsset(_ summary: CameraAssetSummary) {
-        guard let api, assetStates[summary.assetId]?.isBusy != true else { return }
+        guard let api,
+              assetStates[summary.assetId]?.isBusy != true,
+              assetStates[summary.assetId] != .imported,
+              assetStates[summary.assetId] != .needsConfirmation,
+              inFlightAssetIds.insert(summary.assetId).inserted else { return }
         Task { [weak self] in
             guard let self else { return }
+            defer { inFlightAssetIds.remove(summary.assetId) }
             do {
                 if try await history.record(for: summary.assetId) != nil {
                     assetStates[summary.assetId] = .imported
+                    return
+                }
+                if try await history.hasUnconfirmedSubmission(for: summary.assetId) {
+                    assetStates[summary.assetId] = .needsConfirmation
                     return
                 }
                 assetStates[summary.assetId] = .downloading(0)
@@ -153,31 +173,73 @@ final class ImporterViewModel: ObservableObject {
                         self?.assetStates[summary.assetId] = .downloading(progress)
                     }
                 }
-                assetStates[summary.assetId] = .assembling
-                let assembled = try await assembler.assemble(cached)
+                let kind: ImportedAssetKind
+                let photoURL: URL
+                let pairedVideoURL: URL?
+                if cached.motionURL != nil {
+                    assetStates[summary.assetId] = .assembling
+                    let assembled = try await assembler.assemble(cached)
+                    guard let assembledVideoURL = assembled.pairedVideoURL else {
+                        throw LivePhotoAssemblyError.missingVideoTrack
+                    }
+                    kind = .livePhoto
+                    photoURL = assembled.photoURL
+                    pairedVideoURL = assembledVideoURL
+                } else {
+                    kind = .photo
+                    photoURL = cached.photoURL
+                    pairedVideoURL = nil
+                }
+                assetStates[summary.assetId] = .authorizing
+                try await photoImporter.authorizeForAdditions()
+                guard try await history.beginSubmission(assetId: summary.assetId, kind: kind) else {
+                    assetStates[summary.assetId] = try await history.record(for: summary.assetId) == nil
+                        ? .needsConfirmation
+                        : .imported
+                    return
+                }
                 assetStates[summary.assetId] = .importing
                 let localIdentifier: String
-                let kind: ImportedAssetKind
-                if let pairedVideoURL = assembled.pairedVideoURL {
-                    localIdentifier = try await photoImporter.importLivePhoto(
-                        photoURL: assembled.photoURL,
-                        pairedVideoURL: pairedVideoURL
-                    )
-                    kind = .livePhoto
-                } else {
-                    localIdentifier = try await photoImporter.importPhoto(
-                        photoURL: assembled.photoURL
-                    )
-                    kind = .photo
+                do {
+                    if let pairedVideoURL {
+                        localIdentifier = try await photoImporter.importLivePhoto(
+                            photoURL: photoURL,
+                            pairedVideoURL: pairedVideoURL
+                        )
+                    } else {
+                        localIdentifier = try await photoImporter.importPhoto(photoURL: photoURL)
+                    }
+                } catch let error as PhotoLibraryImportError {
+                    switch error {
+                    case .permissionDenied, .photoKitFailed:
+                        do {
+                            try await history.cancelSubmission(for: summary.assetId)
+                        } catch {
+                            assetStates[summary.assetId] = .needsConfirmation
+                            return
+                        }
+                        throw error
+                    case .missingPlaceholder:
+                        assetStates[summary.assetId] = .needsConfirmation
+                        return
+                    }
+                } catch {
+                    assetStates[summary.assetId] = .needsConfirmation
+                    return
                 }
-                try await history.save(
-                    ImportRecord(
-                        assetId: summary.assetId,
-                        localIdentifier: localIdentifier,
-                        kind: kind,
-                        importedAt: Date()
+                do {
+                    try await history.save(
+                        ImportRecord(
+                            assetId: summary.assetId,
+                            localIdentifier: localIdentifier,
+                            kind: kind,
+                            importedAt: Date()
+                        )
                     )
-                )
+                } catch {
+                    assetStates[summary.assetId] = .needsConfirmation
+                    return
+                }
                 assetStates[summary.assetId] = .imported
             } catch {
                 assetStates[summary.assetId] = .failed(error.localizedDescription)

@@ -1,5 +1,14 @@
 import Foundation
 
+enum RetroLiveISO8601 {
+    static func date(from value: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: value) { return date }
+        formatter.formatOptions.insert(.withFractionalSeconds)
+        return formatter.date(from: value)
+    }
+}
+
 enum ManifestParserError: Error, Equatable, LocalizedError {
     case invalidJSON(String)
     case unsupportedSchemaVersion(found: Int, supported: [Int])
@@ -59,10 +68,13 @@ struct ManifestParser: Sendable {
         guard UUID(uuidString: manifest.assetId) != nil else {
             throw ManifestParserError.invalidField("$.assetId")
         }
-        guard ISO8601DateFormatter().date(from: manifest.createdAt) != nil else {
+        guard let createdAt = RetroLiveISO8601.date(from: manifest.createdAt) else {
             throw ManifestParserError.invalidField("$.createdAt")
         }
         guard manifest.createdAtUnixMilliseconds >= 0 else {
+            throw ManifestParserError.invalidField("$.createdAtUnixMilliseconds")
+        }
+        guard abs(createdAt.timeIntervalSince1970 * 1_000 - Double(manifest.createdAtUnixMilliseconds)) <= 1 else {
             throw ManifestParserError.invalidField("$.createdAtUnixMilliseconds")
         }
         guard (1...8).contains(manifest.capture.orientation) else {
@@ -79,7 +91,7 @@ struct ManifestParser: Sendable {
         }
         if let motion = manifest.motion {
             try validateMotion(motion)
-            guard manifest.capture.stillImageTimeSeconds <= motion.durationSeconds else {
+            guard manifest.capture.stillImageTimeSeconds < motion.durationSeconds else {
                 throw ManifestParserError.invalidField("$.capture.stillImageTimeSeconds")
             }
         } else if manifest.capture.stillImageTimeSeconds != 0 ||
@@ -140,7 +152,7 @@ struct ManifestParser: Sendable {
         guard !mimeType.isEmpty else {
             throw ManifestParserError.invalidField("\(path).mimeType")
         }
-        guard byteLength >= 0 else {
+        guard byteLength > 0 else {
             throw ManifestParserError.invalidField("\(path).byteLength")
         }
         let lowercaseHex = CharacterSet(charactersIn: "0123456789abcdef")

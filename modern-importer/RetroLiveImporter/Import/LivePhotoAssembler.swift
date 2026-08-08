@@ -20,6 +20,7 @@ enum LivePhotoAssemblyError: Error, LocalizedError {
     case writer
     case timedMetadata
     case identifierMismatch
+    case mediaValidation
 
     var errorDescription: String? {
         switch self {
@@ -41,6 +42,8 @@ enum LivePhotoAssemblyError: Error, LocalizedError {
             "无法写入 Live Photo 静态帧时间。"
         case .identifierMismatch:
             "生成资源的配对标识不一致。"
+        case .mediaValidation:
+            "生成资源的尺寸、轨道、方向或时间信息与源素材不一致。"
         }
     }
 }
@@ -85,6 +88,7 @@ private final class AssemblyIO: @unchecked Sendable {
 actor LivePhotoAssembler {
     private let rootURL: URL
     private let fileManager: FileManager
+    private var activeStagingURLs: Set<URL> = []
 
     init(rootURL: URL? = nil, fileManager: FileManager = .default) {
         let applicationSupport = fileManager.urls(
@@ -102,11 +106,20 @@ actor LivePhotoAssembler {
         let assetsRoot = rootURL.appendingPathComponent("Assets", isDirectory: true)
         try fileManager.createDirectory(at: temporaryRoot, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: assetsRoot, withIntermediateDirectories: true)
-        let staging = temporaryRoot.appendingPathComponent(assetId, isDirectory: true)
-        if fileManager.fileExists(atPath: staging.path) {
-            try fileManager.removeItem(at: staging)
-        }
+        try removeAbandonedStagingDirectories(in: temporaryRoot)
+        let staging = temporaryRoot.appendingPathComponent(
+            "\(assetId)-\(UUID().uuidString)",
+            isDirectory: true
+        )
         try fileManager.createDirectory(at: staging, withIntermediateDirectories: true)
+        activeStagingURLs.insert(staging)
+        var committed = false
+        defer {
+            activeStagingURLs.remove(staging)
+            if !committed, fileManager.fileExists(atPath: staging.path) {
+                try? fileManager.removeItem(at: staging)
+            }
+        }
 
         let pairedPhoto = staging.appendingPathComponent("paired-photo.jpg")
         try writePairedPhoto(sourceURL: cached.photoURL, destinationURL: pairedPhoto, assetId: assetId)
@@ -121,16 +134,33 @@ actor LivePhotoAssembler {
             )
             pairedVideo = destination
         }
-        try validatePhotoIdentifier(pairedPhoto, assetId: assetId)
+        try validatePhoto(
+            pairedPhoto,
+            assetId: assetId,
+            expectedWidth: cached.manifest.photo.width,
+            expectedHeight: cached.manifest.photo.height
+        )
         if let pairedVideo {
-            try await validateVideo(pairedVideo, assetId: assetId)
+            try await validateVideo(
+                pairedVideo,
+                sourceURL: cached.motionURL!,
+                assetId: assetId,
+                stillTimeSeconds: cached.manifest.capture.stillImageTimeSeconds
+            )
         }
 
         let finalURL = assetsRoot.appendingPathComponent(assetId, isDirectory: true)
         if fileManager.fileExists(atPath: finalURL.path) {
-            try fileManager.removeItem(at: finalURL)
+            _ = try fileManager.replaceItemAt(
+                finalURL,
+                withItemAt: staging,
+                backupItemName: nil,
+                options: []
+            )
+        } else {
+            try fileManager.moveItem(at: staging, to: finalURL)
         }
-        try fileManager.moveItem(at: staging, to: finalURL)
+        committed = true
         return AssembledAsset(
             assetId: assetId,
             directoryURL: finalURL,
@@ -139,6 +169,17 @@ actor LivePhotoAssembler {
                 ? nil
                 : finalURL.appendingPathComponent("paired-video.mov")
         )
+    }
+
+    private func removeAbandonedStagingDirectories(in temporaryRoot: URL) throws {
+        let candidates = try fileManager.contentsOfDirectory(
+            at: temporaryRoot,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )
+        for candidate in candidates where !activeStagingURLs.contains(candidate) {
+            try fileManager.removeItem(at: candidate)
+        }
     }
 
     private func writePairedPhoto(sourceURL: URL, destinationURL: URL, assetId: String) throws {
@@ -187,7 +228,9 @@ actor LivePhotoAssembler {
             throw LivePhotoAssemblyError.missingVideoTrack
         }
         let audioTracks = try await asset.loadTracks(withMediaType: .audio)
-        try? fileManager.removeItem(at: destinationURL)
+        if fileManager.fileExists(atPath: destinationURL.path) {
+            try fileManager.removeItem(at: destinationURL)
+        }
         let reader = try AVAssetReader(asset: asset)
         let writer = try AVAssetWriter(outputURL: destinationURL, fileType: .mov)
 
@@ -243,8 +286,12 @@ actor LivePhotoAssembler {
         writer.add(metadataInput)
         let metadataAdaptor = AVAssetWriterInputMetadataAdaptor(assetWriterInput: metadataInput)
 
-        guard writer.startWriting(), reader.startReading() else {
+        guard writer.startWriting() else {
             throw writer.error ?? reader.error ?? LivePhotoAssemblyError.writer
+        }
+        guard reader.startReading() else {
+            writer.cancelWriting()
+            throw reader.error ?? LivePhotoAssemblyError.reader
         }
         writer.startSession(atSourceTime: .zero)
         let stillItem = AVMutableMetadataItem()
@@ -254,15 +301,23 @@ actor LivePhotoAssembler {
         stillItem.value = NSNumber(value: Int8(0))
         stillItem.dataType = kCMMetadataBaseDataType_SInt8 as String
         let stillTime = CMTime(seconds: stillTimeSeconds, preferredTimescale: 600)
-        guard metadataAdaptor.append(
+        let nominalMetadataDuration = CMTime(value: 1, timescale: 30)
+        let remainingDuration = CMTimeSubtract(duration, stillTime)
+        let metadataDuration = CMTimeCompare(nominalMetadataDuration, remainingDuration) < 0
+            ? nominalMetadataDuration
+            : remainingDuration
+        guard CMTimeCompare(metadataDuration, .zero) > 0,
+              metadataAdaptor.append(
             AVTimedMetadataGroup(
                 items: [stillItem],
                 timeRange: CMTimeRange(
                     start: stillTime,
-                    duration: CMTime(value: 1, timescale: 30)
+                    duration: metadataDuration
                 )
             )
         ) else {
+            reader.cancelReading()
+            writer.cancelWriting()
             throw LivePhotoAssemblyError.timedMetadata
         }
         metadataInput.markAsFinished()
@@ -313,10 +368,17 @@ actor LivePhotoAssembler {
         }
     }
 
-    private func validatePhotoIdentifier(_ url: URL, assetId: String) throws {
+    private func validatePhoto(
+        _ url: URL,
+        assetId: String,
+        expectedWidth: Int,
+        expectedHeight: Int
+    ) throws {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
                 as? [CFString: Any],
+              (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue == expectedWidth,
+              (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue == expectedHeight,
               let makerApple = properties[kCGImagePropertyMakerAppleDictionary]
                 as? [String: Any],
               makerApple["17"] as? String == assetId else {
@@ -324,7 +386,12 @@ actor LivePhotoAssembler {
         }
     }
 
-    private func validateVideo(_ url: URL, assetId: String) async throws {
+    private func validateVideo(
+        _ url: URL,
+        sourceURL: URL,
+        assetId: String,
+        stillTimeSeconds: Double
+    ) async throws {
         let asset = AVURLAsset(url: url)
         let metadata = try await asset.load(.metadata)
         let identifierItems = AVMetadataItem.metadataItems(
@@ -340,8 +407,55 @@ actor LivePhotoAssembler {
         guard contentIdentifier == assetId else {
             throw LivePhotoAssemblyError.identifierMismatch
         }
+        let sourceAsset = AVURLAsset(url: sourceURL)
+        let sourceVideoTracks = try await sourceAsset.loadTracks(withMediaType: .video)
+        let outputVideoTracks = try await asset.loadTracks(withMediaType: .video)
+        let sourceAudioTracks = try await sourceAsset.loadTracks(withMediaType: .audio)
+        let outputAudioTracks = try await asset.loadTracks(withMediaType: .audio)
+        guard !outputVideoTracks.isEmpty,
+              outputVideoTracks.count == sourceVideoTracks.count,
+              outputAudioTracks.count == sourceAudioTracks.count else {
+            throw LivePhotoAssemblyError.mediaValidation
+        }
+        for (sourceTrack, outputTrack) in zip(sourceVideoTracks, outputVideoTracks) {
+            let sourceTransform = try await sourceTrack.load(.preferredTransform)
+            let outputTransform = try await outputTrack.load(.preferredTransform)
+            let sourceSize = try await sourceTrack.load(.naturalSize)
+            let outputSize = try await outputTrack.load(.naturalSize)
+            guard sourceTransform == outputTransform, sourceSize == outputSize else {
+                throw LivePhotoAssemblyError.mediaValidation
+            }
+        }
+        let sourceDuration = try await sourceAsset.load(.duration)
+        let outputDuration = try await asset.load(.duration)
+        let frameRate = try await sourceVideoTracks[0].load(.nominalFrameRate)
+        let tolerance = max(1.0 / 600.0, frameRate > 0 ? 1.0 / Double(frameRate) : 1.0 / 30.0)
+        guard abs(CMTimeGetSeconds(sourceDuration) - CMTimeGetSeconds(outputDuration)) <= tolerance else {
+            throw LivePhotoAssemblyError.mediaValidation
+        }
         let metadataTracks = try await asset.loadTracks(withMediaType: .metadata)
-        guard !metadataTracks.isEmpty else {
+        var foundStillTime = false
+        for metadataTrack in metadataTracks {
+            let reader = try AVAssetReader(asset: asset)
+            let output = AVAssetReaderTrackOutput(track: metadataTrack, outputSettings: nil)
+            guard reader.canAdd(output) else { continue }
+            reader.add(output)
+            let adaptor = AVAssetReaderOutputMetadataAdaptor(assetReaderTrackOutput: output)
+            guard reader.startReading() else { continue }
+            while let group = adaptor.nextTimedMetadataGroup() {
+                let containsStillItem = group.items.contains {
+                    $0.identifier?.rawValue == "mdta/com.apple.quicktime.still-image-time"
+                }
+                if containsStillItem,
+                   abs(CMTimeGetSeconds(group.timeRange.start) - stillTimeSeconds) <= tolerance {
+                    foundStillTime = true
+                    break
+                }
+            }
+            reader.cancelReading()
+            if foundStillTime { break }
+        }
+        guard foundStillTime else {
             throw LivePhotoAssemblyError.timedMetadata
         }
     }

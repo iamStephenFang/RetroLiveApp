@@ -10,7 +10,7 @@
 - Inspect both camera targets with `xcodebuild -list`.
 - Compile both target source sets with the current SDK using host-compatible deployment/architecture overrides. This is not an iOS 6 binary acceptance build.
 - Run `plutil -lint` and `git diff --check`.
-- Build the modern importer and its XCTest bundle for a generic iOS device. Run `Phase45Tests` on an available iOS Simulator for API authorization/pagination, resumable verified download, photo-only fallback, and idempotent import history.
+- Build the modern importer and its XCTest bundle for a generic iOS device. Run the complete test bundle on an available iOS Simulator and inspect the xcresult test count for Manifest boundaries, API authorization/pagination, resumable verified download, photo-only fallback, and durable import-journal recovery.
 
 ## Additional transaction checks on an iOS test host
 
