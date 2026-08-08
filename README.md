@@ -1,8 +1,8 @@
 # RetroLive
 
-RetroLive is a two-generation legacy camera and future modern importer for producing motion-photo assets on iPhones that never supported native Live Photo capture.
+RetroLive is a two-generation legacy camera and modern importer for producing motion-photo assets on iPhones that never supported native Live Photo capture.
 
-The repository now contains the **Phase 2 Legacy Motion Capture Foundation** and the code-complete portion of **Phase 3 Read-only LAN Transfer**: iOS 6 Legacy and iOS 8 Classic targets, shared still-plus-motion capture, transactional local asset storage, Manifest V1 writing, a local RetroLive library, and an explicitly enabled paired HTTP/Bonjour transfer service. The modern import workflow and Live Photo assembly remain out of scope.
+The repository now contains the code-complete portions of **Phase 0–5**: the versioned protocol, iOS 6 Legacy and iOS 8 Classic capture targets, transactional still-plus-motion storage, paired read-only HTTP/Bonjour transfer, a modern downloader with resumable checksum-verified caching, Live Photo assembly, and idempotent PhotoKit import. Hardware-dependent capture, LAN, Photos, and Live Photo playback checks remain device acceptance work.
 
 ## Repository layout
 
@@ -80,6 +80,8 @@ The legacy project deliberately keeps its deployment target at iOS 6.0. Building
 - Real-camera timing, audio, orientation, and 20-shot stability still require the target devices.
 - Phase 3 routing, pairing, bearer authorization, pagination, immutable media access, and Range behavior are covered by a host integration test.
 - Bonjour discovery, real-device transfer, capture/download concurrency, and archived iOS 6 builds remain device acceptance checks.
-- No modern import workflow, PhotoKit write, or Live Photo assembly is implemented.
+- Phase 4 API, discovery, pairing, pagination, resumable download, SHA-256 verification, and immutable cache code compile with the modern app test bundle.
+- Phase 5 JPEG/MOV identifier injection, still-image-time metadata, PhotoKit paired import, photo-only fallback, and idempotent history code compile with the modern app test bundle.
+- Modern importer unit tests require an available iOS Simulator to execute; current-host build-for-testing is not a substitute for the physical-device acceptance cases.
 
-See [docs/phase0-2-completion-audit.md](docs/phase0-2-completion-audit.md), [docs/phase2-plan.md](docs/phase2-plan.md), [docs/phase3-delivery.md](docs/phase3-delivery.md), [docs/camera-ui-measurements.md](docs/camera-ui-measurements.md), and [docs/test-plan.md](docs/test-plan.md).
+See [docs/phase0-2-completion-audit.md](docs/phase0-2-completion-audit.md), [docs/phase2-plan.md](docs/phase2-plan.md), [docs/phase3-delivery.md](docs/phase3-delivery.md), [docs/phase4-5-delivery.md](docs/phase4-5-delivery.md), [docs/camera-ui-measurements.md](docs/camera-ui-measurements.md), and [docs/test-plan.md](docs/test-plan.md).

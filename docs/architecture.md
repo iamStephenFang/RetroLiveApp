@@ -1,6 +1,6 @@
 # Architecture
 
-RetroLive has two legacy camera targets and a future modern importer. The camera targets share source-level Capture, Device, Asset, Manifest, and Library foundations. The importer shares only the versioned protocol under `protocol/`.
+RetroLive has two legacy camera targets and one modern importer. The camera targets share source-level Capture, Device, Asset, Manifest, and Library foundations. The importer consumes the versioned protocol under `protocol/` without sharing legacy implementation code.
 
 ```text
 Legacy UI (iOS 6) ----\
@@ -12,6 +12,12 @@ Classic UI (iOS 8) ---/                         -> Assets/{assetId}/photo.jpg
                                            RLVTransferRouter
                                                            |
                                   HTTP + Bonjour read-only transfer
+                                                           |
+                                  CameraAPIClient + DownloadStore
+                                                           |
+                                      immutable verified cache
+                                                           |
+                                LivePhotoAssembler + PhotoKit
 ```
 
 ## Boundaries
@@ -33,3 +39,11 @@ Each shutter press creates `RLVCaptureEvent` immediately, including the permanen
 ## Phase 3
 
 The user explicitly starts RLVTransferService from the local library. It publishes _retrolive._tcp., accepts a six-digit pairing code, and streams only committed assets through the versioned read-only HTTP API. RLVTransferRouter owns authorization, pagination, UUID validation, optional-resource handling, and byte ranges; the socket layer never constructs asset filesystem paths. Stopping sharing destroys the router and invalidates its temporary bearer token.
+
+## Phase 4
+
+The modern importer discovers `_retrolive._tcp.` services, pairs through `CameraAPIClient`, paginates the committed asset list, and downloads each Manifest resource through `DownloadStore`. Partial files stay in `Temporary`, byte ranges resume when possible, SHA-256 and byte length are verified while streaming, and only complete assets are atomically committed to the immutable download cache.
+
+## Phase 5
+
+`LivePhotoAssembler` copies verified resources into a separate assembly workspace, writes one content identifier to the JPEG and MOV, writes the Manifest still time to the QuickTime metadata track, then validates the generated pair. `PhotoLibraryImporter` submits `.photo` and `.pairedVideo` in one PhotoKit request; photo-only manifests follow a normal-photo path. `ImportHistoryStore` records the asset identifier after success so repeated imports are idempotent.

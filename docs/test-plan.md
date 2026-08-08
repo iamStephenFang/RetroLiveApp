@@ -1,4 +1,4 @@
-# Phase 2 Test Plan
+# RetroLive Test Plan
 
 ## Automated repository checks
 
@@ -10,6 +10,7 @@
 - Inspect both camera targets with `xcodebuild -list`.
 - Compile both target source sets with the current SDK using host-compatible deployment/architecture overrides. This is not an iOS 6 binary acceptance build.
 - Run `plutil -lint` and `git diff --check`.
+- Build the modern importer and its XCTest bundle for a generic iOS device. Run `Phase45Tests` on an available iOS Simulator for API authorization/pagination, resumable verified download, photo-only fallback, and idempotent import history.
 
 ## Additional transaction checks on an iOS test host
 
@@ -39,3 +40,7 @@ Capture one native Camera reference and one RetroLive screenshot for each exact 
 ## Phase 3 device transfer acceptance
 
 Use the Legacy and Classic device pairs, checksums, interrupted-download cases, capture/download concurrency run, and repeated server lifecycle checks defined in phase3-delivery.md. Host routing tests do not validate Bonjour, the listening socket on iOS, Wi-Fi behavior, or foreground suspension.
+
+## Phase 4–5 modern-device acceptance
+
+Use the pairing, pagination, interruption/relaunch, checksum rejection, Photos permission, Live Photo playback, photo-only fallback, and repeat-import cases in `phase4-5-delivery.md`. Compiler and simulator checks do not validate real Bonjour discovery, Wi-Fi recovery, PhotoKit persistence, or Live Photo animation on a physical iPhone.
