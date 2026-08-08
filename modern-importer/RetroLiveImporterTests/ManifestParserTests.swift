@@ -9,8 +9,25 @@ final class ManifestParserTests: XCTestCase {
         let manifest = try parser.parse(try fixtureData("valid-v1"))
         XCTAssertEqual(manifest.schemaVersion, 1)
         XCTAssertEqual(manifest.assetId, "75A14CE4-3E3F-4BB1-BC27-EFE37D8C2A84")
-        XCTAssertTrue(manifest.motion.hasAudio)
+        XCTAssertTrue(try XCTUnwrap(manifest.motion).hasAudio)
         XCTAssertEqual(manifest.capture.stillImageTimeSeconds, 1.486)
+    }
+
+    func testPhotoOnlyFixture() throws {
+        let manifest = try parser.parse(try fixtureData("photo-only-v1"))
+        XCTAssertNil(manifest.motion)
+        XCTAssertNil(manifest.thumbnail)
+        XCTAssertEqual(manifest.capture.stillImageTimeSeconds, 0)
+    }
+
+    func testMissingMotionIsRejected() throws {
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try fixtureData("photo-only-v1")) as? [String: Any]
+        )
+        object.removeValue(forKey: "motion")
+        XCTAssertThrowsError(try parser.parse(try JSONSerialization.data(withJSONObject: object))) { error in
+            XCTAssertEqual(error as? ManifestParserError, .invalidField("$.motion"))
+        }
     }
 
     func testInvalidHashFixture() throws {

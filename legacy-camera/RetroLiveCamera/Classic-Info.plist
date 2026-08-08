@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key><string>en</string>
-    <key>CFBundleDisplayName</key><string>RetroLive Camera</string>
+    <key>CFBundleDisplayName</key><string>RetroLive Classic</string>
     <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
@@ -15,7 +15,6 @@
     <key>NSCameraUsageDescription</key><string>RetroLive uses the camera to capture local photo assets.</string>
     <key>UIStatusBarHidden</key><true/>
     <key>UIViewControllerBasedStatusBarAppearance</key><false/>
-    <key>UILaunchImageFile</key><string></string>
     <key>UISupportedInterfaceOrientations</key>
     <array><string>UIInterfaceOrientationPortrait</string></array>
 </dict>

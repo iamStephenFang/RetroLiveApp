@@ -36,13 +36,17 @@ NSString * const RLVManifestParserErrorDomain = @"com.retrolive.manifest";
     NSNumber *createdMilliseconds = [root objectForKey:@"createdAtUnixMilliseconds"];
     NSDictionary *captureJSON = [root objectForKey:@"capture"];
     NSDictionary *photoJSON = [root objectForKey:@"photo"];
-    NSDictionary *motionJSON = [root objectForKey:@"motion"];
-    NSDictionary *thumbnailJSON = [root objectForKey:@"thumbnail"];
+    id motionValue = [root objectForKey:@"motion"];
+    id thumbnailValue = [root objectForKey:@"thumbnail"];
+    NSDictionary *motionJSON = [motionValue isKindOfClass:[NSDictionary class]] ? motionValue : nil;
+    NSDictionary *thumbnailJSON = [thumbnailValue isKindOfClass:[NSDictionary class]] ? thumbnailValue : nil;
     NSDictionary *deviceJSON = [root objectForKey:@"device"];
     if (![assetId isKindOfClass:[NSString class]] || ![createdAt isKindOfClass:[NSString class]] ||
         ![createdMilliseconds isKindOfClass:[NSNumber class]] || ![captureJSON isKindOfClass:[NSDictionary class]] ||
-        ![photoJSON isKindOfClass:[NSDictionary class]] || ![motionJSON isKindOfClass:[NSDictionary class]] ||
-        ![thumbnailJSON isKindOfClass:[NSDictionary class]] || ![deviceJSON isKindOfClass:[NSDictionary class]]) {
+        ![photoJSON isKindOfClass:[NSDictionary class]] || motionValue == nil ||
+        !([motionValue isKindOfClass:[NSDictionary class]] || motionValue == [NSNull null]) ||
+        (thumbnailValue != nil && ![thumbnailValue isKindOfClass:[NSDictionary class]]) ||
+        ![deviceJSON isKindOfClass:[NSDictionary class]]) {
         [self setError:error code:RLVManifestParserErrorMissingValue message:@"Manifest is missing one or more required values."];
         return nil;
     }
@@ -85,32 +89,37 @@ NSString * const RLVManifestParserErrorDomain = @"com.retrolive.manifest";
     }
 
     RLVImageResource *photo = [[RLVImageResource alloc] init];
-    RLVMotionResource *motion = [[RLVMotionResource alloc] init];
-    RLVImageResource *thumbnail = [[RLVImageResource alloc] init];
+    RLVMotionResource *motion = motionJSON ? [[RLVMotionResource alloc] init] : nil;
+    RLVImageResource *thumbnail = thumbnailJSON ? [[RLVImageResource alloc] init] : nil;
     if (![self readResource:photoJSON into:photo image:YES error:error] ||
-        ![self readResource:motionJSON into:motion image:NO error:error] ||
-        ![self readResource:thumbnailJSON into:thumbnail image:YES error:error]) {
+        (motion && ![self readResource:motionJSON into:motion image:NO error:error]) ||
+        (thumbnail && ![self readResource:thumbnailJSON into:thumbnail image:YES error:error])) {
         return nil;
     }
 
-    id duration = [motionJSON objectForKey:@"durationSeconds"];
-    id motionWidth = [motionJSON objectForKey:@"width"];
-    id motionHeight = [motionJSON objectForKey:@"height"];
-    id frameRate = [motionJSON objectForKey:@"frameRate"];
-    id hasAudio = [motionJSON objectForKey:@"hasAudio"];
-    if (![duration isKindOfClass:[NSNumber class]] || ![motionWidth isKindOfClass:[NSNumber class]] ||
-        ![motionHeight isKindOfClass:[NSNumber class]] || ![frameRate isKindOfClass:[NSNumber class]] ||
-        ![hasAudio isKindOfClass:[NSNumber class]]) {
-        [self setError:error code:RLVManifestParserErrorMissingValue message:@"motion is missing one or more required values."];
-        return nil;
-    }
-    motion.durationSeconds = [duration doubleValue];
-    motion.width = [motionWidth unsignedIntegerValue];
-    motion.height = [motionHeight unsignedIntegerValue];
-    motion.frameRate = [frameRate doubleValue];
-    motion.hasAudio = [hasAudio boolValue];
-    if (motion.durationSeconds <= 0 || motion.width == 0 || motion.height == 0 || motion.frameRate <= 0 || capture.stillImageTimeSeconds > motion.durationSeconds) {
-        [self setError:error code:RLVManifestParserErrorInvalidValue message:@"motion contains an invalid value or still image time is out of range."];
+    if (motion) {
+        id duration = [motionJSON objectForKey:@"durationSeconds"];
+        id motionWidth = [motionJSON objectForKey:@"width"];
+        id motionHeight = [motionJSON objectForKey:@"height"];
+        id frameRate = [motionJSON objectForKey:@"frameRate"];
+        id hasAudio = [motionJSON objectForKey:@"hasAudio"];
+        if (![duration isKindOfClass:[NSNumber class]] || ![motionWidth isKindOfClass:[NSNumber class]] ||
+            ![motionHeight isKindOfClass:[NSNumber class]] || ![frameRate isKindOfClass:[NSNumber class]] ||
+            ![hasAudio isKindOfClass:[NSNumber class]]) {
+            [self setError:error code:RLVManifestParserErrorMissingValue message:@"motion is missing one or more required values."];
+            return nil;
+        }
+        motion.durationSeconds = [duration doubleValue];
+        motion.width = [motionWidth unsignedIntegerValue];
+        motion.height = [motionHeight unsignedIntegerValue];
+        motion.frameRate = [frameRate doubleValue];
+        motion.hasAudio = [hasAudio boolValue];
+        if (motion.durationSeconds <= 0 || motion.width == 0 || motion.height == 0 || motion.frameRate <= 0 || capture.stillImageTimeSeconds > motion.durationSeconds) {
+            [self setError:error code:RLVManifestParserErrorInvalidValue message:@"motion contains an invalid value or still image time is out of range."];
+            return nil;
+        }
+    } else if (capture.stillImageTimeSeconds != 0 || capture.preRollSeconds != 0 || capture.postRollSeconds != 0) {
+        [self setError:error code:RLVManifestParserErrorInvalidValue message:@"Photo-only assets require zero motion timing values."];
         return nil;
     }
 

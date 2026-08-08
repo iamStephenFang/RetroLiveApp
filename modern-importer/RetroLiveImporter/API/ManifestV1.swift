@@ -7,8 +7,8 @@ struct ManifestV1: Codable, Equatable, Sendable {
     let createdAtUnixMilliseconds: Int64
     let capture: Capture
     let photo: ImageResource
-    let motion: MotionResource
-    let thumbnail: ImageResource
+    let motion: MotionResource?
+    let thumbnail: ImageResource?
     let device: Device
 
     struct Capture: Codable, Equatable, Sendable {
@@ -60,4 +60,3 @@ struct ManifestV1: Codable, Equatable, Sendable {
     enum FlashMode: String, Codable, Sendable { case off, on, auto }
     enum StillImageTimeAccuracy: String, Codable, Sendable { case measured, estimated }
 }
-

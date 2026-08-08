@@ -39,6 +39,9 @@ struct ManifestParser: Sendable {
                 supported: Self.supportedSchemaVersions
             )
         }
+        guard root.keys.contains("motion") else {
+            throw ManifestParserError.invalidField("$.motion")
+        }
 
         let manifest: ManifestV1
         do {
@@ -71,10 +74,18 @@ struct ManifestParser: Sendable {
             throw ManifestParserError.invalidField("$.capture")
         }
         try validateImage(manifest.photo, path: "$.photo")
-        try validateImage(manifest.thumbnail, path: "$.thumbnail")
-        try validateMotion(manifest.motion)
-        guard manifest.capture.stillImageTimeSeconds <= manifest.motion.durationSeconds else {
-            throw ManifestParserError.invalidField("$.capture.stillImageTimeSeconds")
+        if let thumbnail = manifest.thumbnail {
+            try validateImage(thumbnail, path: "$.thumbnail")
+        }
+        if let motion = manifest.motion {
+            try validateMotion(motion)
+            guard manifest.capture.stillImageTimeSeconds <= motion.durationSeconds else {
+                throw ManifestParserError.invalidField("$.capture.stillImageTimeSeconds")
+            }
+        } else if manifest.capture.stillImageTimeSeconds != 0 ||
+                    manifest.capture.preRollSeconds != 0 ||
+                    manifest.capture.postRollSeconds != 0 {
+            throw ManifestParserError.invalidField("$.capture")
         }
         guard !manifest.device.modelIdentifier.isEmpty,
               !manifest.device.systemVersion.isEmpty,
@@ -154,4 +165,3 @@ struct ManifestParser: Sendable {
         return suffix.isEmpty ? "$" : "$.\(suffix)"
     }
 }
-

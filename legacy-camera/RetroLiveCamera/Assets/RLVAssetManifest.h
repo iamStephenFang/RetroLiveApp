@@ -44,7 +44,7 @@
 @property (nonatomic, assign) long long createdAtUnixMilliseconds;
 @property (nonatomic, strong) RLVCaptureMetadata *capture;
 @property (nonatomic, strong) RLVImageResource *photo;
-@property (nonatomic, strong) RLVMotionResource *motion;
-@property (nonatomic, strong) RLVImageResource *thumbnail;
+@property (nonatomic, strong) RLVMotionResource *motion; // nil for a Phase 1 still asset
+@property (nonatomic, strong) RLVImageResource *thumbnail; // optional
 @property (nonatomic, strong) RLVDeviceMetadata *device;
 @end

@@ -31,6 +31,15 @@ def resolve_reference(root_schema, reference):
 
 
 def validate_schema_instance(instance, schema, root_schema, path="$"):
+    if "anyOf" in schema:
+        errors = []
+        for candidate in schema["anyOf"]:
+            try:
+                validate_schema_instance(instance, candidate, root_schema, path)
+                return
+            except ValueError as error:
+                errors.append(str(error))
+        raise ValueError(f"{path}: value did not match any allowed schema")
     if "$ref" in schema:
         validate_schema_instance(instance, resolve_reference(root_schema, schema["$ref"]), root_schema, path)
     for item in schema.get("allOf", []):
@@ -44,6 +53,7 @@ def validate_schema_instance(instance, schema, root_schema, path="$"):
         "integer": isinstance(instance, int) and not isinstance(instance, bool),
         "number": isinstance(instance, (int, float)) and not isinstance(instance, bool),
         "boolean": isinstance(instance, bool),
+        "null": instance is None,
     }
     if expected is not None and not type_matches.get(expected, False):
         raise ValueError(f"{path}: schema expected {expected}")
@@ -152,21 +162,28 @@ def validate_manifest(document):
             raise ValueError(f"$.capture.{key}: must be non-negative")
 
     photo = require(document, "photo", dict, "$")
-    motion = require(document, "motion", dict, "$")
-    thumbnail = require(document, "thumbnail", dict, "$")
+    if "motion" not in document:
+        raise ValueError("$.motion: required value is missing")
+    motion = document["motion"]
+    thumbnail = document.get("thumbnail")
     validate_resource(photo, "$.photo", image=True)
-    validate_resource(motion, "$.motion")
-    validate_resource(thumbnail, "$.thumbnail", image=True)
-    duration = require(motion, "durationSeconds", float, "$.motion")
-    if duration <= 0:
-        raise ValueError("$.motion.durationSeconds: must be positive")
-    if still_time > duration:
-        raise ValueError("$.capture.stillImageTimeSeconds: exceeds motion duration")
-    if require(motion, "width", int, "$.motion") <= 0 or require(motion, "height", int, "$.motion") <= 0:
-        raise ValueError("$.motion: dimensions must be positive")
-    if require(motion, "frameRate", float, "$.motion") <= 0:
-        raise ValueError("$.motion.frameRate: must be positive")
-    require(motion, "hasAudio", bool, "$.motion")
+    if thumbnail is not None:
+        validate_resource(thumbnail, "$.thumbnail", image=True)
+    if motion is None:
+        if still_time != 0 or capture["preRollSeconds"] != 0 or capture["postRollSeconds"] != 0:
+            raise ValueError("$.capture: photo-only assets require zero motion timing values")
+    else:
+        validate_resource(motion, "$.motion")
+        duration = require(motion, "durationSeconds", float, "$.motion")
+        if duration <= 0:
+            raise ValueError("$.motion.durationSeconds: must be positive")
+        if still_time > duration:
+            raise ValueError("$.capture.stillImageTimeSeconds: exceeds motion duration")
+        if require(motion, "width", int, "$.motion") <= 0 or require(motion, "height", int, "$.motion") <= 0:
+            raise ValueError("$.motion: dimensions must be positive")
+        if require(motion, "frameRate", float, "$.motion") <= 0:
+            raise ValueError("$.motion.frameRate: must be positive")
+        require(motion, "hasAudio", bool, "$.motion")
 
     device = require(document, "device", dict, "$")
     for key in ("modelIdentifier", "systemVersion", "appVersion"):
