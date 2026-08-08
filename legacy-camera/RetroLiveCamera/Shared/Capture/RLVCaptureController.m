@@ -1,17 +1,34 @@
 #import "RLVCaptureController.h"
+#import <math.h>
 
 NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
 
-@interface RLVCaptureController () {
+static const NSTimeInterval RLVTargetPreRollSeconds = 1.5;
+static const NSTimeInterval RLVTargetPostRollSeconds = 1.5;
+static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
+
+@interface RLVCaptureController () <AVCaptureFileOutputRecordingDelegate> {
     dispatch_queue_t _sessionQueue;
 }
 @property (nonatomic, assign, readwrite) RLVCaptureState state;
 @property (nonatomic, strong) AVCaptureSession *session;
 @property (nonatomic, strong) AVCaptureDeviceInput *videoInput;
 @property (nonatomic, strong) AVCaptureStillImageOutput *stillImageOutput;
+@property (nonatomic, strong) AVCaptureMovieFileOutput *movieFileOutput;
+@property (nonatomic, strong) AVCaptureDeviceInput *audioInput;
 @property (nonatomic, strong, readwrite) AVCaptureVideoPreviewLayer *previewLayer;
 @property (nonatomic, assign, readwrite) AVCaptureDevicePosition cameraPosition;
 @property (nonatomic, assign, readwrite) AVCaptureFlashMode flashMode;
+@property (nonatomic, strong) NSURL *rollingURL;
+@property (nonatomic, strong) NSDate *rollingStartedAt;
+@property (nonatomic, strong) RLVCaptureEvent *pendingEvent;
+@property (nonatomic, strong) NSData *pendingPhotoData;
+@property (nonatomic, strong) NSURL *pendingMotionURL;
+@property (nonatomic, assign) BOOL pendingMotionFinished;
+@property (nonatomic, assign) AVCaptureVideoOrientation rollingOrientation;
+@property (nonatomic, assign) BOOL wantsSessionRunning;
+@property (nonatomic, assign) BOOL cameraSwitchPending;
+@property (nonatomic, assign) BOOL orientationRestartPending;
 @end
 
 @implementation RLVCaptureController
@@ -23,7 +40,9 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
         _state = RLVCaptureStateIdle;
         _cameraPosition = AVCaptureDevicePositionBack;
         _flashMode = AVCaptureFlashModeAuto;
+        _rollingOrientation = AVCaptureVideoOrientationPortrait;
         _sessionQueue = dispatch_queue_create("com.retrolive.capture.session", DISPATCH_QUEUE_SERIAL);
+        [self removeAbandonedRollingFiles];
     }
     return self;
 }
@@ -48,6 +67,10 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
         AVCaptureDeviceInput *input = device ? [AVCaptureDeviceInput deviceInputWithDevice:device error:&error] : nil;
         AVCaptureStillImageOutput *output = [[AVCaptureStillImageOutput alloc] init];
         output.outputSettings = [NSDictionary dictionaryWithObject:AVVideoCodecJPEG forKey:AVVideoCodecKey];
+        AVCaptureMovieFileOutput *movieOutput = [[AVCaptureMovieFileOutput alloc] init];
+        movieOutput.maxRecordedDuration = CMTimeMakeWithSeconds(RLVMaximumRollingSegmentSeconds, 600);
+        AVCaptureDevice *audioDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeAudio];
+        AVCaptureDeviceInput *audioInput = audioDevice ? [AVCaptureDeviceInput deviceInputWithDevice:audioDevice error:NULL] : nil;
 
         [session beginConfiguration];
         if (input && [session canAddInput:input]) {
@@ -60,12 +83,22 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
         } else if (error == nil) {
             error = [self errorWithCode:2 description:@"Still image output is unavailable."];
         }
+        if (error == nil && [session canAddOutput:movieOutput]) {
+            [session addOutput:movieOutput];
+        } else if (error == nil) {
+            error = [self errorWithCode:7 description:@"Motion video output is unavailable."];
+        }
+        if (error == nil && audioInput && [session canAddInput:audioInput]) {
+            [session addInput:audioInput];
+        }
         [session commitConfiguration];
 
         if (error == nil) {
             self.session = session;
             self.videoInput = input;
             self.stillImageOutput = output;
+            self.movieFileOutput = movieOutput;
+            self.audioInput = audioInput;
             self.cameraPosition = [device position];
             self.previewLayer = [AVCaptureVideoPreviewLayer layerWithSession:session];
             self.previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
@@ -93,10 +126,12 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
 - (void)startRunning
 {
     dispatch_async(_sessionQueue, ^{
+        self.wantsSessionRunning = YES;
         if (self.session && ![self.session isRunning]) {
             [self.session startRunning];
         }
         if ([self.session isRunning]) {
+            [self startRollingRecording];
             dispatch_async(dispatch_get_main_queue(), ^{ [self updateState:RLVCaptureStateRunning]; });
         }
     });
@@ -105,6 +140,8 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
 - (void)stopRunning
 {
     dispatch_async(_sessionQueue, ^{
+        self.wantsSessionRunning = NO;
+        if ([self.movieFileOutput isRecording]) [self.movieFileOutput stopRecording];
         if ([self.session isRunning]) {
             [self.session stopRunning];
         }
@@ -115,6 +152,8 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
 - (void)interrupt
 {
     dispatch_async(_sessionQueue, ^{
+        self.wantsSessionRunning = NO;
+        if ([self.movieFileOutput isRecording]) [self.movieFileOutput stopRecording];
         if ([self.session isRunning]) [self.session stopRunning];
         dispatch_async(dispatch_get_main_queue(), ^{ [self updateState:RLVCaptureStateInterrupted]; });
     });
@@ -124,6 +163,21 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
 {
     if (self.state != RLVCaptureStateInterrupted) return;
     [self startRunning];
+}
+
+- (void)updateVideoOrientation:(AVCaptureVideoOrientation)videoOrientation
+{
+    dispatch_async(_sessionQueue, ^{
+        if (self.rollingOrientation == videoOrientation) return;
+        self.rollingOrientation = videoOrientation;
+        if (self.pendingEvent) return;
+        if ([self.movieFileOutput isRecording]) {
+            self.orientationRestartPending = YES;
+            [self.movieFileOutput stopRecording];
+        } else if (self.wantsSessionRunning) {
+            [self startRollingRecording];
+        }
+    });
 }
 
 - (void)capturePhotoWithOrientation:(RLVCaptureOrientation)orientation
@@ -140,11 +194,16 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
     event.cameraPosition = self.cameraPosition;
     event.mirrored = self.cameraPosition == AVCaptureDevicePositionFront;
     event.flashMode = [self stringForFlashMode:self.flashMode];
+    self.pendingEvent = event;
+    self.pendingPhotoData = nil;
+    self.pendingMotionURL = nil;
+    self.pendingMotionFinished = NO;
     [self updateState:RLVCaptureStateCapturing];
 
     dispatch_async(_sessionQueue, ^{
         AVCaptureConnection *connection = [self.stillImageOutput connectionWithMediaType:AVMediaTypeVideo];
         if (connection == nil) {
+            self.pendingEvent = nil;
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self updateState:RLVCaptureStateRunning];
                 [self notifyError:[self errorWithCode:6 description:@"Still image connection is unavailable."]];
@@ -160,17 +219,27 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
         [self.stillImageOutput captureStillImageAsynchronouslyFromConnection:connection
                                                            completionHandler:^(CMSampleBufferRef buffer, NSError *error) {
             NSData *data = buffer ? [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:buffer] : nil;
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self updateState:RLVCaptureStateRunning];
-                if (data) {
-                    if ([self.delegate respondsToSelector:@selector(captureController:didCapturePhotoData:event:)]) {
-                        [self.delegate captureController:self didCapturePhotoData:data event:event];
-                    }
-                } else {
-                    [self notifyError:error ?: [self errorWithCode:3 description:@"The camera returned no JPEG data."]];
+            dispatch_async(self->_sessionQueue, ^{
+                if (self.pendingEvent != event) return;
+                if (!data) {
+                    [self failPendingCapture:error ?: [self errorWithCode:3 description:@"The camera returned no JPEG data."]];
+                    return;
+                }
+                self.pendingPhotoData = data;
+                if (self.pendingMotionFinished) {
+                    [self completePendingCaptureWithMotionURL:nil];
                 }
             });
         }];
+        if ([self.movieFileOutput isRecording]) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(RLVTargetPostRollSeconds * NSEC_PER_SEC)), self->_sessionQueue, ^{
+                if (self.pendingEvent == event && [self.movieFileOutput isRecording]) {
+                    [self.movieFileOutput stopRecording];
+                }
+            });
+        } else {
+            self.pendingMotionFinished = YES;
+        }
     });
 }
 
@@ -180,6 +249,17 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
         return;
     }
     dispatch_async(_sessionQueue, ^{
+        if ([self.movieFileOutput isRecording]) {
+            self.cameraSwitchPending = YES;
+            [self.movieFileOutput stopRecording];
+            return;
+        }
+        [self performCameraSwitch];
+    });
+}
+
+- (void)performCameraSwitch
+{
         AVCaptureDevicePosition desired = self.cameraPosition == AVCaptureDevicePositionBack
             ? AVCaptureDevicePositionFront : AVCaptureDevicePositionBack;
         AVCaptureDevice *device = [self cameraWithPosition:desired];
@@ -187,6 +267,7 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
         AVCaptureDeviceInput *input = device ? [AVCaptureDeviceInput deviceInputWithDevice:device error:&error] : nil;
         if (!input) {
             dispatch_async(dispatch_get_main_queue(), ^{ [self notifyError:error ?: [self errorWithCode:4 description:@"Camera is unavailable."]]; });
+            self.cameraSwitchPending = NO;
             return;
         }
         [self.session beginConfiguration];
@@ -207,7 +288,190 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
                 }
             });
         }
+        self.cameraSwitchPending = NO;
+}
+
+- (void)startRollingRecording
+{
+    if (!self.wantsSessionRunning || ![self.session isRunning] || self.pendingEvent || [self.movieFileOutput isRecording]) return;
+    NSURL *url = [self uniqueRollingURLWithPrefix:@"segment"];
+    AVCaptureConnection *connection = [self.movieFileOutput connectionWithMediaType:AVMediaTypeVideo];
+    if ([connection isVideoOrientationSupported]) connection.videoOrientation = self.rollingOrientation;
+    if ([connection isVideoMirroringSupported]) connection.videoMirrored = self.cameraPosition == AVCaptureDevicePositionFront;
+    self.rollingURL = url;
+    self.rollingStartedAt = [NSDate date];
+    [self.movieFileOutput startRecordingToOutputFileURL:url recordingDelegate:self];
+}
+
+- (void)captureOutput:(AVCaptureFileOutput *)captureOutput
+didStartRecordingToOutputFileAtURL:(NSURL *)fileURL
+      fromConnections:(NSArray *)connections
+{
+    (void)captureOutput;
+    (void)connections;
+    dispatch_async(_sessionQueue, ^{
+        if ([fileURL isEqual:self.rollingURL]) self.rollingStartedAt = [NSDate date];
     });
+}
+
+- (void)captureOutput:(AVCaptureFileOutput *)captureOutput
+didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
+      fromConnections:(NSArray *)connections
+                error:(NSError *)error
+{
+    (void)captureOutput;
+    (void)connections;
+    dispatch_async(_sessionQueue, ^{
+        if (self.pendingEvent) {
+            if ([[NSFileManager defaultManager] fileExistsAtPath:[outputFileURL path]]) {
+                [self exportMotionFromRollingURL:outputFileURL startedAt:self.rollingStartedAt event:self.pendingEvent];
+            } else {
+                [self finishMotionWithError:error ?: [self errorWithCode:8 description:@"The motion recording returned no movie file."]];
+            }
+            return;
+        }
+
+        [[NSFileManager defaultManager] removeItemAtURL:outputFileURL error:NULL];
+        self.rollingURL = nil;
+        self.rollingStartedAt = nil;
+        if (self.cameraSwitchPending) [self performCameraSwitch];
+        self.orientationRestartPending = NO;
+        [self startRollingRecording];
+    });
+}
+
+- (void)exportMotionFromRollingURL:(NSURL *)sourceURL startedAt:(NSDate *)startedAt event:(RLVCaptureEvent *)event
+{
+    AVURLAsset *asset = [AVURLAsset URLAssetWithURL:sourceURL options:nil];
+    NSTimeInterval sourceDuration = CMTimeGetSeconds([asset duration]);
+    NSTimeInterval shutterOffset = [event.shutterTimestamp timeIntervalSinceDate:startedAt];
+    if (!isfinite(sourceDuration) || sourceDuration <= 0.0 || !isfinite(shutterOffset)) {
+        [[NSFileManager defaultManager] removeItemAtURL:sourceURL error:NULL];
+        [self finishMotionWithError:[self errorWithCode:9 description:@"The recorded motion timeline is invalid."]];
+        return;
+    }
+    shutterOffset = MAX(0.0, MIN(shutterOffset, sourceDuration));
+    NSTimeInterval start = MAX(0.0, shutterOffset - RLVTargetPreRollSeconds);
+    NSTimeInterval end = MIN(sourceDuration, shutterOffset + RLVTargetPostRollSeconds);
+    if (end <= start) {
+        [[NSFileManager defaultManager] removeItemAtURL:sourceURL error:NULL];
+        [self finishMotionWithError:[self errorWithCode:10 description:@"The recorded motion window is empty."]];
+        return;
+    }
+
+    NSURL *outputURL = [self uniqueRollingURLWithPrefix:@"motion"];
+    AVAssetExportSession *exportSession = [[AVAssetExportSession alloc] initWithAsset:asset presetName:AVAssetExportPresetPassthrough];
+    if (!exportSession) {
+        [[NSFileManager defaultManager] removeItemAtURL:sourceURL error:NULL];
+        [self finishMotionWithError:[self errorWithCode:11 description:@"Motion trimming is unsupported for this recording."]];
+        return;
+    }
+    exportSession.outputURL = outputURL;
+    exportSession.outputFileType = AVFileTypeQuickTimeMovie;
+    exportSession.timeRange = CMTimeRangeMake(CMTimeMakeWithSeconds(start, 600), CMTimeMakeWithSeconds(end - start, 600));
+    [exportSession exportAsynchronouslyWithCompletionHandler:^{
+        dispatch_async(self->_sessionQueue, ^{
+            [[NSFileManager defaultManager] removeItemAtURL:sourceURL error:NULL];
+            if ([exportSession status] != AVAssetExportSessionStatusCompleted) {
+                [[NSFileManager defaultManager] removeItemAtURL:outputURL error:NULL];
+                [self finishMotionWithError:[exportSession error] ?: [self errorWithCode:11 description:@"Motion trimming failed."]];
+                return;
+            }
+            [self populateMotionMetadataForEvent:event motionURL:outputURL];
+            if (event.motionDurationSeconds <= 0.0 || event.motionWidth == 0 || event.motionHeight == 0 || event.motionFrameRate <= 0.0) {
+                [[NSFileManager defaultManager] removeItemAtURL:outputURL error:NULL];
+                [self finishMotionWithError:[self errorWithCode:12 description:@"The trimmed motion metadata is invalid."]];
+                return;
+            }
+            event.stillImageTimeSeconds = shutterOffset - start;
+            event.preRollSeconds = event.stillImageTimeSeconds;
+            event.postRollSeconds = MAX(0.0, event.motionDurationSeconds - event.stillImageTimeSeconds);
+            [self completePendingCaptureWithMotionURL:outputURL];
+        });
+    }];
+}
+
+- (void)populateMotionMetadataForEvent:(RLVCaptureEvent *)event motionURL:(NSURL *)motionURL
+{
+    AVURLAsset *asset = [AVURLAsset URLAssetWithURL:motionURL options:nil];
+    AVAssetTrack *videoTrack = [[asset tracksWithMediaType:AVMediaTypeVideo] lastObject];
+    CGRect transformed = CGRectApplyAffineTransform(CGRectMake(0.0, 0.0, [videoTrack naturalSize].width, [videoTrack naturalSize].height), [videoTrack preferredTransform]);
+    event.motionDurationSeconds = CMTimeGetSeconds([asset duration]);
+    event.motionWidth = (NSUInteger)llround(fabs(transformed.size.width));
+    event.motionHeight = (NSUInteger)llround(fabs(transformed.size.height));
+    event.motionFrameRate = [videoTrack nominalFrameRate];
+    event.motionHasAudio = [[asset tracksWithMediaType:AVMediaTypeAudio] count] > 0;
+}
+
+- (void)completePendingCaptureWithMotionURL:(NSURL *)motionURL
+{
+    if (!self.pendingEvent) return;
+    self.pendingMotionFinished = YES;
+    if (motionURL) self.pendingMotionURL = motionURL;
+    if (!self.pendingPhotoData) return;
+
+    RLVCaptureEvent *event = self.pendingEvent;
+    NSData *photoData = self.pendingPhotoData;
+    NSURL *completedMotionURL = self.pendingMotionURL;
+    self.pendingEvent = nil;
+    self.pendingPhotoData = nil;
+    self.pendingMotionURL = nil;
+    self.pendingMotionFinished = NO;
+    self.rollingURL = nil;
+    self.rollingStartedAt = nil;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (self.wantsSessionRunning) [self updateState:RLVCaptureStateRunning];
+        if ([self.delegate respondsToSelector:@selector(captureController:didCapturePhotoData:motionURL:event:)]) {
+            [self.delegate captureController:self didCapturePhotoData:photoData motionURL:completedMotionURL event:event];
+        }
+    });
+    [self startRollingRecording];
+}
+
+- (void)finishMotionWithError:(NSError *)error
+{
+    if (self.pendingEvent) {
+        self.pendingEvent.stillImageTimeSeconds = 0.0;
+        self.pendingEvent.preRollSeconds = 0.0;
+        self.pendingEvent.postRollSeconds = 0.0;
+        [self completePendingCaptureWithMotionURL:nil];
+    }
+    dispatch_async(dispatch_get_main_queue(), ^{ [self notifyError:error]; });
+}
+
+- (void)failPendingCapture:(NSError *)error
+{
+    if (self.pendingMotionURL) [[NSFileManager defaultManager] removeItemAtURL:self.pendingMotionURL error:NULL];
+    self.pendingEvent = nil;
+    self.pendingPhotoData = nil;
+    self.pendingMotionURL = nil;
+    self.pendingMotionFinished = NO;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self updateState:RLVCaptureStateRunning];
+        [self notifyError:error];
+    });
+    [self startRollingRecording];
+}
+
+- (NSURL *)rollingDirectoryURL
+{
+    NSString *path = [NSTemporaryDirectory() stringByAppendingPathComponent:@"RetroLiveRolling"];
+    NSURL *url = [NSURL fileURLWithPath:path isDirectory:YES];
+    [[NSFileManager defaultManager] createDirectoryAtURL:url withIntermediateDirectories:YES attributes:nil error:NULL];
+    return url;
+}
+
+- (NSURL *)uniqueRollingURLWithPrefix:(NSString *)prefix
+{
+    NSString *filename = [NSString stringWithFormat:@"%@-%@.mov", prefix, [[NSUUID UUID] UUIDString]];
+    return [[self rollingDirectoryURL] URLByAppendingPathComponent:filename];
+}
+
+- (void)removeAbandonedRollingFiles
+{
+    NSURL *directory = [self rollingDirectoryURL];
+    NSArray *children = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:directory includingPropertiesForKeys:nil options:0 error:NULL];
+    for (NSURL *url in children) [[NSFileManager defaultManager] removeItemAtURL:url error:NULL];
 }
 
 - (void)setFlashMode:(AVCaptureFlashMode)flashMode
@@ -301,8 +565,20 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
 @synthesize session = _session;
 @synthesize videoInput = _videoInput;
 @synthesize stillImageOutput = _stillImageOutput;
+@synthesize movieFileOutput = _movieFileOutput;
+@synthesize audioInput = _audioInput;
 @synthesize previewLayer = _previewLayer;
 @synthesize cameraPosition = _cameraPosition;
 @synthesize flashMode = _flashMode;
+@synthesize rollingURL = _rollingURL;
+@synthesize rollingStartedAt = _rollingStartedAt;
+@synthesize pendingEvent = _pendingEvent;
+@synthesize pendingPhotoData = _pendingPhotoData;
+@synthesize pendingMotionURL = _pendingMotionURL;
+@synthesize pendingMotionFinished = _pendingMotionFinished;
+@synthesize rollingOrientation = _rollingOrientation;
+@synthesize wantsSessionRunning = _wantsSessionRunning;
+@synthesize cameraSwitchPending = _cameraSwitchPending;
+@synthesize orientationRestartPending = _orientationRestartPending;
 
 @end

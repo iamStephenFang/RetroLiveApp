@@ -5,6 +5,7 @@
 
 + (NSDictionary *)manifestForEvent:(RLVCaptureEvent *)event
                          photoData:(NSData *)photoData
+                        motionData:(NSData *)motionData
                               width:(NSUInteger)width
                              height:(NSUInteger)height
                        capabilities:(RLVDeviceCapabilities *)capabilities
@@ -13,15 +14,16 @@
     long long milliseconds = (long long)llround([event.shutterTimestamp timeIntervalSince1970] * 1000.0);
     NSString *cameraPosition = event.cameraPosition == AVCaptureDevicePositionFront ? @"front" : @"back";
     NSString *appVersion = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"] ?: @"1.0";
+    BOOL hasMotion = motionData != nil;
     NSDictionary *capture = [NSDictionary dictionaryWithObjectsAndKeys:
         cameraPosition, @"cameraPosition",
         [NSNumber numberWithInteger:event.orientation], @"orientation",
         [NSNumber numberWithBool:event.isMirrored], @"mirrored",
         event.flashMode ?: @"off", @"flashMode",
-        [NSNumber numberWithDouble:0.0], @"stillImageTimeSeconds",
+        [NSNumber numberWithDouble:hasMotion ? event.stillImageTimeSeconds : 0.0], @"stillImageTimeSeconds",
         @"estimated", @"stillImageTimeAccuracy",
-        [NSNumber numberWithDouble:0.0], @"preRollSeconds",
-        [NSNumber numberWithDouble:0.0], @"postRollSeconds",
+        [NSNumber numberWithDouble:hasMotion ? event.preRollSeconds : 0.0], @"preRollSeconds",
+        [NSNumber numberWithDouble:hasMotion ? event.postRollSeconds : 0.0], @"postRollSeconds",
         [NSNumber numberWithLongLong:milliseconds], @"shutterTimestampUnixMilliseconds", nil];
     NSDictionary *photo = [NSDictionary dictionaryWithObjectsAndKeys:
         @"photo.jpg", @"filename", @"image/jpeg", @"mimeType",
@@ -34,11 +36,23 @@
         capabilities.systemVersion ?: @"unknown", @"systemVersion",
         appVersion, @"appVersion",
         capabilities.architecture ?: @"unknown", @"architecture", nil];
+    id motion = [NSNull null];
+    if (hasMotion) {
+        motion = [NSDictionary dictionaryWithObjectsAndKeys:
+            @"motion.mov", @"filename", @"video/quicktime", @"mimeType",
+            [NSNumber numberWithDouble:event.motionDurationSeconds], @"durationSeconds",
+            [NSNumber numberWithUnsignedInteger:event.motionWidth], @"width",
+            [NSNumber numberWithUnsignedInteger:event.motionHeight], @"height",
+            [NSNumber numberWithDouble:event.motionFrameRate], @"frameRate",
+            [NSNumber numberWithBool:event.motionHasAudio], @"hasAudio",
+            [NSNumber numberWithUnsignedLongLong:[motionData length]], @"byteLength",
+            [self SHA256ForData:motionData], @"sha256", nil];
+    }
     return [NSDictionary dictionaryWithObjectsAndKeys:
         [NSNumber numberWithInteger:1], @"schemaVersion",
         event.assetId, @"assetId", createdAt, @"createdAt",
         [NSNumber numberWithLongLong:milliseconds], @"createdAtUnixMilliseconds",
-        capture, @"capture", photo, @"photo", [NSNull null], @"motion", device, @"device", nil];
+        capture, @"capture", photo, @"photo", motion, @"motion", device, @"device", nil];
 }
 
 + (NSData *)JSONDataForManifest:(NSDictionary *)manifest error:(NSError **)error

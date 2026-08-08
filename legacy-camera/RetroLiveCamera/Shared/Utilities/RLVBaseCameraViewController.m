@@ -163,11 +163,12 @@
     }
 }
 
-- (void)captureController:(RLVCaptureController *)controller didCapturePhotoData:(NSData *)photoData event:(RLVCaptureEvent *)event
+- (void)captureController:(RLVCaptureController *)controller didCapturePhotoData:(NSData *)photoData motionURL:(NSURL *)motionURL event:(RLVCaptureEvent *)event
 {
     (void)controller;
-    [[RLVAssetStore sharedStore] createAssetWithPhotoData:photoData event:event capabilities:self.capabilities
+    [[RLVAssetStore sharedStore] createAssetWithPhotoData:photoData motionURL:motionURL event:event capabilities:self.capabilities
                                               completion:^(RLVAsset *asset, NSError *error) {
+        if (motionURL) [[NSFileManager defaultManager] removeItemAtURL:motionURL error:NULL];
         if (asset) [self updateThumbnail];
         if (error) [self showError:error];
     }];
@@ -181,6 +182,7 @@
 
 - (void)orientationCoordinator:(RLVCameraOrientationCoordinator *)coordinator didUpdateControlTransform:(CGAffineTransform)transform
 {
+    [self.captureController updateVideoOrientation:coordinator.videoOrientation];
     AVCaptureConnection *previewConnection = self.captureController.previewLayer.connection;
     if ([previewConnection isVideoOrientationSupported]) {
         previewConnection.videoOrientation = coordinator.videoOrientation;

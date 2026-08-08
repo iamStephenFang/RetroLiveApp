@@ -1,11 +1,11 @@
-# Phase 1 Test Plan
+# Phase 2 Test Plan
 
 ## Automated repository checks
 
 - Validate motion, photo-only, malformed-hash, and unsupported-version fixtures with `tools/validate-manifest/validate.py`.
 - Parse both valid asset lifecycles with the Foundation-only Objective-C runner.
 - Type-check the modern Swift Manifest model/parser.
-- Run the Objective-C asset-store integration runner against a temporary Documents root. It commits a generated JPEG, validates Manifest/hash/dimensions, reloads the same UUID, and verifies conservative Temporary recovery.
+- Run the Objective-C asset-store integration runner against a temporary Documents root. It commits generated photo/motion payloads, validates both hashes and media metadata, reloads the same UUID, and verifies conservative Temporary recovery.
 - Inspect both camera targets with `xcodebuild -list`.
 - Compile both target source sets with the current SDK using host-compatible deployment/architecture overrides. This is not an iOS 6 binary acceptance build.
 - Run `plutil -lint` and `git diff --check`.
@@ -18,6 +18,7 @@
 4. Place partial directories under `Temporary`, recreate the store, and assert they are removed.
 5. Place malformed/photo-missing directories under `Assets` and assert `loadAssets:` does not expose them.
 6. Capture five assets, terminate the app, relaunch, and confirm identifiers and order are unchanged.
+7. Verify successful captures contain `motion.mov`, and force a motion failure to verify the JPEG is retained as `motion: null` with zero timings.
 
 ## Real-device capture acceptance
 
@@ -27,6 +28,8 @@
 - Verify Portrait, Landscape Left, and Landscape Right preview/capture/Manifest agreement.
 - Exercise rear/front switching, supported flash modes, focus, background/foreground, low storage, forced termination during staging, and relaunch recovery.
 - Confirm no capture is copied into the system Camera Roll.
+- For warmed captures, verify approximately 1.5 seconds of pre-roll and post-roll, still-time error no greater than 200 ms, correct movie orientation, and audio when permission is granted.
+- Repeat near startup and a rolling-segment boundary and verify any shortened duration is reported accurately rather than padded or fabricated.
 
 ## UI fidelity acceptance
 

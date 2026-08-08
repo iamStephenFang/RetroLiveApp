@@ -13,6 +13,7 @@
     <key>CFBundleVersion</key><string>1</string>
     <key>LSRequiresIPhoneOS</key><true/>
     <key>NSCameraUsageDescription</key><string>RetroLive uses the camera to capture local photo assets.</string>
+    <key>NSMicrophoneUsageDescription</key><string>RetroLive uses the microphone to include sound with motion photos.</string>
     <key>UIStatusBarHidden</key><true/>
     <key>UIViewControllerBasedStatusBarAppearance</key><false/>
     <key>UILaunchImageFile</key><string></string>

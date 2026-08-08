@@ -6,6 +6,7 @@
 
 + (NSDictionary *)manifestForEvent:(RLVCaptureEvent *)event
                          photoData:(NSData *)photoData
+                        motionData:(NSData *)motionData
                               width:(NSUInteger)width
                              height:(NSUInteger)height
                        capabilities:(RLVDeviceCapabilities *)capabilities;

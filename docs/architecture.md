@@ -6,6 +6,7 @@ RetroLive has two legacy camera targets and a future modern importer. The camera
 Legacy UI (iOS 6) ----\
                        -> RLVCaptureController -> RLVAssetStore
 Classic UI (iOS 8) ---/                         -> Assets/{assetId}/photo.jpg
+                                                  Assets/{assetId}/motion.mov
                                                   Assets/{assetId}/manifest.json
 ```
 
@@ -19,4 +20,8 @@ Original downloads and generated paired resources must use separate directories.
 
 Each shutter press creates `RLVCaptureEvent` immediately, including the permanent UUID, shutter timestamp, orientation, and camera position. The still JPEG and Manifest are written into `Temporary/{assetId}`, validated, then moved into `Assets/{assetId}` as the final commit. Startup recovery conservatively removes uncommitted temporary directories.
 
-`RLVCameraOrientationCoordinator` is the single source for preview/capture orientation, EXIF-style manifest orientation, and control transforms. Phase 2 can attach a rolling buffer around the same capture event without changing asset identity or UI ownership.
+`RLVCameraOrientationCoordinator` is the single source for preview/capture orientation, EXIF-style manifest orientation, movie orientation, and control transforms.
+
+## Phase 2
+
+`RLVCaptureController` maintains one bounded, compressed rolling movie on disk. A shutter event captures the JPEG immediately, closes the roll after the post-window, trims a motion clip around that same event, and passes both resources to `RLVAssetStore`. Motion failure degrades to the V1 photo-only representation without losing the independent still.

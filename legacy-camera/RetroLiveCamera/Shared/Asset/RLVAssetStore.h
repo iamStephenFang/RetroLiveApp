@@ -13,6 +13,7 @@ extern NSString * const RLVAssetStoreDidChangeNotification;
 + (RLVAssetStore *)sharedStore;
 - (id)initWithDocumentsURL:(NSURL *)documentsURL;
 - (void)createAssetWithPhotoData:(NSData *)photoData
+                       motionURL:(NSURL *)motionURL
                            event:(RLVCaptureEvent *)event
                     capabilities:(RLVDeviceCapabilities *)capabilities
                       completion:(void (^)(RLVAsset *asset, NSError *error))completion;

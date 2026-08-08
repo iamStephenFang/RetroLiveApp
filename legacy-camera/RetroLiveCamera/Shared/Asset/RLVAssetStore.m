@@ -41,6 +41,7 @@ NSString * const RLVAssetStoreErrorDomain = @"com.retrolive.asset-store";
 }
 
 - (void)createAssetWithPhotoData:(NSData *)photoData
+                       motionURL:(NSURL *)motionURL
                            event:(RLVCaptureEvent *)event
                     capabilities:(RLVDeviceCapabilities *)capabilities
                       completion:(void (^)(RLVAsset *asset, NSError *error))completion
@@ -71,7 +72,12 @@ NSString * const RLVAssetStoreErrorDomain = @"com.retrolive.asset-store";
         if (error == nil && ![photoData writeToURL:photoURL options:NSDataWritingAtomic error:&error]) {
             // error populated by NSData
         }
-        NSDictionary *manifest = error == nil ? [RLVManifest manifestForEvent:event photoData:photoData width:width height:height capabilities:capabilities] : nil;
+        NSData *motionData = motionURL && error == nil ? [NSData dataWithContentsOfURL:motionURL options:NSDataReadingMappedIfSafe error:&error] : nil;
+        NSURL *stagedMotionURL = [stagingURL URLByAppendingPathComponent:@"motion.mov"];
+        if (motionData && error == nil && ![motionData writeToURL:stagedMotionURL options:NSDataWritingAtomic error:&error]) {
+            // error populated by NSData
+        }
+        NSDictionary *manifest = error == nil ? [RLVManifest manifestForEvent:event photoData:photoData motionData:motionData width:width height:height capabilities:capabilities] : nil;
         NSData *manifestData = manifest ? [RLVManifest JSONDataForManifest:manifest error:&error] : nil;
         NSURL *manifestURL = [stagingURL URLByAppendingPathComponent:@"manifest.json"];
         if (error == nil && ![manifestData writeToURL:manifestURL options:NSDataWritingAtomic error:&error]) {
@@ -141,7 +147,11 @@ NSString * const RLVAssetStoreErrorDomain = @"com.retrolive.asset-store";
     if ([motion isKindOfClass:[NSDictionary class]]) {
         NSURL *motionURL = [assetURL URLByAppendingPathComponent:[motion objectForKey:@"filename"] ?: @""];
         NSData *motionData = [NSData dataWithContentsOfURL:motionURL options:NSDataReadingMappedIfSafe error:NULL];
-        motionValid = motionData != nil && [[motion objectForKey:@"byteLength"] unsignedLongLongValue] == [motionData length] &&
+        motionValid = motionData != nil && [[motion objectForKey:@"filename"] isEqualToString:@"motion.mov"] &&
+            [[motion objectForKey:@"durationSeconds"] doubleValue] > 0.0 &&
+            [[motion objectForKey:@"width"] unsignedIntegerValue] > 0 && [[motion objectForKey:@"height"] unsignedIntegerValue] > 0 &&
+            [[motion objectForKey:@"frameRate"] doubleValue] > 0.0 &&
+            [[motion objectForKey:@"byteLength"] unsignedLongLongValue] == [motionData length] &&
             [[[motion objectForKey:@"sha256"] lowercaseString] isEqualToString:[RLVManifest SHA256ForData:motionData]];
     }
     BOOL valid = [manifest isKindOfClass:[NSDictionary class]] && [[manifest objectForKey:@"schemaVersion"] integerValue] == 1 &&

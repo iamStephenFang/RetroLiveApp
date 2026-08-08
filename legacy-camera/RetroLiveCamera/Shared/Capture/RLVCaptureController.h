@@ -28,6 +28,7 @@ typedef NS_ENUM(NSInteger, RLVCaptureState) {
 - (void)resumeAfterInterruption;
 - (void)capturePhotoWithOrientation:(RLVCaptureOrientation)orientation
                    videoOrientation:(AVCaptureVideoOrientation)videoOrientation;
+- (void)updateVideoOrientation:(AVCaptureVideoOrientation)videoOrientation;
 - (void)switchCamera;
 - (void)setFlashMode:(AVCaptureFlashMode)flashMode;
 - (void)focusAtDevicePoint:(CGPoint)devicePoint;
@@ -40,6 +41,7 @@ typedef NS_ENUM(NSInteger, RLVCaptureState) {
 - (void)captureController:(RLVCaptureController *)controller didChangeCameraPosition:(AVCaptureDevicePosition)position;
 - (void)captureController:(RLVCaptureController *)controller
       didCapturePhotoData:(NSData *)photoData
+                motionURL:(NSURL *)motionURL
                     event:(RLVCaptureEvent *)event;
 - (void)captureController:(RLVCaptureController *)controller didFailWithError:(NSError *)error;
 @end

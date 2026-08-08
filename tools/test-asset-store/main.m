@@ -38,11 +38,21 @@ int main(void)
         event.orientation = RLVCaptureOrientationPortrait;
         event.cameraPosition = AVCaptureDevicePositionBack;
         event.flashMode = @"off";
+        event.stillImageTimeSeconds = 1.5;
+        event.preRollSeconds = 1.5;
+        event.postRollSeconds = 1.5;
+        event.motionDurationSeconds = 3.0;
+        event.motionWidth = 1280;
+        event.motionHeight = 720;
+        event.motionFrameRate = 30.0;
+        event.motionHasAudio = YES;
+        NSURL *motionURL = [documentsURL URLByAppendingPathComponent:@"source-motion.mov"];
+        [[@"synthetic-motion-payload" dataUsingEncoding:NSUTF8StringEncoding] writeToURL:motionURL atomically:YES];
 
         __block RLVAsset *committedAsset = nil;
         __block NSError *commitError = nil;
         __block BOOL completed = NO;
-        [store createAssetWithPhotoData:RLVCreateTestJPEG() event:event capabilities:nil completion:^(RLVAsset *asset, NSError *error) {
+        [store createAssetWithPhotoData:RLVCreateTestJPEG() motionURL:motionURL event:event capabilities:nil completion:^(RLVAsset *asset, NSError *error) {
             committedAsset = asset;
             commitError = error;
             completed = YES;
@@ -50,12 +60,23 @@ int main(void)
         while (!completed) {
             [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
         }
-        if (!committedAsset || commitError || ![committedAsset isComplete] || committedAsset.width != 2 || committedAsset.height != 2) {
+        if (!committedAsset || commitError || ![committedAsset isComplete] || ![committedAsset hasMotion] || committedAsset.width != 2 || committedAsset.height != 2) {
             fprintf(stderr, "FAIL asset commit: %s\n", [[commitError description] UTF8String]);
             return 1;
         }
         if (![store validateAssetAtURL:[[committedAsset photoURL] URLByDeletingLastPathComponent] error:&commitError]) {
             fprintf(stderr, "FAIL committed validation: %s\n", [[commitError description] UTF8String]);
+            return 1;
+        }
+        NSData *manifestData = [NSData dataWithContentsOfURL:committedAsset.manifestURL];
+        NSDictionary *manifest = [NSJSONSerialization JSONObjectWithData:manifestData options:0 error:&commitError];
+        NSDictionary *motion = [manifest objectForKey:@"motion"];
+        NSDictionary *capture = [manifest objectForKey:@"capture"];
+        if (![[motion objectForKey:@"filename"] isEqualToString:@"motion.mov"] ||
+            [[motion objectForKey:@"durationSeconds"] doubleValue] != 3.0 ||
+            [[motion objectForKey:@"frameRate"] doubleValue] != 30.0 ||
+            [[capture objectForKey:@"stillImageTimeSeconds"] doubleValue] != 1.5) {
+            fprintf(stderr, "FAIL motion manifest metadata\n");
             return 1;
         }
 
@@ -74,7 +95,7 @@ int main(void)
             return 1;
         }
         [[NSFileManager defaultManager] removeItemAtURL:documentsURL error:NULL];
-        printf("PASS asset transaction: commit, validation, reload, recovery\n");
+        printf("PASS motion asset transaction: commit, validation, reload, recovery\n");
     }
     return 0;
 }
