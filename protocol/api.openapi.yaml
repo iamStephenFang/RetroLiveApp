@@ -34,6 +34,8 @@ paths:
                 $ref: '#/components/schemas/Session'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Too many failed pairing attempts; retry after the temporary lockout
   /device:
     get:
       responses:
@@ -180,7 +182,7 @@ components:
             delete: { type: boolean }
     AssetSummary:
       type: object
-      required: [assetId, createdAt, thumbnailURL, manifestURL]
+      required: [assetId, createdAt, manifestURL]
       properties:
         assetId: { type: string, format: uuid }
         createdAt: { type: string, format: date-time }
@@ -203,4 +205,3 @@ components:
         freeDiskBytes: { type: integer, minimum: 0 }
 security:
   - bearerAuth: []
-

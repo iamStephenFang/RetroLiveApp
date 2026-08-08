@@ -80,6 +80,39 @@ int main(void)
             return 1;
         }
 
+        RLVCaptureEvent *photoEvent = [[RLVCaptureEvent alloc] init];
+        photoEvent.assetId = [[[NSUUID UUID] UUIDString] uppercaseString];
+        photoEvent.shutterTimestamp = [NSDate dateWithTimeIntervalSince1970:1786190401.125];
+        photoEvent.orientation = RLVCaptureOrientationLandscapeLeft;
+        photoEvent.cameraPosition = AVCaptureDevicePositionFront;
+        photoEvent.mirrored = YES;
+        photoEvent.flashMode = @"off";
+        completed = NO;
+        committedAsset = nil;
+        commitError = nil;
+        [store createAssetWithPhotoData:RLVCreateTestJPEG() motionURL:nil event:photoEvent capabilities:nil completion:^(RLVAsset *asset, NSError *error) {
+            committedAsset = asset;
+            commitError = error;
+            completed = YES;
+        }];
+        while (!completed) {
+            [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
+        }
+        if (!committedAsset || commitError || [committedAsset hasMotion]) {
+            fprintf(stderr, "FAIL photo-only commit: %s\n", [[commitError description] UTF8String]);
+            return 1;
+        }
+        NSData *photoManifestData = [NSData dataWithContentsOfURL:committedAsset.manifestURL];
+        NSDictionary *photoManifest = [NSJSONSerialization JSONObjectWithData:photoManifestData options:0 error:&commitError];
+        NSDictionary *photoCapture = [photoManifest objectForKey:@"capture"];
+        if ([photoManifest objectForKey:@"motion"] != [NSNull null] ||
+            [[photoCapture objectForKey:@"stillImageTimeSeconds"] doubleValue] != 0.0 ||
+            [[photoCapture objectForKey:@"preRollSeconds"] doubleValue] != 0.0 ||
+            [[photoCapture objectForKey:@"postRollSeconds"] doubleValue] != 0.0) {
+            fprintf(stderr, "FAIL photo-only manifest semantics\n");
+            return 1;
+        }
+
         NSURL *partial = [[store temporaryURL] URLByAppendingPathComponent:@"PARTIAL" isDirectory:YES];
         [[NSFileManager defaultManager] createDirectoryAtURL:partial withIntermediateDirectories:NO attributes:nil error:NULL];
         [@"partial" writeToURL:[partial URLByAppendingPathComponent:@"photo.jpg"] atomically:YES encoding:NSUTF8StringEncoding error:NULL];
@@ -89,13 +122,30 @@ int main(void)
             return 1;
         }
 
+        NSString *corruptId = [[[NSUUID UUID] UUIDString] uppercaseString];
+        NSURL *corruptURL = [[store assetsURL] URLByAppendingPathComponent:corruptId isDirectory:YES];
+        [[NSFileManager defaultManager] createDirectoryAtURL:corruptURL withIntermediateDirectories:NO attributes:nil error:NULL];
+        [RLVCreateTestJPEG() writeToURL:[corruptURL URLByAppendingPathComponent:@"photo.jpg"] atomically:YES];
+        NSMutableDictionary *corruptManifest = [photoManifest mutableCopy];
+        NSMutableDictionary *corruptPhoto = [[corruptManifest objectForKey:@"photo"] mutableCopy];
+        [corruptManifest setObject:corruptId forKey:@"assetId"];
+        [corruptPhoto setObject:@"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" forKey:@"sha256"];
+        [corruptManifest setObject:corruptPhoto forKey:@"photo"];
+        NSData *corruptData = [NSJSONSerialization dataWithJSONObject:corruptManifest options:0 error:NULL];
+        [corruptData writeToURL:[corruptURL URLByAppendingPathComponent:@"manifest.json"] atomically:YES];
+
+        NSString *missingId = [[[NSUUID UUID] UUIDString] uppercaseString];
+        NSURL *missingURL = [[store assetsURL] URLByAppendingPathComponent:missingId isDirectory:YES];
+        [[NSFileManager defaultManager] createDirectoryAtURL:missingURL withIntermediateDirectories:NO attributes:nil error:NULL];
+        [photoManifestData writeToURL:[missingURL URLByAppendingPathComponent:@"manifest.json"] atomically:YES];
+
         NSArray *assets = [store loadAssets:&commitError];
-        if ([assets count] != 1 || ![[[assets objectAtIndex:0] assetId] isEqualToString:event.assetId]) {
+        if ([assets count] != 2) {
             fprintf(stderr, "FAIL asset reload: %s\n", [[commitError description] UTF8String]);
             return 1;
         }
         [[NSFileManager defaultManager] removeItemAtURL:documentsURL error:NULL];
-        printf("PASS motion asset transaction: commit, validation, reload, recovery\n");
+        printf("PASS asset transactions: motion, photo-only, validation, filtering, recovery\n");
     }
     return 0;
 }

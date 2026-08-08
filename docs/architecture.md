@@ -8,6 +8,10 @@ Legacy UI (iOS 6) ----\
 Classic UI (iOS 8) ---/                         -> Assets/{assetId}/photo.jpg
                                                   Assets/{assetId}/motion.mov
                                                   Assets/{assetId}/manifest.json
+                                                           |
+                                           RLVTransferRouter
+                                                           |
+                                  HTTP + Bonjour read-only transfer
 ```
 
 ## Boundaries
@@ -25,3 +29,7 @@ Each shutter press creates `RLVCaptureEvent` immediately, including the permanen
 ## Phase 2
 
 `RLVCaptureController` maintains one bounded, compressed rolling movie on disk. A shutter event captures the JPEG immediately, closes the roll after the post-window, trims a motion clip around that same event, and passes both resources to `RLVAssetStore`. Motion failure degrades to the V1 photo-only representation without losing the independent still.
+
+## Phase 3
+
+The user explicitly starts RLVTransferService from the local library. It publishes _retrolive._tcp., accepts a six-digit pairing code, and streams only committed assets through the versioned read-only HTTP API. RLVTransferRouter owns authorization, pagination, UUID validation, optional-resource handling, and byte ranges; the socket layer never constructs asset filesystem paths. Stopping sharing destroys the router and invalidates its temporary bearer token.

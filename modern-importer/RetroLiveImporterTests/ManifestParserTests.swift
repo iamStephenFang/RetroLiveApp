@@ -36,6 +36,18 @@ final class ManifestParserTests: XCTestCase {
         }
     }
 
+    func testInvalidDateFixture() throws {
+        XCTAssertThrowsError(try parser.parse(try fixtureData("invalid-date"))) { error in
+            XCTAssertEqual(error as? ManifestParserError, .invalidField("$.createdAt"))
+        }
+    }
+
+    func testBooleanSchemaVersionFixture() throws {
+        XCTAssertThrowsError(try parser.parse(try fixtureData("invalid-types"))) { error in
+            XCTAssertEqual(error as? ManifestParserError, .invalidField("$.schemaVersion"))
+        }
+    }
+
     func testUnsupportedSchemaFixture() throws {
         XCTAssertThrowsError(try parser.parse(try fixtureData("unsupported-schema"))) { error in
             XCTAssertEqual(

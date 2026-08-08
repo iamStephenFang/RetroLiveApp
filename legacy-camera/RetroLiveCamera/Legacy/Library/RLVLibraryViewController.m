@@ -1,6 +1,7 @@
 #import "RLVLibraryViewController.h"
 #import "RLVAssetDetailViewController.h"
 #import "RLVAssetStore.h"
+#import "RLVTransferViewController.h"
 #import <ImageIO/ImageIO.h>
 
 @interface RLVAssetCell : UICollectionViewCell
@@ -45,8 +46,16 @@
     self.title = @"RetroLive";
     self.collectionView.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1];
     [self.collectionView registerClass:[RLVAssetCell class] forCellWithReuseIdentifier:@"AssetCell"];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Transfer"
+        style:UIBarButtonItemStyleBordered target:self action:@selector(showTransfer:)];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reloadAssets)
                                                  name:RLVAssetStoreDidChangeNotification object:nil];
+}
+
+- (void)showTransfer:(id)sender
+{
+    (void)sender;
+    [self.navigationController pushViewController:[[RLVTransferViewController alloc] init] animated:YES];
 }
 
 - (void)viewWillAppear:(BOOL)animated

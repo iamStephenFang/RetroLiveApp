@@ -3,6 +3,34 @@
 
 NSString * const RLVManifestParserErrorDomain = @"com.retrolive.manifest";
 
+static BOOL RLVParserIsNumber(id value)
+{
+    return [value isKindOfClass:[NSNumber class]] && CFGetTypeID((__bridge CFTypeRef)value) != CFBooleanGetTypeID();
+}
+
+static BOOL RLVParserIsBoolean(id value)
+{
+    return [value isKindOfClass:[NSNumber class]] && CFGetTypeID((__bridge CFTypeRef)value) == CFBooleanGetTypeID();
+}
+
+static BOOL RLVParserIsNonEmptyString(id value)
+{
+    return [value isKindOfClass:[NSString class]] && [value length] > 0;
+}
+
+static BOOL RLVParserIsISO8601Date(id value)
+{
+    if (![value isKindOfClass:[NSString class]]) return NO;
+    NSArray *formats = [NSArray arrayWithObjects:@"yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ", @"yyyy-MM-dd'T'HH:mm:ssZZZZZ", nil];
+    for (NSString *format in formats) {
+        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+        formatter.locale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
+        formatter.dateFormat = format;
+        if ([formatter dateFromString:value] != nil) return YES;
+    }
+    return NO;
+}
+
 @interface RLVManifestParser ()
 - (void)setError:(NSError **)error code:(RLVManifestParserErrorCode)code message:(NSString *)message;
 - (BOOL)readResource:(NSDictionary *)dictionary into:(RLVMediaResource *)resource image:(BOOL)image error:(NSError **)error;
@@ -22,7 +50,7 @@ NSString * const RLVManifestParserErrorDomain = @"com.retrolive.manifest";
 
     NSDictionary *root = (NSDictionary *)value;
     NSNumber *version = [root objectForKey:@"schemaVersion"];
-    if (![version isKindOfClass:[NSNumber class]]) {
+    if (!RLVParserIsNumber(version)) {
         [self setError:error code:RLVManifestParserErrorMissingValue message:@"schemaVersion is required."];
         return nil;
     }
@@ -41,8 +69,8 @@ NSString * const RLVManifestParserErrorDomain = @"com.retrolive.manifest";
     NSDictionary *motionJSON = [motionValue isKindOfClass:[NSDictionary class]] ? motionValue : nil;
     NSDictionary *thumbnailJSON = [thumbnailValue isKindOfClass:[NSDictionary class]] ? thumbnailValue : nil;
     NSDictionary *deviceJSON = [root objectForKey:@"device"];
-    if (![assetId isKindOfClass:[NSString class]] || ![createdAt isKindOfClass:[NSString class]] ||
-        ![createdMilliseconds isKindOfClass:[NSNumber class]] || ![captureJSON isKindOfClass:[NSDictionary class]] ||
+    if (!RLVParserIsNonEmptyString(assetId) || !RLVParserIsISO8601Date(createdAt) ||
+        !RLVParserIsNumber(createdMilliseconds) || ![captureJSON isKindOfClass:[NSDictionary class]] ||
         ![photoJSON isKindOfClass:[NSDictionary class]] || motionValue == nil ||
         !([motionValue isKindOfClass:[NSDictionary class]] || motionValue == [NSNull null]) ||
         (thumbnailValue != nil && ![thumbnailValue isKindOfClass:[NSDictionary class]]) ||
@@ -63,10 +91,10 @@ NSString * const RLVManifestParserErrorDomain = @"com.retrolive.manifest";
     id stillImageTimeAccuracy = [captureJSON objectForKey:@"stillImageTimeAccuracy"];
     id preRoll = [captureJSON objectForKey:@"preRollSeconds"];
     id postRoll = [captureJSON objectForKey:@"postRollSeconds"];
-    if (![cameraPosition isKindOfClass:[NSString class]] || ![orientation isKindOfClass:[NSNumber class]] ||
-        ![mirrored isKindOfClass:[NSNumber class]] || ![flashMode isKindOfClass:[NSString class]] ||
-        ![stillImageTime isKindOfClass:[NSNumber class]] || ![stillImageTimeAccuracy isKindOfClass:[NSString class]] ||
-        ![preRoll isKindOfClass:[NSNumber class]] || ![postRoll isKindOfClass:[NSNumber class]]) {
+    if (![cameraPosition isKindOfClass:[NSString class]] || !RLVParserIsNumber(orientation) ||
+        !RLVParserIsBoolean(mirrored) || ![flashMode isKindOfClass:[NSString class]] ||
+        !RLVParserIsNumber(stillImageTime) || ![stillImageTimeAccuracy isKindOfClass:[NSString class]] ||
+        !RLVParserIsNumber(preRoll) || !RLVParserIsNumber(postRoll)) {
         [self setError:error code:RLVManifestParserErrorMissingValue message:@"capture is missing one or more required values."];
         return nil;
     }
@@ -103,9 +131,9 @@ NSString * const RLVManifestParserErrorDomain = @"com.retrolive.manifest";
         id motionHeight = [motionJSON objectForKey:@"height"];
         id frameRate = [motionJSON objectForKey:@"frameRate"];
         id hasAudio = [motionJSON objectForKey:@"hasAudio"];
-        if (![duration isKindOfClass:[NSNumber class]] || ![motionWidth isKindOfClass:[NSNumber class]] ||
-            ![motionHeight isKindOfClass:[NSNumber class]] || ![frameRate isKindOfClass:[NSNumber class]] ||
-            ![hasAudio isKindOfClass:[NSNumber class]]) {
+        if (!RLVParserIsNumber(duration) || !RLVParserIsNumber(motionWidth) ||
+            !RLVParserIsNumber(motionHeight) || !RLVParserIsNumber(frameRate) ||
+            !RLVParserIsBoolean(hasAudio)) {
             [self setError:error code:RLVManifestParserErrorMissingValue message:@"motion is missing one or more required values."];
             return nil;
         }
@@ -126,9 +154,8 @@ NSString * const RLVManifestParserErrorDomain = @"com.retrolive.manifest";
     id modelIdentifier = [deviceJSON objectForKey:@"modelIdentifier"];
     id systemVersion = [deviceJSON objectForKey:@"systemVersion"];
     id appVersion = [deviceJSON objectForKey:@"appVersion"];
-    if (![modelIdentifier isKindOfClass:[NSString class]] || ![systemVersion isKindOfClass:[NSString class]] ||
-        ![appVersion isKindOfClass:[NSString class]] || [modelIdentifier length] == 0 ||
-        [systemVersion length] == 0 || [appVersion length] == 0) {
+    if (!RLVParserIsNonEmptyString(modelIdentifier) || !RLVParserIsNonEmptyString(systemVersion) ||
+        !RLVParserIsNonEmptyString(appVersion)) {
         [self setError:error code:RLVManifestParserErrorMissingValue message:@"device values are required."];
         return nil;
     }
@@ -161,7 +188,7 @@ NSString * const RLVManifestParserErrorDomain = @"com.retrolive.manifest";
     BOOL filenameValid = [filename isKindOfClass:[NSString class]] && [filename length] > 0 &&
         ![filename isEqualToString:@"."] && ![filename isEqualToString:@".."] &&
         [filename rangeOfString:@"/"].location == NSNotFound && [filename rangeOfString:@"\\"].location == NSNotFound;
-    if (!filenameValid || ![mimeType isKindOfClass:[NSString class]] || ![byteLength isKindOfClass:[NSNumber class]] || [byteLength longLongValue] < 0 || !hashValid) {
+    if (!filenameValid || !RLVParserIsNonEmptyString(mimeType) || !RLVParserIsNumber(byteLength) || [byteLength longLongValue] < 0 || !hashValid) {
         [self setError:error code:RLVManifestParserErrorInvalidValue message:@"Media resource contains an invalid filename, length, MIME type, or SHA-256 value."];
         return NO;
     }
@@ -173,7 +200,7 @@ NSString * const RLVManifestParserErrorDomain = @"com.retrolive.manifest";
         RLVImageResource *imageResource = (RLVImageResource *)resource;
         id width = [dictionary objectForKey:@"width"];
         id height = [dictionary objectForKey:@"height"];
-        if (![width isKindOfClass:[NSNumber class]] || ![height isKindOfClass:[NSNumber class]] ||
+        if (!RLVParserIsNumber(width) || !RLVParserIsNumber(height) ||
             [width unsignedIntegerValue] == 0 || [height unsignedIntegerValue] == 0) {
             [self setError:error code:RLVManifestParserErrorInvalidValue message:@"Image dimensions must be positive."];
             return NO;
