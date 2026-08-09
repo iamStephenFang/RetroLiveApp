@@ -59,7 +59,13 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
     dispatch_async(_sessionQueue, ^{
         NSError *error = nil;
         AVCaptureSession *session = [[AVCaptureSession alloc] init];
-        if ([session canSetSessionPreset:AVCaptureSessionPresetPhoto]) {
+        // A continuously connected movie output is required for the rolling
+        // pre-recording window. On older devices the Photo preset can leave
+        // that output's video connection inactive even though canAddOutput:
+        // succeeds, and starting it then raises NSInvalidArgumentException.
+        if ([session canSetSessionPreset:AVCaptureSessionPresetHigh]) {
+            session.sessionPreset = AVCaptureSessionPresetHigh;
+        } else if ([session canSetSessionPreset:AVCaptureSessionPresetPhoto]) {
             session.sessionPreset = AVCaptureSessionPresetPhoto;
         }
 
@@ -294,8 +300,14 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 - (void)startRollingRecording
 {
     if (!self.wantsSessionRunning || ![self.session isRunning] || self.pendingEvent || [self.movieFileOutput isRecording]) return;
-    NSURL *url = [self uniqueRollingURLWithPrefix:@"segment"];
     AVCaptureConnection *connection = [self.movieFileOutput connectionWithMediaType:AVMediaTypeVideo];
+    if (connection == nil || ![connection isEnabled] || ![connection isActive]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self notifyError:[self errorWithCode:7 description:NSLocalizedString(@"capture.error.motion_output", nil)]];
+        });
+        return;
+    }
+    NSURL *url = [self uniqueRollingURLWithPrefix:@"segment"];
     if ([connection isVideoOrientationSupported]) connection.videoOrientation = self.rollingOrientation;
     if ([connection isVideoMirroringSupported]) connection.videoMirrored = self.cameraPosition == AVCaptureDevicePositionFront;
     self.rollingURL = url;

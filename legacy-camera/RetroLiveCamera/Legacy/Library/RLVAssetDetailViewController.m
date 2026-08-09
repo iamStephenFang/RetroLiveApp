@@ -1,4 +1,5 @@
 #import "RLVAssetDetailViewController.h"
+#import "RLVLayout.h"
 
 @interface RLVAssetDetailViewController ()
 @property (nonatomic, strong) RLVAsset *asset;
@@ -17,6 +18,9 @@
 
 - (void)loadView
 {
+    if ([self respondsToSelector:@selector(setEdgesForExtendedLayout:)]) {
+        self.edgesForExtendedLayout = UIRectEdgeNone;
+    }
     UIView *root = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     root.backgroundColor = [UIColor blackColor];
     self.imageView = [[UIImageView alloc] initWithFrame:CGRectZero];
@@ -36,15 +40,11 @@
         [formatter stringFromDate:self.asset.captureTimestamp], (unsigned long)self.asset.width,
         (unsigned long)self.asset.height, self.asset.captureDevice ?: NSLocalizedString(@"asset.unknown_device", nil)];
     [root addSubview:self.metadataLabel];
-    self.view = root;
-}
 
-- (void)viewDidLayoutSubviews
-{
-    [super viewDidLayoutSubviews];
-    CGFloat height = CGRectGetHeight(self.view.bounds);
-    self.imageView.frame = self.view.bounds;
-    self.metadataLabel.frame = CGRectMake(0, height - 82, CGRectGetWidth(self.view.bounds), 82);
+    RLVPrepareViewsForAutoLayout(@[self.imageView, self.metadataLabel]);
+    RLVAddVisualConstraints(root, @{@"image": self.imageView, @"metadata": self.metadataLabel},
+        @[@"H:|[image]|", @"V:|[image]|", @"H:|[metadata]|", @"V:[metadata(82)]|"]);
+    self.view = root;
 }
 
 @synthesize asset = _asset;

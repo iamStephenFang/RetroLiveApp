@@ -1,6 +1,7 @@
 #import "RLVLibraryViewController.h"
 #import "RLVAssetDetailViewController.h"
 #import "RLVAssetStore.h"
+#import "RLVLayout.h"
 #import "RLVTransferViewController.h"
 #import <ImageIO/ImageIO.h>
 
@@ -13,11 +14,11 @@
 {
     self = [super initWithFrame:frame];
     if (self) {
-        _imageView = [[UIImageView alloc] initWithFrame:self.contentView.bounds];
-        _imageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        _imageView = [[UIImageView alloc] initWithFrame:CGRectZero];
         _imageView.contentMode = UIViewContentModeScaleAspectFill;
         _imageView.clipsToBounds = YES;
         [self.contentView addSubview:_imageView];
+        RLVPinViewToEdges(_imageView, self.contentView);
     }
     return self;
 }
@@ -43,6 +44,9 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    if ([self respondsToSelector:@selector(setEdgesForExtendedLayout:)]) {
+        self.edgesForExtendedLayout = UIRectEdgeNone;
+    }
     self.title = @"RetroLive";
     self.collectionView.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1];
     [self.collectionView registerClass:[RLVAssetCell class] forCellWithReuseIdentifier:@"AssetCell"];

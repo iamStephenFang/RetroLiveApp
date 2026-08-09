@@ -1,4 +1,5 @@
 #import "RLVTransferViewController.h"
+#import "RLVLayout.h"
 #import "RLVTransferService.h"
 
 @interface RLVTransferViewController ()
@@ -7,6 +8,7 @@
 @property (nonatomic, strong) UILabel *codeLabel;
 @property (nonatomic, strong) UILabel *noteLabel;
 @property (nonatomic, strong) UIButton *actionButton;
+@property (nonatomic, strong) UIView *contentView;
 @end
 
 @implementation RLVTransferViewController
@@ -14,6 +16,9 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    if ([self respondsToSelector:@selector(setEdgesForExtendedLayout:)]) {
+        self.edgesForExtendedLayout = UIRectEdgeNone;
+    }
     self.title = NSLocalizedString(@"transfer.title", nil);
     self.view.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1.0];
     self.statusLabel = [self labelWithFontSize:18.0];
@@ -26,11 +31,26 @@
     self.actionButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
     self.actionButton.titleLabel.font = [UIFont boldSystemFontOfSize:18.0];
     [self.actionButton addTarget:self action:@selector(actionPressed:) forControlEvents:UIControlEventTouchUpInside];
-    [self.view addSubview:self.statusLabel];
-    [self.view addSubview:self.addressLabel];
-    [self.view addSubview:self.codeLabel];
-    [self.view addSubview:self.noteLabel];
-    [self.view addSubview:self.actionButton];
+    self.contentView = [[UIView alloc] initWithFrame:CGRectZero];
+    [self.view addSubview:self.contentView];
+    [self.contentView addSubview:self.statusLabel];
+    [self.contentView addSubview:self.addressLabel];
+    [self.contentView addSubview:self.codeLabel];
+    [self.contentView addSubview:self.noteLabel];
+    [self.contentView addSubview:self.actionButton];
+
+    RLVPrepareViewsForAutoLayout(@[self.contentView, self.statusLabel, self.addressLabel,
+        self.codeLabel, self.noteLabel, self.actionButton]);
+    RLVAddVisualConstraints(self.view, @{@"content": self.contentView},
+        @[@"H:|-16-[content]-16-|", @"V:|-(>=20)-[content]-(>=20)-|"]);
+    RLVAlignViews(self.view, self.contentView, NSLayoutAttributeCenterY,
+        self.view, NSLayoutAttributeCenterY);
+    RLVAddVisualConstraints(self.contentView,
+        @{@"status": self.statusLabel, @"address": self.addressLabel, @"code": self.codeLabel,
+          @"note": self.noteLabel, @"action": self.actionButton},
+        @[@"H:|[status]|", @"H:|[address]|", @"H:|[code]|", @"H:|-8-[note]-8-|",
+          @"H:|-24-[action]-24-|",
+          @"V:|[status(28)]-14-[address(24)]-20-[code(58)]-20-[note(82)]-18-[action(48)]|"]);
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateContent)
         name:RLVTransferServiceDidChangeNotification object:nil];
     [self updateContent];
@@ -44,19 +64,6 @@
     label.textAlignment = NSTextAlignmentCenter;
     label.font = [UIFont systemFontOfSize:fontSize];
     return label;
-}
-
-- (void)viewDidLayoutSubviews
-{
-    [super viewDidLayoutSubviews];
-    CGFloat width = CGRectGetWidth(self.view.bounds);
-    CGFloat contentWidth = width - 32.0;
-    CGFloat top = 34.0;
-    self.statusLabel.frame = CGRectMake(16.0, top, contentWidth, 28.0);
-    self.addressLabel.frame = CGRectMake(16.0, top + 42.0, contentWidth, 24.0);
-    self.codeLabel.frame = CGRectMake(16.0, top + 86.0, contentWidth, 58.0);
-    self.noteLabel.frame = CGRectMake(24.0, top + 164.0, width - 48.0, 82.0);
-    self.actionButton.frame = CGRectMake(40.0, top + 264.0, width - 80.0, 48.0);
 }
 
 - (void)actionPressed:(id)sender
@@ -104,5 +111,6 @@
 @synthesize codeLabel = _codeLabel;
 @synthesize noteLabel = _noteLabel;
 @synthesize actionButton = _actionButton;
+@synthesize contentView = _contentView;
 
 @end

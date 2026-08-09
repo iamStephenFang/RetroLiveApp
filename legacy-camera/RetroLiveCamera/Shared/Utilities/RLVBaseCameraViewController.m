@@ -2,6 +2,7 @@
 #import "RLVAssetStore.h"
 #import "RLVDeviceCapabilities.h"
 #import "RLVLibraryViewController.h"
+#import "RLVLayout.h"
 #import "RLVShutterButton.h"
 #import <QuartzCore/QuartzCore.h>
 
@@ -25,11 +26,11 @@
     [self configureCameraActions];
 
     self.shutterOverlay = [[UIView alloc] initWithFrame:self.previewView.bounds];
-    self.shutterOverlay.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.shutterOverlay.backgroundColor = [UIColor blackColor];
     self.shutterOverlay.alpha = 0.0;
     self.shutterOverlay.userInteractionEnabled = NO;
     [self.previewView addSubview:self.shutterOverlay];
+    RLVPinViewToEdges(self.shutterOverlay, self.previewView);
 
     __block RLVBaseCameraViewController *controller = self;
     [self.captureController prepareWithCompletion:^(NSError *error) {
@@ -80,7 +81,6 @@
 {
     [super viewDidLayoutSubviews];
     self.captureController.previewLayer.frame = self.previewView.bounds;
-    self.shutterOverlay.frame = self.previewView.bounds;
 }
 
 - (BOOL)shouldAutorotate

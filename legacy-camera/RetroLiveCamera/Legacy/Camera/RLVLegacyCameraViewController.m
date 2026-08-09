@@ -1,4 +1,5 @@
 #import "RLVLegacyCameraViewController.h"
+#import "RLVLayout.h"
 #import "RLVShutterButton.h"
 #import <QuartzCore/QuartzCore.h>
 
@@ -79,6 +80,21 @@
     mode.shadowOffset = CGSizeMake(0, -1);
     [bottom addSubview:mode];
 
+    RLVPrepareViewsForAutoLayout(@[self.previewView, top, bottom, self.flashButton,
+        self.cameraSwitchButton, self.thumbnailButton, self.shutterButton, mode]);
+    RLVAddVisualConstraints(root, @{@"top": top, @"preview": self.previewView, @"bottom": bottom},
+        @[@"H:|[top]|", @"H:|[preview]|", @"H:|[bottom]|", @"V:|[top(44)][preview][bottom(96)]|"]);
+    RLVAddVisualConstraints(top, @{@"flash": self.flashButton, @"switch": self.cameraSwitchButton},
+        @[@"H:|-4-[flash(86)]", @"H:[switch(54)]-4-|", @"V:|[flash]|", @"V:|[switch]|"]);
+    RLVAddVisualConstraints(bottom,
+        @{@"thumbnail": self.thumbnailButton, @"shutter": self.shutterButton, @"mode": mode},
+        @[@"H:|-14-[thumbnail(48)]", @"H:[mode(54)]-16-|", @"V:[thumbnail(48)]",
+          @"H:[shutter(76)]", @"V:[shutter(76)]", @"V:[mode(25)]"]);
+    RLVAlignViews(bottom, self.thumbnailButton, NSLayoutAttributeCenterY, bottom, NSLayoutAttributeCenterY);
+    RLVAlignViews(bottom, self.shutterButton, NSLayoutAttributeCenterX, bottom, NSLayoutAttributeCenterX);
+    RLVAlignViews(bottom, self.shutterButton, NSLayoutAttributeCenterY, bottom, NSLayoutAttributeCenterY);
+    RLVAlignViews(bottom, mode, NSLayoutAttributeCenterY, bottom, NSLayoutAttributeCenterY);
+
     self.rotatingControls = [NSArray arrayWithObjects:self.flashButton, self.cameraSwitchButton, self.thumbnailButton, nil];
     self.view = root;
 }
@@ -92,24 +108,6 @@
     button.titleLabel.shadowColor = [UIColor blackColor];
     button.titleLabel.shadowOffset = CGSizeMake(0, -1);
     return button;
-}
-
-- (void)viewDidLayoutSubviews
-{
-    CGFloat width = CGRectGetWidth(self.view.bounds);
-    CGFloat height = CGRectGetHeight(self.view.bounds);
-    CGFloat topHeight = 44.0;
-    CGFloat bottomHeight = height <= 480.0 ? 88.0 : 96.0;
-    self.topChromeView.frame = CGRectMake(0, 0, width, topHeight);
-    self.bottomChromeView.frame = CGRectMake(0, height - bottomHeight, width, bottomHeight);
-    self.previewView.frame = CGRectMake(0, topHeight, width, height - topHeight - bottomHeight);
-    self.flashButton.frame = CGRectMake(4, 0, 86, topHeight);
-    self.cameraSwitchButton.frame = CGRectMake(width - 58, 0, 54, topHeight);
-    self.shutterButton.frame = CGRectMake((width - 76) / 2.0, 5.0, 76, 76);
-    self.thumbnailButton.frame = CGRectMake(14, (bottomHeight - 48) / 2.0, 48, 48);
-    UIView *mode = [self.bottomChromeView viewWithTag:6001];
-    mode.frame = CGRectMake(width - 70, (bottomHeight - 25) / 2.0, 54, 25);
-    [super viewDidLayoutSubviews];
 }
 
 @end
