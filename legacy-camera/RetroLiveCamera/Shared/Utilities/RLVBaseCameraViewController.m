@@ -132,7 +132,8 @@
     if (self.captureController.flashMode == AVCaptureFlashModeAuto) next = AVCaptureFlashModeOn;
     else if (self.captureController.flashMode == AVCaptureFlashModeOn) next = AVCaptureFlashModeOff;
     [self.captureController setFlashMode:next];
-    NSString *title = next == AVCaptureFlashModeAuto ? @"Flash Auto" : (next == AVCaptureFlashModeOn ? @"Flash On" : @"Flash Off");
+    NSString *title = next == AVCaptureFlashModeAuto ? NSLocalizedString(@"camera.flash.auto", nil) :
+        (next == AVCaptureFlashModeOn ? NSLocalizedString(@"camera.flash.on", nil) : NSLocalizedString(@"camera.flash.off", nil));
     [self.flashButton setTitle:title forState:UIControlStateNormal];
 }
 
@@ -140,8 +141,8 @@
 {
     (void)controller;
     self.flashButton.hidden = position != AVCaptureDevicePositionBack || !self.capabilities.supportsFlash;
-    NSString *title = controller.flashMode == AVCaptureFlashModeAuto ? @"Flash Auto" :
-        (controller.flashMode == AVCaptureFlashModeOn ? @"Flash On" : @"Flash Off");
+    NSString *title = controller.flashMode == AVCaptureFlashModeAuto ? NSLocalizedString(@"camera.flash.auto", nil) :
+        (controller.flashMode == AVCaptureFlashModeOn ? NSLocalizedString(@"camera.flash.on", nil) : NSLocalizedString(@"camera.flash.off", nil));
     [self.flashButton setTitle:title forState:UIControlStateNormal];
 }
 
@@ -206,8 +207,9 @@
 - (void)showError:(NSError *)error
 {
     if (!error) return;
-    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Camera Error" message:[error localizedDescription]
-                                                   delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"camera.error.title", nil)
+        message:[error localizedDescription] delegate:nil cancelButtonTitle:NSLocalizedString(@"common.ok", nil)
+        otherButtonTitles:nil];
     [alert show];
 }
 

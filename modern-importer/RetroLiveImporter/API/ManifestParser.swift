@@ -17,11 +17,11 @@ enum ManifestParserError: Error, Equatable, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidJSON(let detail):
-            "Invalid Manifest JSON: \(detail)"
+            L10n.format("manifest.invalid_json", detail)
         case .unsupportedSchemaVersion(let found, let supported):
-            "Unsupported schemaVersion \(found); supported versions: \(supported.map(String.init).joined(separator: ", "))."
+            L10n.format("manifest.unsupported_schema", found, supported.map(String.init).joined(separator: ", "))
         case .invalidField(let field):
-            "Manifest field is missing or invalid: \(field)."
+            L10n.format("manifest.invalid_field", field)
         }
     }
 }
@@ -37,7 +37,7 @@ struct ManifestParser: Sendable {
             throw ManifestParserError.invalidJSON(error.localizedDescription)
         }
         guard let root = object as? [String: Any] else {
-            throw ManifestParserError.invalidJSON("Root value must be an object.")
+            throw ManifestParserError.invalidJSON(L10n.text("manifest.root_not_object"))
         }
         guard let schemaVersion = root["schemaVersion"] as? Int else {
             throw ManifestParserError.invalidField("$.schemaVersion")

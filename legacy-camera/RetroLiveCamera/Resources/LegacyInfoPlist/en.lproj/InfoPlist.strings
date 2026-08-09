@@ -1,0 +1,4 @@
+"CFBundleDisplayName" = "RetroLive Camera";
+"NSCameraUsageDescription" = "RetroLive uses the camera to capture local photo assets.";
+"NSLocalNetworkUsageDescription" = "RetroLive shares captured assets with your paired device on the local network.";
+"NSMicrophoneUsageDescription" = "RetroLive uses the microphone to include sound with motion photos.";

@@ -9,7 +9,7 @@
     if (self) {
         self.backgroundColor = [UIColor clearColor];
         self.opaque = NO;
-        self.accessibilityLabel = @"Shutter";
+        self.accessibilityLabel = NSLocalizedString(@"camera.shutter", nil);
     }
     return self;
 }

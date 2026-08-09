@@ -22,6 +22,8 @@
 		A1000000000000000000000E /* ImporterViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* ImporterViewModel.swift */; };
 		A1000000000000000000000F /* Phase45Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* Phase45Tests.swift */; };
 		A10000000000000000000020 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* Assets.xcassets */; };
+		A10000000000000000000021 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = A4000000000000000000001A /* Localizable.strings */; };
+		A10000000000000000000022 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A4000000000000000000001B /* InfoPlist.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +49,12 @@
 		A20000000000000000000010 /* ImporterViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImporterViewModel.swift; sourceTree = "<group>"; };
 		A20000000000000000000011 /* Phase45Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase45Tests.swift; sourceTree = "<group>"; };
 		A20000000000000000000020 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20000000000000000000021 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		A20000000000000000000022 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		A20000000000000000000023 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		A20000000000000000000024 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A20000000000000000000025 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		A20000000000000000000026 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -56,7 +64,7 @@
 
 /* Begin PBXGroup section */
 		A40000000000000000000010 = {isa = PBXGroup; children = (A40000000000000000000011, A40000000000000000000015, A40000000000000000000016, A40000000000000000000017); sourceTree = "<group>"; };
-		A40000000000000000000011 /* RetroLiveImporter */ = {isa = PBXGroup; path = RetroLiveImporter; sourceTree = "<group>"; children = (A40000000000000000000012, A40000000000000000000013, A40000000000000000000014, A40000000000000000000018, A40000000000000000000019, A20000000000000000000020); };
+		A40000000000000000000011 /* RetroLiveImporter */ = {isa = PBXGroup; path = RetroLiveImporter; sourceTree = "<group>"; children = (A40000000000000000000012, A40000000000000000000013, A40000000000000000000014, A40000000000000000000018, A40000000000000000000019, A20000000000000000000020, A4000000000000000000001A, A4000000000000000000001B); };
 		A40000000000000000000012 /* App */ = {isa = PBXGroup; path = App; sourceTree = "<group>"; children = (A20000000000000000000001); };
 		A40000000000000000000013 /* Features */ = {isa = PBXGroup; path = Features; sourceTree = "<group>"; children = (A20000000000000000000002, A20000000000000000000010); };
 		A40000000000000000000014 /* API */ = {isa = PBXGroup; path = API; sourceTree = "<group>"; children = (A20000000000000000000003, A20000000000000000000004, A2000000000000000000000A); };
@@ -67,17 +75,22 @@
 		A40000000000000000000019 /* Import */ = {isa = PBXGroup; path = Import; sourceTree = "<group>"; children = (A2000000000000000000000D, A2000000000000000000000E, A2000000000000000000000F); };
 /* End PBXGroup section */
 
+/* Begin PBXVariantGroup section */
+		A4000000000000000000001A /* Localizable.strings */ = {isa = PBXVariantGroup; children = (A20000000000000000000021 /* en */, A20000000000000000000022 /* zh-Hans */, A20000000000000000000023 /* zh-Hant */); name = Localizable.strings; sourceTree = "<group>"; };
+		A4000000000000000000001B /* InfoPlist.strings */ = {isa = PBXVariantGroup; children = (A20000000000000000000024 /* en */, A20000000000000000000025 /* zh-Hans */, A20000000000000000000026 /* zh-Hant */); name = InfoPlist.strings; sourceTree = "<group>"; };
+/* End PBXVariantGroup section */
+
 /* Begin PBXNativeTarget section */
 		A50000000000000000000001 /* RetroLiveImporter */ = {isa = PBXNativeTarget; buildConfigurationList = A90000000000000000000002; buildPhases = (A70000000000000000000001, A40000000000000000000001, A70000000000000000000002); buildRules = (); dependencies = (); name = RetroLiveImporter; productName = RetroLiveImporter; productReference = A20000000000000000000006; productType = "com.apple.product-type.application"; };
 		A50000000000000000000002 /* RetroLiveImporterTests */ = {isa = PBXNativeTarget; buildConfigurationList = A90000000000000000000003; buildPhases = (A70000000000000000000003, A40000000000000000000002, A70000000000000000000004); buildRules = (); dependencies = (A80000000000000000000001); name = RetroLiveImporterTests; productName = RetroLiveImporterTests; productReference = A20000000000000000000007; productType = "com.apple.product-type.bundle.unit-test"; };
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		A60000000000000000000001 /* Project object */ = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2700; LastUpgradeCheck = 2700; TargetAttributes = {A50000000000000000000001 = {CreatedOnToolsVersion = 27.0;}; A50000000000000000000002 = {CreatedOnToolsVersion = 27.0; TestTargetID = A50000000000000000000001;};};}; buildConfigurationList = A90000000000000000000001; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = A40000000000000000000010; productRefGroup = A40000000000000000000017; projectDirPath = ""; projectRoot = ""; targets = (A50000000000000000000001, A50000000000000000000002); };
+		A60000000000000000000001 /* Project object */ = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2700; LastUpgradeCheck = 2700; TargetAttributes = {A50000000000000000000001 = {CreatedOnToolsVersion = 27.0;}; A50000000000000000000002 = {CreatedOnToolsVersion = 27.0; TestTargetID = A50000000000000000000001;};};}; buildConfigurationList = A90000000000000000000001; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, "zh-Hans", "zh-Hant", Base); mainGroup = A40000000000000000000010; productRefGroup = A40000000000000000000017; projectDirPath = ""; projectRoot = ""; targets = (A50000000000000000000001, A50000000000000000000002); };
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		A70000000000000000000002 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000020 /* Assets.xcassets in Resources */); runOnlyForDeploymentPostprocessing = 0; };
+		A70000000000000000000002 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000020 /* Assets.xcassets in Resources */, A10000000000000000000021 /* Localizable.strings in Resources */, A10000000000000000000022 /* InfoPlist.strings in Resources */); runOnlyForDeploymentPostprocessing = 0; };
 		A70000000000000000000004 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000007); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 

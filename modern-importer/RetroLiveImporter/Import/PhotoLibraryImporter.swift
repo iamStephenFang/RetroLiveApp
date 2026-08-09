@@ -14,11 +14,11 @@ enum PhotoLibraryImportError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .permissionDenied:
-            "没有添加照片的权限，请在系统设置中允许 RetroLive 写入照片。"
+            L10n.text("photos.permission_denied")
         case .missingPlaceholder:
-            "Photos 没有返回新素材的标识。"
+            L10n.text("photos.missing_placeholder")
         case .photoKitFailed:
-            "Photos 未能完成素材写入。"
+            L10n.text("photos.write_failed")
         }
     }
 }

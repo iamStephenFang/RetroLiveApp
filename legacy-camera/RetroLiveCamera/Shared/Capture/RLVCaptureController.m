@@ -76,17 +76,17 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
         if (input && [session canAddInput:input]) {
             [session addInput:input];
         } else if (error == nil) {
-            error = [self errorWithCode:1 description:@"Rear camera is unavailable."];
+            error = [self errorWithCode:1 description:NSLocalizedString(@"capture.error.rear_camera", nil)];
         }
         if (error == nil && [session canAddOutput:output]) {
             [session addOutput:output];
         } else if (error == nil) {
-            error = [self errorWithCode:2 description:@"Still image output is unavailable."];
+            error = [self errorWithCode:2 description:NSLocalizedString(@"capture.error.still_output", nil)];
         }
         if (error == nil && [session canAddOutput:movieOutput]) {
             [session addOutput:movieOutput];
         } else if (error == nil) {
-            error = [self errorWithCode:7 description:@"Motion video output is unavailable."];
+            error = [self errorWithCode:7 description:NSLocalizedString(@"capture.error.motion_output", nil)];
         }
         if (error == nil && audioInput && [session canAddInput:audioInput]) {
             [session addInput:audioInput];
@@ -206,7 +206,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
             self.pendingEvent = nil;
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self updateState:RLVCaptureStateRunning];
-                [self notifyError:[self errorWithCode:6 description:@"Still image connection is unavailable."]];
+                [self notifyError:[self errorWithCode:6 description:NSLocalizedString(@"capture.error.still_connection", nil)]];
             });
             return;
         }
@@ -222,7 +222,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
             dispatch_async(self->_sessionQueue, ^{
                 if (self.pendingEvent != event) return;
                 if (!data) {
-                    [self failPendingCapture:error ?: [self errorWithCode:3 description:@"The camera returned no JPEG data."]];
+                    [self failPendingCapture:error ?: [self errorWithCode:3 description:NSLocalizedString(@"capture.error.no_jpeg", nil)]];
                     return;
                 }
                 self.pendingPhotoData = data;
@@ -266,7 +266,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
         NSError *error = nil;
         AVCaptureDeviceInput *input = device ? [AVCaptureDeviceInput deviceInputWithDevice:device error:&error] : nil;
         if (!input) {
-            dispatch_async(dispatch_get_main_queue(), ^{ [self notifyError:error ?: [self errorWithCode:4 description:@"Camera is unavailable."]]; });
+            dispatch_async(dispatch_get_main_queue(), ^{ [self notifyError:error ?: [self errorWithCode:4 description:NSLocalizedString(@"capture.error.unavailable", nil)]]; });
             self.cameraSwitchPending = NO;
             return;
         }
@@ -326,7 +326,7 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
             if ([[NSFileManager defaultManager] fileExistsAtPath:[outputFileURL path]]) {
                 [self exportMotionFromRollingURL:outputFileURL startedAt:self.rollingStartedAt event:self.pendingEvent];
             } else {
-                [self finishMotionWithError:error ?: [self errorWithCode:8 description:@"The motion recording returned no movie file."]];
+                [self finishMotionWithError:error ?: [self errorWithCode:8 description:NSLocalizedString(@"capture.error.no_movie", nil)]];
             }
             return;
         }
@@ -347,7 +347,7 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
     NSTimeInterval shutterOffset = [event.shutterTimestamp timeIntervalSinceDate:startedAt];
     if (!isfinite(sourceDuration) || sourceDuration <= 0.0 || !isfinite(shutterOffset)) {
         [[NSFileManager defaultManager] removeItemAtURL:sourceURL error:NULL];
-        [self finishMotionWithError:[self errorWithCode:9 description:@"The recorded motion timeline is invalid."]];
+        [self finishMotionWithError:[self errorWithCode:9 description:NSLocalizedString(@"capture.error.invalid_timeline", nil)]];
         return;
     }
     shutterOffset = MAX(0.0, MIN(shutterOffset, sourceDuration));
@@ -355,7 +355,7 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
     NSTimeInterval end = MIN(sourceDuration, shutterOffset + RLVTargetPostRollSeconds);
     if (end <= start) {
         [[NSFileManager defaultManager] removeItemAtURL:sourceURL error:NULL];
-        [self finishMotionWithError:[self errorWithCode:10 description:@"The recorded motion window is empty."]];
+        [self finishMotionWithError:[self errorWithCode:10 description:NSLocalizedString(@"capture.error.empty_window", nil)]];
         return;
     }
 
@@ -363,7 +363,7 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
     AVAssetExportSession *exportSession = [[AVAssetExportSession alloc] initWithAsset:asset presetName:AVAssetExportPresetPassthrough];
     if (!exportSession) {
         [[NSFileManager defaultManager] removeItemAtURL:sourceURL error:NULL];
-        [self finishMotionWithError:[self errorWithCode:11 description:@"Motion trimming is unsupported for this recording."]];
+        [self finishMotionWithError:[self errorWithCode:11 description:NSLocalizedString(@"capture.error.trim_unsupported", nil)]];
         return;
     }
     exportSession.outputURL = outputURL;
@@ -374,13 +374,13 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
             [[NSFileManager defaultManager] removeItemAtURL:sourceURL error:NULL];
             if ([exportSession status] != AVAssetExportSessionStatusCompleted) {
                 [[NSFileManager defaultManager] removeItemAtURL:outputURL error:NULL];
-                [self finishMotionWithError:[exportSession error] ?: [self errorWithCode:11 description:@"Motion trimming failed."]];
+                [self finishMotionWithError:[exportSession error] ?: [self errorWithCode:11 description:NSLocalizedString(@"capture.error.trim_failed", nil)]];
                 return;
             }
             [self populateMotionMetadataForEvent:event motionURL:outputURL];
             if (event.motionDurationSeconds <= 0.0 || event.motionWidth == 0 || event.motionHeight == 0 || event.motionFrameRate <= 0.0) {
                 [[NSFileManager defaultManager] removeItemAtURL:outputURL error:NULL];
-                [self finishMotionWithError:[self errorWithCode:12 description:@"The trimmed motion metadata is invalid."]];
+                [self finishMotionWithError:[self errorWithCode:12 description:NSLocalizedString(@"capture.error.invalid_metadata", nil)]];
                 return;
             }
             event.stillImageTimeSeconds = shutterOffset - start;
@@ -388,7 +388,7 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
             event.postRollSeconds = MAX(0.0, event.motionDurationSeconds - event.stillImageTimeSeconds);
             if (event.stillImageTimeSeconds < 0.0 || event.stillImageTimeSeconds >= event.motionDurationSeconds) {
                 [[NSFileManager defaultManager] removeItemAtURL:outputURL error:NULL];
-                [self finishMotionWithError:[self errorWithCode:13 description:@"The still frame falls outside the trimmed motion timeline."]];
+                [self finishMotionWithError:[self errorWithCode:13 description:NSLocalizedString(@"capture.error.frame_outside", nil)]];
                 return;
             }
             [self completePendingCaptureWithMotionURL:outputURL];
@@ -528,7 +528,7 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
     NSError *error = [[notification userInfo] objectForKey:AVCaptureSessionErrorKey];
     dispatch_async(dispatch_get_main_queue(), ^{
         [self updateState:RLVCaptureStateFailed];
-        [self notifyError:error ?: [self errorWithCode:5 description:@"Capture session failed."]];
+        [self notifyError:error ?: [self errorWithCode:5 description:NSLocalizedString(@"capture.error.session_failed", nil)]];
     });
 }
 

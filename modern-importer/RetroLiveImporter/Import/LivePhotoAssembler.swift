@@ -25,25 +25,25 @@ enum LivePhotoAssemblyError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidStillTime:
-            "Manifest 中的静态帧时间不在视频范围内。"
+            L10n.text("assembly.invalid_still_time")
         case .imageSource:
-            "无法读取源照片。"
+            L10n.text("assembly.image_source")
         case .imageDestination:
-            "无法生成配对照片。"
+            L10n.text("assembly.image_destination")
         case .imageMetadata:
-            "配对照片的内容标识写入失败。"
+            L10n.text("assembly.image_metadata")
         case .missingVideoTrack:
-            "动态素材不包含视频轨道。"
+            L10n.text("assembly.missing_video_track")
         case .reader:
-            "无法读取源动态视频。"
+            L10n.text("assembly.reader")
         case .writer:
-            "无法生成 Live Photo 配对视频。"
+            L10n.text("assembly.writer")
         case .timedMetadata:
-            "无法写入 Live Photo 静态帧时间。"
+            L10n.text("assembly.timed_metadata")
         case .identifierMismatch:
-            "生成资源的配对标识不一致。"
+            L10n.text("assembly.identifier_mismatch")
         case .mediaValidation:
-            "生成资源的尺寸、轨道、方向或时间信息与源素材不一致。"
+            L10n.text("assembly.media_validation")
         }
     }
 }

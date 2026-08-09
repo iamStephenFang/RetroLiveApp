@@ -71,19 +71,19 @@ static BOOL RLVIsBoolean(id value)
         NSUInteger height = [[imageProperties objectForKey:(id)kCGImagePropertyPixelHeight] unsignedIntegerValue];
         if (imageSource) CFRelease(imageSource);
         if (width == 0 || height == 0) {
-            error = [self errorWithCode:1 description:@"Captured data is not a valid JPEG image."];
+            error = [self errorWithCode:1 description:NSLocalizedString(@"asset.error.invalid_jpeg", nil)];
         }
 
         NSUUID *eventUUID = [[NSUUID alloc] initWithUUIDString:event.assetId];
         if (error == nil && (eventUUID == nil || ![[eventUUID UUIDString] isEqualToString:event.assetId])) {
-            error = [self errorWithCode:4 description:@"Asset identifier must be a canonical UUID."];
+            error = [self errorWithCode:4 description:NSLocalizedString(@"asset.error.uuid_required", nil)];
         }
 
         NSURL *stagingURL = [self.temporaryURL URLByAppendingPathComponent:event.assetId isDirectory:YES];
         NSURL *finalURL = [self.assetsURL URLByAppendingPathComponent:event.assetId isDirectory:YES];
         NSFileManager *manager = [NSFileManager defaultManager];
         if (error == nil && ([manager fileExistsAtPath:[stagingURL path]] || [manager fileExistsAtPath:[finalURL path]])) {
-            error = [self errorWithCode:2 description:@"Asset identifier already exists."];
+            error = [self errorWithCode:2 description:NSLocalizedString(@"asset.error.already_exists", nil)];
         }
         if (error == nil && ![manager createDirectoryAtURL:stagingURL withIntermediateDirectories:NO attributes:nil error:&error]) {
             // error populated by NSFileManager
@@ -145,7 +145,7 @@ static BOOL RLVIsBoolean(id value)
 {
     NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:assetId];
     if (!uuid) {
-        if (error) *error = [self errorWithCode:4 description:@"Asset identifier is invalid."];
+        if (error) *error = [self errorWithCode:4 description:NSLocalizedString(@"asset.error.invalid_id", nil)];
         return nil;
     }
     return [self loadAssetAtURL:[self.assetsURL URLByAppendingPathComponent:[uuid UUIDString] isDirectory:YES] error:error];
@@ -157,7 +157,7 @@ static BOOL RLVIsBoolean(id value)
     NSURL *directory = [asset.photoURL URLByDeletingLastPathComponent];
     NSURL *expectedDirectory = uuid ? [self.assetsURL URLByAppendingPathComponent:[uuid UUIDString] isDirectory:YES] : nil;
     if (!expectedDirectory || ![[directory URLByStandardizingPath] isEqual:[expectedDirectory URLByStandardizingPath]]) {
-        if (error) *error = [self errorWithCode:4 description:@"Refusing to delete an asset outside the managed store."];
+        if (error) *error = [self errorWithCode:4 description:NSLocalizedString(@"asset.error.outside_store", nil)];
         return NO;
     }
     BOOL deleted = [[NSFileManager defaultManager] removeItemAtURL:directory error:error];
@@ -247,7 +247,7 @@ static BOOL RLVIsBoolean(id value)
         [photoHash isEqualToString:[RLVManifest SHA256ForData:photoData]] &&
         motionValid;
     if (!valid && error != NULL && *error == nil) {
-        *error = [self errorWithCode:3 description:@"Asset validation failed before commit."];
+        *error = [self errorWithCode:3 description:NSLocalizedString(@"asset.error.validation_failed", nil)];
     }
     return valid;
 }

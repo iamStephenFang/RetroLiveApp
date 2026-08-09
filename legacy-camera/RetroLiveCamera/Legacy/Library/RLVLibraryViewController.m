@@ -46,8 +46,8 @@
     self.title = @"RetroLive";
     self.collectionView.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1];
     [self.collectionView registerClass:[RLVAssetCell class] forCellWithReuseIdentifier:@"AssetCell"];
-    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Transfer"
-        style:UIBarButtonItemStyleBordered target:self action:@selector(showTransfer:)];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"transfer.title", nil)
+        style:UIBarButtonItemStylePlain target:self action:@selector(showTransfer:)];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reloadAssets)
                                                  name:RLVAssetStoreDidChangeNotification object:nil];
 }

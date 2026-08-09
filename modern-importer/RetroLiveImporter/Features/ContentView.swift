@@ -18,7 +18,7 @@ struct ContentView: View {
             .toolbar {
                 if model.selectedCamera != nil {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button("断开") { model.disconnect() }
+                        Button(L10n.text("common.disconnect")) { model.disconnect() }
                     }
                 }
                 if model.deviceInfo != nil {
@@ -33,13 +33,13 @@ struct ContentView: View {
                 }
             }
             .alert(
-                "操作失败",
+                L10n.text("error.operation_failed"),
                 isPresented: Binding(
                     get: { model.errorMessage != nil },
                     set: { if !$0 { model.errorMessage = nil } }
                 )
             ) {
-                Button("好", role: .cancel) {}
+                Button(L10n.text("common.ok"), role: .cancel) {}
             } message: {
                 Text(model.errorMessage ?? "")
             }
@@ -51,9 +51,9 @@ struct ContentView: View {
         Group {
             if model.cameras.isEmpty {
                 ContentUnavailableView(
-                    "未发现设备",
+                    L10n.text("device.none.title"),
                     systemImage: "iphone.radiowaves.left.and.right",
-                    description: Text("请在旧设备的图库中打开 Transfer，并确认两台设备连接到同一 Wi-Fi。")
+                    description: Text(L10n.text("device.none.description"))
                 )
             } else {
                 List(model.cameras) { camera in
@@ -81,20 +81,20 @@ struct ContentView: View {
 
     private var pairingView: some View {
         Form {
-            Section("连接 \(model.selectedCamera?.name ?? "相机")") {
-                TextField("六位配对码", text: $model.pairingCode)
+            Section(L10n.format("pairing.section", model.selectedCamera?.name ?? L10n.text("device.camera"))) {
+                TextField(L10n.text("pairing.code.placeholder"), text: $model.pairingCode)
                     .keyboardType(.numberPad)
                     .textContentType(.oneTimeCode)
                     .onChange(of: model.pairingCode) { _, value in
                         model.pairingCode = String(value.filter(\.isNumber).prefix(6))
                     }
-                Button(model.isPairing ? "正在配对…" : "配对") {
+                Button(model.isPairing ? L10n.text("pairing.in_progress") : L10n.text("pairing.action")) {
                     model.pair()
                 }
                 .disabled(model.pairingCode.count != 6 || model.isPairing)
             }
             Section {
-                Text("配对码显示在旧设备的 Transfer 页面，有效会话不会写入钥匙串。")
+                Text(L10n.text("pairing.note"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -105,14 +105,14 @@ struct ContentView: View {
         List {
             if let device = model.deviceInfo {
                 Section {
-                    LabeledContent("设备", value: device.modelIdentifier)
-                    LabeledContent("系统", value: device.systemVersion)
-                    LabeledContent("素材", value: String(device.assetCount))
+                    LabeledContent(L10n.text("device.model"), value: device.modelIdentifier)
+                    LabeledContent(L10n.text("device.system"), value: device.systemVersion)
+                    LabeledContent(L10n.text("asset.count"), value: String(device.assetCount))
                 }
             }
-            Section("素材") {
+            Section(L10n.text("asset.section")) {
                 if model.assets.isEmpty && !model.isLoadingAssets {
-                    Text("相机中没有可导入的素材")
+                    Text(L10n.text("asset.none"))
                         .foregroundStyle(.secondary)
                 }
                 ForEach(model.assets) { asset in
@@ -122,7 +122,7 @@ struct ContentView: View {
         }
         .overlay {
             if model.isLoadingAssets {
-                ProgressView("正在读取素材…")
+                ProgressView(L10n.text("asset.loading"))
             }
         }
     }
@@ -151,7 +151,7 @@ struct ContentView: View {
                     .foregroundStyle(.red)
             }
             if state == .needsConfirmation {
-                Text("上次写入照片的结果无法确认。请先在“照片”中检查，避免重复导入。")
+                Text(L10n.text("asset.needs_confirmation.note"))
                     .font(.caption)
                     .foregroundStyle(.orange)
             }

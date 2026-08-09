@@ -20,19 +20,19 @@ enum DownloadStoreError: Error, LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .assetIdentifierMismatch:
-            "素材列表与 Manifest 的标识不一致。"
+            L10n.text("download.asset_id_mismatch")
         case .invalidStatus(let status):
-            "下载返回了不支持的 HTTP 状态 \(status)。"
+            L10n.format("download.invalid_status", status)
         case .invalidContentRange:
-            "相机返回的断点续传范围不正确。"
+            L10n.text("download.invalid_range")
         case .lengthMismatch(let resource):
-            "\(resource) 的文件长度与 Manifest 不一致。"
+            L10n.format("download.length_mismatch", resource)
         case .hashMismatch(let resource):
-            "\(resource) 的 SHA-256 与 Manifest 不一致。"
+            L10n.format("download.hash_mismatch", resource)
         case .missingResource(let resource):
-            "缓存中缺少 \(resource)。"
+            L10n.format("download.missing_resource", resource)
         case .invalidAssetIdentifier:
-            "素材标识不是有效的 UUID。"
+            L10n.text("download.invalid_asset_id")
         }
     }
 }

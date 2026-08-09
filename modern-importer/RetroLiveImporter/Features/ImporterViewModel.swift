@@ -15,23 +15,23 @@ enum ImporterAssetState: Equatable {
     var title: String {
         switch self {
         case .available:
-            "下载并导入"
+            L10n.text("asset.action.import")
         case .downloading(let progress):
-            "下载 \(Int(progress * 100))%"
+            L10n.format("asset.action.downloading", Int(progress * 100))
         case .cached:
-            "已下载"
+            L10n.text("asset.state.cached")
         case .assembling:
-            "正在生成"
+            L10n.text("asset.state.assembling")
         case .authorizing:
-            "等待照片权限"
+            L10n.text("asset.state.authorizing")
         case .importing:
-            "正在写入照片"
+            L10n.text("asset.state.importing")
         case .imported:
-            "已导入"
+            L10n.text("asset.state.imported")
         case .needsConfirmation:
-            "需要确认"
+            L10n.text("asset.state.needs_confirmation")
         case .failed:
-            "重试"
+            L10n.text("common.retry")
         }
     }
 

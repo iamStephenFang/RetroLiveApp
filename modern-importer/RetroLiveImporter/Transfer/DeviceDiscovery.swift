@@ -65,7 +65,7 @@ extension DeviceDiscovery: @preconcurrency NetServiceBrowserDelegate {
 
     func netServiceBrowser(_ browser: NetServiceBrowser, didNotSearch errorDict: [String: NSNumber]) {
         isSearching = false
-        errorMessage = "无法搜索局域网设备（\(errorDict)）。"
+        errorMessage = L10n.format("discovery.search_failed", String(describing: errorDict))
     }
 
     func netServiceBrowserDidStopSearch(_ browser: NetServiceBrowser) {
@@ -80,6 +80,6 @@ extension DeviceDiscovery: @preconcurrency NetServiceDelegate {
 
     func netService(_ sender: NetService, didNotResolve errorDict: [String: NSNumber]) {
         services.removeValue(forKey: sender.name)
-        errorMessage = "无法解析 \(sender.name)（\(errorDict)）。"
+        errorMessage = L10n.format("discovery.resolve_failed", sender.name, String(describing: errorDict))
     }
 }

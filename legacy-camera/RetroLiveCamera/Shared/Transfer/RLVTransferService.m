@@ -76,7 +76,7 @@ static BOOL RLVContentLengthFromHeaders(NSDictionary *headers, NSUInteger *resul
 {
     if (self.running) return YES;
     int listener = socket(AF_INET, SOCK_STREAM, 0);
-    if (listener < 0) return [self failWithCode:1 description:@"Unable to create the transfer socket." error:error];
+    if (listener < 0) return [self failWithCode:1 description:NSLocalizedString(@"transfer.error.socket", nil) error:error];
     int enabled = 1;
     setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &enabled, sizeof(enabled));
     struct sockaddr_in address;
@@ -89,12 +89,12 @@ static BOOL RLVContentLengthFromHeaders(NSDictionary *headers, NSUInteger *resul
         address.sin_port = 0;
         if (bind(listener, (struct sockaddr *)&address, sizeof(address)) != 0) {
             close(listener);
-            return [self failWithCode:2 description:@"Unable to bind a local transfer port." error:error];
+            return [self failWithCode:2 description:NSLocalizedString(@"transfer.error.bind", nil) error:error];
         }
     }
     if (listen(listener, 8) != 0) {
         close(listener);
-        return [self failWithCode:3 description:@"Unable to listen for transfer clients." error:error];
+        return [self failWithCode:3 description:NSLocalizedString(@"transfer.error.listen", nil) error:error];
     }
     fcntl(listener, F_SETFL, fcntl(listener, F_GETFL, 0) | O_NONBLOCK);
     socklen_t addressLength = sizeof(address);

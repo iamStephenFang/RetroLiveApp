@@ -61,23 +61,23 @@ enum CameraAPIError: Error, LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
-            "相机返回了无法识别的响应。"
+            L10n.text("api.invalid_response")
         case .invalidRequest:
-            "请求参数无效。"
+            L10n.text("api.invalid_request")
         case .unauthorized:
-            "配对已失效，请重新输入相机上的配对码。"
+            L10n.text("api.unauthorized")
         case .lockedOut:
-            "配对尝试过多，请稍后再试。"
+            L10n.text("api.locked_out")
         case .notFound:
-            "相机上已找不到这个素材。"
+            L10n.text("api.not_found")
         case .invalidPayload(let field):
-            "相机返回的数据字段无效：\(field)。"
+            L10n.format("api.invalid_payload", field)
         case .paginationLoop:
-            "相机返回了重复的分页游标，已停止读取。"
+            L10n.text("api.pagination_loop")
         case .duplicateAsset(let assetId):
-            "相机返回了重复素材：\(assetId)。"
-        case .server(let status, let message):
-            "相机请求失败（\(status)）：\(message)"
+            L10n.format("api.duplicate_asset", assetId)
+        case .server(let status, _):
+            L10n.format("api.server_error", status)
         }
     }
 }

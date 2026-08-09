@@ -14,7 +14,7 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    self.title = @"Transfer";
+    self.title = NSLocalizedString(@"transfer.title", nil);
     self.view.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1.0];
     self.statusLabel = [self labelWithFontSize:18.0];
     self.addressLabel = [self labelWithFontSize:15.0];
@@ -68,8 +68,9 @@
     } else {
         NSError *error = nil;
         if (![service start:&error]) {
-            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Transfer Error"
-                message:[error localizedDescription] delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"transfer.error.title", nil)
+                message:[error localizedDescription] delegate:nil cancelButtonTitle:NSLocalizedString(@"common.ok", nil)
+                otherButtonTitles:nil];
             [alert show];
         }
     }
@@ -79,17 +80,17 @@
 {
     RLVTransferService *service = [RLVTransferService sharedService];
     if (service.running) {
-        self.statusLabel.text = @"Sharing on Local Network";
+        self.statusLabel.text = NSLocalizedString(@"transfer.status.on", nil);
         self.addressLabel.text = [NSString stringWithFormat:@"http://%@:%lu", service.localAddress, (unsigned long)service.port];
         self.codeLabel.text = service.pairingCode;
-        self.noteLabel.text = @"Enter this one-time pairing code on the modern device. Keep RetroLive open and connected to the same Wi-Fi network.";
-        [self.actionButton setTitle:@"Stop Sharing" forState:UIControlStateNormal];
+        self.noteLabel.text = NSLocalizedString(@"transfer.note.on", nil);
+        [self.actionButton setTitle:NSLocalizedString(@"transfer.stop", nil) forState:UIControlStateNormal];
     } else {
-        self.statusLabel.text = @"Sharing is Off";
-        self.addressLabel.text = @"No local server is running";
+        self.statusLabel.text = NSLocalizedString(@"transfer.status.off", nil);
+        self.addressLabel.text = NSLocalizedString(@"transfer.no_server", nil);
         self.codeLabel.text = @"------";
-        self.noteLabel.text = @"Start sharing when both devices are on the same Wi-Fi network. Stopping sharing invalidates the current session.";
-        [self.actionButton setTitle:@"Start Sharing" forState:UIControlStateNormal];
+        self.noteLabel.text = NSLocalizedString(@"transfer.note.off", nil);
+        [self.actionButton setTitle:NSLocalizedString(@"transfer.start", nil) forState:UIControlStateNormal];
     }
 }
 

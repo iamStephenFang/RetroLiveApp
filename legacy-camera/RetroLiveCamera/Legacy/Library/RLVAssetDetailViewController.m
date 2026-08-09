@@ -34,7 +34,7 @@
     formatter.timeStyle = NSDateFormatterMediumStyle;
     self.metadataLabel.text = [NSString stringWithFormat:@"%@\n%lu × %lu\n%@",
         [formatter stringFromDate:self.asset.captureTimestamp], (unsigned long)self.asset.width,
-        (unsigned long)self.asset.height, self.asset.captureDevice ?: @"Unknown device"];
+        (unsigned long)self.asset.height, self.asset.captureDevice ?: NSLocalizedString(@"asset.unknown_device", nil)];
     [root addSubview:self.metadataLabel];
     self.view = root;
 }

@@ -1,0 +1,4 @@
+"CFBundleDisplayName" = "RetroLive 相机";
+"NSCameraUsageDescription" = "RetroLive 使用相机拍摄并保存本地照片素材。";
+"NSLocalNetworkUsageDescription" = "RetroLive 通过局域网与已配对的设备共享拍摄素材。";
+"NSMicrophoneUsageDescription" = "RetroLive 使用麦克风为动态照片录制声音。";

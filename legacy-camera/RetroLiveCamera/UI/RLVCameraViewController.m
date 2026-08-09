@@ -13,11 +13,10 @@
     titleLabel.textColor = [UIColor whiteColor];
     titleLabel.textAlignment = NSTextAlignmentCenter;
     titleLabel.numberOfLines = 2;
-    titleLabel.text = @"RetroLive Camera\n准备拍摄";
+    titleLabel.text = [NSString stringWithFormat:@"RetroLive Camera\n%@", NSLocalizedString(@"camera.ready", nil)];
     [rootView addSubview:titleLabel];
 
     self.view = rootView;
 }
 
 @end
-

@@ -20,15 +20,15 @@
     self.bottomChromeView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.88];
     [root addSubview:self.bottomChromeView];
 
-    self.flashButton = [self flatButtonWithTitle:@"Flash Auto" font:[UIFont systemFontOfSize:12.0]];
+    self.flashButton = [self flatButtonWithTitle:NSLocalizedString(@"camera.flash.auto", nil) font:[UIFont systemFontOfSize:12.0]];
     [self.topChromeView addSubview:self.flashButton];
     self.cameraSwitchButton = [self flatButtonWithTitle:@"↻" font:[UIFont systemFontOfSize:25.0]];
-    self.cameraSwitchButton.accessibilityLabel = @"Switch Camera";
+    self.cameraSwitchButton.accessibilityLabel = NSLocalizedString(@"camera.switch", nil);
     [self.topChromeView addSubview:self.cameraSwitchButton];
 
     UILabel *mode = [[UILabel alloc] initWithFrame:CGRectZero];
     mode.tag = 8001;
-    mode.text = @"PHOTO";
+    mode.text = NSLocalizedString(@"camera.mode.photo", nil);
     mode.textColor = [UIColor colorWithRed:1 green:0.78 blue:0 alpha:1];
     mode.font = [UIFont systemFontOfSize:12.0];
     mode.textAlignment = NSTextAlignmentCenter;
@@ -38,7 +38,7 @@
     self.shutterButton = [[RLVClassicShutterButton alloc] initWithFrame:CGRectZero];
     [self.bottomChromeView addSubview:self.shutterButton];
     self.thumbnailButton = [UIButton buttonWithType:UIButtonTypeCustom];
-    self.thumbnailButton.accessibilityLabel = @"Last Photo";
+    self.thumbnailButton.accessibilityLabel = NSLocalizedString(@"camera.last_photo", nil);
     self.thumbnailButton.clipsToBounds = YES;
     [self.bottomChromeView addSubview:self.thumbnailButton];
     self.rotatingControls = [NSArray arrayWithObjects:self.flashButton, self.cameraSwitchButton, self.thumbnailButton, nil];
