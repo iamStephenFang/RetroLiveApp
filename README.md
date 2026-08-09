@@ -1,43 +1,162 @@
 # RetroLive
 
-RetroLive is a two-generation legacy camera and modern importer for producing motion-photo assets on iPhones that never supported native Live Photo capture.
+RetroLive brings motion-photo capture to older iPhones and imports the result as a Live Photo on a modern iPhone.
 
-Legacy and Classic capture screens offer persistent `4:3`, `1:1`, and `16:9` framing. `4:3` is the default. The legacy device stores the original JPEG/MOV plus the selected framing metadata; the modern importer applies one centered composition to both resources before creating the Live Photo, avoiding video re-encoding on the old phone.
+The project has two parts:
 
-The repository now contains the code-complete portions of **Phase 0–5**: the versioned protocol, iOS 6 Legacy and iOS 8 Classic capture targets, transactional still-plus-motion storage, paired read-only HTTP/Bonjour transfer, a modern downloader with resumable checksum-verified caching, Live Photo assembly, and idempotent PhotoKit import. Hardware-dependent capture, LAN, Photos, and Live Photo playback checks remain device acceptance work.
+- a legacy Objective-C camera app that captures an independent JPEG and a short motion clip; and
+- a modern SwiftUI importer that discovers the camera over the local network, verifies the downloaded files, assembles a Live Photo, and saves it to Photos.
+
+RetroLive is under active development. The protocol, storage, transfer, and import paths are implemented and covered by host or simulator tests, but archived iOS toolchain builds and the complete two-device workflow still require physical-device acceptance. See [Project status](#project-status) before relying on it for irreplaceable photos.
+
+## Features
+
+- Legacy-style camera interfaces for iOS 6 and the iOS 7/8 era
+- Independent full-resolution JPEG capture with a short, shutter-centered motion clip
+- Persistent `4:3`, `1:1`, and `16:9` framing without modifying the camera-side originals
+- On-device asset library with still and motion playback
+- Explicit, six-digit pairing over the local network
+- Bonjour discovery and a versioned, read-only HTTP API
+- Resumable downloads with byte-length and SHA-256 verification
+- Live Photo metadata assembly and PhotoKit import
+- Photo-only fallback when motion capture is unavailable
+- English, Simplified Chinese, and Traditional Chinese localization
+- No package-manager or third-party runtime dependencies
+
+## Apps and compatibility
+
+| Target | Purpose | Project setting | Development toolchain |
+| --- | --- | --- | --- |
+| `RetroLiveCamera` | iOS 6-style camera and local asset server | iOS 6.0 | An archived Xcode/iOS 6 SDK is required for an authentic device build |
+| `RetroLiveClassic` | iOS 7/8-era camera using the same capture and storage core | iOS 7.0 | Use a toolchain that can build and sign for the target device |
+| `RetroLiveImporter` | Discovers a camera, downloads assets, and imports them into Photos | iOS 17.0 | Current Xcode with Swift 6 support |
+
+Both camera targets use Objective-C and ARC. The importer is a SwiftUI application. A modern Xcode installation can inspect and host-check much of the camera source, but it cannot prove that the iOS 6 binary builds, installs, or behaves correctly on period hardware.
+
+## How it works
+
+1. The camera captures `photo.jpg` and, when available, a short `motion.mov` around the shutter event.
+2. It writes the media and `manifest.json` into a temporary asset directory, validates them, and atomically commits the asset.
+3. The importer pairs with the camera, downloads immutable resources, and verifies their declared byte lengths and SHA-256 hashes.
+4. For a motion asset, the importer writes a shared content identifier and still-image-time metadata into a separate working copy before submitting the pair to PhotoKit. A photo-only asset is imported as a normal photo.
+
+The original files on the camera and the verified download cache are never edited in place. The cross-device contract is defined by [Protocol V1](docs/protocol.md), with [`protocol/manifest.schema.json`](protocol/manifest.schema.json) as the normative Manifest specification.
+
+## Build from source
+
+### Clone the repository
+
+```sh
+git clone https://github.com/iamStephenFang/RetroLive.git
+cd RetroLive
+```
+
+The repository has no external dependency bootstrap step.
+
+### Modern importer
+
+1. Open `modern-importer/RetroLiveImporter.xcodeproj` in a current version of Xcode.
+2. Select the `RetroLiveImporter` target.
+3. In **Signing & Capabilities**, choose your development team. Change the bundle identifier if your account cannot sign `com.retrolive.importer`.
+4. Select an iPhone running iOS 17 or later and run the app.
+5. Allow Local Network and Photos access when prompted.
+
+The importer can be built in the simulator, but Bonjour, local-network transfer, PhotoKit persistence, and Live Photo playback should be tested on a physical iPhone.
+
+### Legacy and Classic cameras
+
+1. Read [the legacy build-environment notes](docs/ios6-build-environment.md).
+2. Open `legacy-camera/RetroLiveCamera.xcodeproj` with the toolchain appropriate for the target device.
+3. Choose either the `RetroLiveCamera` or `RetroLiveClassic` scheme.
+4. Configure a signing identity and, if necessary, a unique bundle identifier.
+5. Build and run on a physical iPhone. Grant camera, microphone, and local-network access when the OS requests them.
+
+Do not raise the deployment target or replace legacy APIs merely to make the iOS 6 scheme build in current Xcode. That would stop the build from representing the device it is intended to support.
+
+## Usage
+
+### Capture on the old iPhone
+
+1. Open the camera app and select `4:3`, `1:1`, or `16:9` from the framing control.
+2. Use the shutter button to capture an asset. Motion capture starts in the background; if it cannot produce a valid clip, RetroLive keeps the JPEG as a photo-only asset.
+3. Tap the thumbnail button to open the local library. Select an item to review its still image and, when present, its motion.
+
+Captured assets stay inside RetroLive. The camera app does not add them directly to the system Camera Roll.
+
+### Share from the old iPhone
+
+1. Connect both iPhones to the same trusted Wi-Fi network.
+2. Open the camera's local library.
+3. Tap the transfer button in the navigation bar.
+4. Tap **Start Sharing** and keep this screen open. Note the six-digit pairing code.
+
+Sharing advertises a `_retrolive._tcp.` Bonjour service and exposes only committed assets. Stopping sharing invalidates the temporary session token.
+
+### Import on the modern iPhone
+
+1. Open `RetroLiveImporter` and select the camera under nearby devices.
+2. Enter the six-digit code shown by the camera. The importer submits it automatically after the sixth digit.
+3. Optionally keep **Remember This Device** enabled to store the pairing session in the modern iPhone's Keychain.
+4. Choose an asset and tap **Import**. Keep both apps available until downloading and import complete.
+5. Open Photos to verify the imported photo or Live Photo.
+
+If discovery fails, confirm that both devices are on the same Wi-Fi network, Local Network permission is enabled for both apps, sharing is still running, and the network does not isolate wireless clients.
+
+> [!IMPORTANT]
+> Camera transfer uses authenticated but unencrypted HTTP. Use it only on a trusted local network, stop sharing when finished, and do not expose its port to the internet.
 
 ## Repository layout
 
 ```text
-docs/              Architecture, protocol, build, format, and test documentation
-protocol/          JSON Schema, OpenAPI description, examples, and fixtures
-legacy-camera/     Shared Objective-C core plus iOS 6 Legacy and iOS 8 Classic camera targets
-modern-importer/   SwiftUI application targeting iOS 17.0
-tools/             Dependency-free protocol validation utilities
+legacy-camera/       Objective-C camera targets and their shared core
+modern-importer/     SwiftUI importer and XCTest target
+protocol/            JSON Schema, OpenAPI contract, examples, and fixtures
+tools/               Dependency-free host-side validation and integration runners
+docs/                Architecture, formats, build notes, delivery notes, and test plans
+design/              Source artwork and interface-icon tooling
 ```
 
-## Protocol validation
+The main runtime flow is:
+
+```text
+Legacy / Classic UI
+        |
+RLVCaptureController
+        |
+RLVAssetStore -> Assets/{assetId}/{photo.jpg,motion.mov,manifest.json}
+        |
+RLVTransferService + RLVTransferRouter
+        |
+Bonjour + paired read-only HTTP
+        |
+CameraAPIClient -> DownloadStore -> LivePhotoAssembler -> PhotoLibraryImporter
+```
+
+For component ownership and data boundaries, read [Architecture](docs/architecture.md). For the on-disk representation, read [Asset format](docs/asset-format.md) and [Live Photo format](docs/live-photo-format.md).
+
+## Development guidelines
+
+Changes should preserve these project boundaries:
+
+- Treat `protocol/manifest.schema.json` as the source of truth. Update the schema, examples, fixture catalog, Objective-C parser, Swift parser, and tests together when the contract changes.
+- Keep the `RLV` prefix for shared and legacy Objective-C symbols.
+- Keep the iOS 6 target under ARC and use APIs available to its intended SDK.
+- Let `RLVCaptureController` own AVFoundation capture, `RLVAssetStore` own asset paths and commits, and the transfer router serve only committed assets.
+- Never modify camera originals or verified downloads in place. Assembly belongs in a separate working directory.
+- Add user-visible text to English, Simplified Chinese, and Traditional Chinese resources for every affected target.
+- Do not treat a current-SDK build, simulator test, or host runner as evidence of old-device camera, Wi-Fi, PhotoKit, or Live Photo behavior.
+
+### Run the checks
+
+Run the shared Manifest catalog through both the Python and Objective-C parsers:
 
 ```sh
-python3 tools/validate-manifest/validate.py protocol/examples/manifest-v1.json
-python3 tools/validate-manifest/validate.py protocol/fixtures/valid-v1/manifest.json
-python3 tools/validate-manifest/validate.py protocol/fixtures/photo-only-v1/manifest.json
-python3 tools/validate-manifest/validate.py --expect-invalid protocol/fixtures/invalid-hash/manifest.json
-python3 tools/validate-manifest/validate.py --expect-invalid protocol/fixtures/invalid-date/manifest.json
-python3 tools/validate-manifest/validate.py --expect-invalid protocol/fixtures/invalid-types/manifest.json
-python3 tools/validate-manifest/validate.py --expect-unsupported protocol/fixtures/unsupported-schema/manifest.json
+python3 tools/test-manifest-fixtures/run.py
+```
 
-clang -fobjc-arc -framework Foundation \
-  -I legacy-camera/RetroLiveCamera/Assets \
-  tools/test-legacy-parser/main.m \
-  legacy-camera/RetroLiveCamera/Assets/RLVAssetManifest.m \
-  legacy-camera/RetroLiveCamera/Assets/RLVManifestParser.m \
-  -o /tmp/retrolive-legacy-parser
-/tmp/retrolive-legacy-parser protocol/fixtures/valid-v1/manifest.json
-/tmp/retrolive-legacy-parser protocol/fixtures/photo-only-v1/manifest.json
-/tmp/retrolive-legacy-parser --expect-invalid protocol/fixtures/invalid-date/manifest.json
-/tmp/retrolive-legacy-parser --expect-invalid protocol/fixtures/invalid-types/manifest.json
+Build and run the transactional asset-store integration check:
 
+```sh
 clang -fobjc-arc -framework Foundation -framework AVFoundation \
   -framework ImageIO -framework CoreGraphics \
   -I legacy-camera/RetroLiveCamera/Shared/Asset \
@@ -50,7 +169,11 @@ clang -fobjc-arc -framework Foundation -framework AVFoundation \
   legacy-camera/RetroLiveCamera/Shared/Capture/RLVCaptureEvent.m \
   -o /tmp/retrolive-asset-store
 /tmp/retrolive-asset-store
+```
 
+Build and run the transfer-router integration check:
+
+```sh
 clang -fobjc-arc -framework Foundation -framework AVFoundation \
   -framework ImageIO -framework CoreGraphics \
   -I legacy-camera/RetroLiveCamera/Shared/Transfer \
@@ -65,26 +188,49 @@ clang -fobjc-arc -framework Foundation -framework AVFoundation \
   legacy-camera/RetroLiveCamera/Shared/Asset/RLVManifest.m \
   -o /tmp/retrolive-transfer-router
 /tmp/retrolive-transfer-router
+```
 
+Run the modern test bundle with Xcode's **Product > Test**, or from the command line with an installed simulator:
+
+```sh
 xcodebuild test \
   -project modern-importer/RetroLiveImporter.xcodeproj \
   -scheme RetroLiveImporter \
-  -destination 'platform=iOS Simulator,id=<installed-simulator-udid>'
+  -destination 'platform=iOS Simulator,id=<simulator-udid>'
 ```
 
-The legacy project deliberately keeps its deployment target at iOS 6.0. Building it for an actual iOS 6 device requires the archived Xcode/iOS SDK environment described in [docs/ios6-build-environment.md](docs/ios6-build-environment.md).
+Before opening a pull request, also run:
 
-## Validation status
+```sh
+find legacy-camera/RetroLiveCamera modern-importer/RetroLiveImporter \
+  -name '*.strings' -print0 | xargs -0 plutil -lint
+git diff --check
+```
 
-- Both camera schemes compile with the current SDK when deployment and architecture are overridden for host source validation.
-- Protocol fixtures cover both motion and `motion: null`; the asset-store runner covers a motion commit.
-- iOS 6 archived-toolchain builds, real-camera capture, 20-shot stability, restart persistence, orientation, and pixel-fidelity checks still require the target devices.
-- Real-camera timing, audio, orientation, and 20-shot stability still require the target devices.
-- Aspect-ratio geometry and Manifest compatibility are covered by host tests; preview-to-photo-to-motion composition still requires portrait/landscape checks on each target device and a physical Live Photo import check.
-- Phase 3 routing, pairing, bearer authorization, pagination, immutable media access, and Range behavior are covered by a host integration test.
-- Bonjour discovery, real-device transfer, capture/download concurrency, and archived iOS 6 builds remain device acceptance checks.
-- Phase 4 API, pagination, resumable download, SHA-256 verification, quarantine, and immutable-cache checks are included in the modern test bundle.
-- Phase 5 manifest boundaries, durable import journal migration/recovery, and duplicate-submission guards are included in the modern test bundle; generated-media and PhotoKit behavior still require focused fixture/mock and device tests.
-- The current simulator run discovered and passed 13 of 13 tests. Simulator success is not a substitute for the physical-device acceptance cases.
+The full automated and physical-device matrix is in [the test plan](docs/test-plan.md). When building both camera schemes in parallel, give them different `-derivedDataPath` values to avoid Xcode's build-database lock.
 
-See [docs/phase0-5-review.md](docs/phase0-5-review.md), [docs/phase0-2-completion-audit.md](docs/phase0-2-completion-audit.md), [docs/phase2-plan.md](docs/phase2-plan.md), [docs/phase3-delivery.md](docs/phase3-delivery.md), [docs/phase4-5-delivery.md](docs/phase4-5-delivery.md), [docs/camera-ui-measurements.md](docs/camera-ui-measurements.md), and [docs/test-plan.md](docs/test-plan.md).
+## Project status
+
+The repository contains the implemented protocol, capture/storage, local transfer, verified download, assembly, and import paths. Current automated coverage includes the shared Manifest fixture catalog, asset transactions, transfer routing, pagination and byte ranges, checksum-verified/resumable downloads, aspect-ratio geometry, generated JPEG/MOV assembly, and import-history recovery.
+
+The following checks remain hardware- or environment-dependent:
+
+- authentic iOS 6 builds with an archived Xcode and SDK;
+- real-camera timing, audio, orientation, interruption, low-storage, and sustained-capture behavior;
+- UI fidelity on each intended legacy device and OS version;
+- Bonjour discovery and transfer between physical devices, including interrupted Wi-Fi and capture/download concurrency; and
+- PhotoKit persistence and Live Photo playback on a physical modern iPhone.
+
+The detailed acceptance boundary is tracked in the [test plan](docs/test-plan.md).
+
+## Contributing and support
+
+Bug reports and focused pull requests are welcome through [GitHub Issues](https://github.com/iamStephenFang/RetroLive/issues). Include the target, Xcode build, iPhone model, iOS version, reproduction steps, and relevant logs. For camera, network, or Live Photo changes, describe which simulator, host, or physical-device checks you actually performed.
+
+Protocol changes should start with an issue so compatibility and fixture changes can be agreed before implementation. Keep pull requests scoped, preserve legacy-device compatibility, and update the documentation and test catalog with behavior changes.
+
+The repository does not yet include separate `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, or `SECURITY.md` files. These should be added before growing a public contributor community.
+
+## License
+
+No open-source license has been added yet. Until the repository owner selects and adds one, the source is publicly visible but no permission to use, modify, or redistribute it is granted. Add an OSI-approved license before presenting RetroLive as an open-source release.
