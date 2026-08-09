@@ -55,7 +55,7 @@
 
     self.cameraSwitchButton = [self chromeButtonWithTitle:nil];
     self.cameraSwitchButton.accessibilityLabel = NSLocalizedString(@"camera.switch", nil);
-    [top addSubview:self.cameraSwitchButton];
+    [bottom addSubview:self.cameraSwitchButton];
 
     self.thumbnailButton = [UIButton buttonWithType:UIButtonTypeCustom];
     self.thumbnailButton.layer.borderColor = [UIColor colorWithWhite:0.75 alpha:1].CGColor;
@@ -67,31 +67,21 @@
     self.shutterButton = [[RLVLegacyShutterButton alloc] initWithFrame:CGRectZero];
     [bottom addSubview:self.shutterButton];
 
-    UILabel *mode = [[UILabel alloc] initWithFrame:CGRectZero];
-    mode.tag = 6001;
-    mode.backgroundColor = [UIColor clearColor];
-    mode.text = NSLocalizedString(@"camera.mode.photo", nil);
-    mode.textColor = [UIColor colorWithWhite:0.88 alpha:1];
-    mode.font = [UIFont boldSystemFontOfSize:9.0];
-    mode.textAlignment = NSTextAlignmentCenter;
-    mode.shadowColor = [UIColor blackColor];
-    mode.shadowOffset = CGSizeMake(0, -1);
-    [bottom addSubview:mode];
-
     RLVPrepareViewsForAutoLayout(@[self.previewView, top, bottom, self.flashButton,
-        self.cameraSwitchButton, self.thumbnailButton, self.shutterButton, mode]);
+        self.cameraSwitchButton, self.thumbnailButton, self.shutterButton]);
     RLVAddVisualConstraints(root, @{@"top": top, @"preview": self.previewView, @"bottom": bottom},
         @[@"H:|[top]|", @"H:|[preview]|", @"H:|[bottom]|", @"V:|[top(44)][preview][bottom(96)]|"]);
-    RLVAddVisualConstraints(top, @{@"flash": self.flashButton, @"switch": self.cameraSwitchButton},
-        @[@"H:|-4-[flash(54)]", @"H:[switch(54)]-4-|", @"V:|[flash]|", @"V:|[switch]|"]);
+    RLVAddVisualConstraints(top, @{@"flash": self.flashButton},
+        @[@"H:[flash(44)]", @"V:|[flash]|"]);
+    RLVAlignViews(top, self.flashButton, NSLayoutAttributeCenterX, top, NSLayoutAttributeCenterX);
     RLVAddVisualConstraints(bottom,
-        @{@"thumbnail": self.thumbnailButton, @"shutter": self.shutterButton, @"mode": mode},
-        @[@"H:|-14-[thumbnail(48)]", @"H:[mode(54)]-16-|", @"V:[thumbnail(48)]",
-          @"H:[shutter(76)]", @"V:[shutter(76)]", @"V:[mode(25)]"]);
+        @{@"thumbnail": self.thumbnailButton, @"shutter": self.shutterButton, @"switch": self.cameraSwitchButton},
+        @[@"H:|-14-[thumbnail(48)]", @"H:[switch(48)]-14-|", @"V:[thumbnail(48)]",
+          @"H:[shutter(76)]", @"V:[shutter(76)]", @"V:[switch(48)]"]);
     RLVAlignViews(bottom, self.thumbnailButton, NSLayoutAttributeCenterY, bottom, NSLayoutAttributeCenterY);
     RLVAlignViews(bottom, self.shutterButton, NSLayoutAttributeCenterX, bottom, NSLayoutAttributeCenterX);
     RLVAlignViews(bottom, self.shutterButton, NSLayoutAttributeCenterY, bottom, NSLayoutAttributeCenterY);
-    RLVAlignViews(bottom, mode, NSLayoutAttributeCenterY, bottom, NSLayoutAttributeCenterY);
+    RLVAlignViews(bottom, self.cameraSwitchButton, NSLayoutAttributeCenterY, bottom, NSLayoutAttributeCenterY);
 
     self.rotatingControls = [NSArray arrayWithObjects:self.flashButton, self.cameraSwitchButton, self.thumbnailButton, nil];
     self.view = root;

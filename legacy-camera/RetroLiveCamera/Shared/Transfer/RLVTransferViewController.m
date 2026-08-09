@@ -9,6 +9,7 @@
 @property (nonatomic, strong) UILabel *noteLabel;
 @property (nonatomic, strong) UIButton *actionButton;
 @property (nonatomic, strong) UIView *contentView;
+@property (nonatomic, strong) UIScrollView *scrollView;
 @end
 
 @implementation RLVTransferViewController
@@ -32,19 +33,24 @@
     self.actionButton.titleLabel.font = [UIFont boldSystemFontOfSize:18.0];
     [self.actionButton addTarget:self action:@selector(actionPressed:) forControlEvents:UIControlEventTouchUpInside];
     self.contentView = [[UIView alloc] initWithFrame:CGRectZero];
-    [self.view addSubview:self.contentView];
+    self.scrollView = [[UIScrollView alloc] initWithFrame:CGRectZero];
+    self.scrollView.alwaysBounceVertical = NO;
+    [self.view addSubview:self.scrollView];
+    [self.scrollView addSubview:self.contentView];
     [self.contentView addSubview:self.statusLabel];
     [self.contentView addSubview:self.addressLabel];
     [self.contentView addSubview:self.codeLabel];
     [self.contentView addSubview:self.noteLabel];
     [self.contentView addSubview:self.actionButton];
 
-    RLVPrepareViewsForAutoLayout(@[self.contentView, self.statusLabel, self.addressLabel,
+    RLVPrepareViewsForAutoLayout(@[self.scrollView, self.contentView, self.statusLabel, self.addressLabel,
         self.codeLabel, self.noteLabel, self.actionButton]);
-    RLVAddVisualConstraints(self.view, @{@"content": self.contentView},
-        @[@"H:|-16-[content]-16-|", @"V:|-(>=20)-[content]-(>=20)-|"]);
-    RLVAlignViews(self.view, self.contentView, NSLayoutAttributeCenterY,
-        self.view, NSLayoutAttributeCenterY);
+    RLVPinViewToEdges(self.scrollView, self.view);
+    RLVAddVisualConstraints(self.scrollView, @{@"content": self.contentView},
+        @[@"H:|-16-[content]-16-|", @"V:|-20-[content]-20-|"]);
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:self.contentView
+        attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:self.view
+        attribute:NSLayoutAttributeWidth multiplier:1.0 constant:-32.0]];
     RLVAddVisualConstraints(self.contentView,
         @{@"status": self.statusLabel, @"address": self.addressLabel, @"code": self.codeLabel,
           @"note": self.noteLabel, @"action": self.actionButton},
@@ -54,6 +60,13 @@
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateContent)
         name:RLVTransferServiceDidChangeNotification object:nil];
     [self updateContent];
+}
+
+- (void)viewDidLayoutSubviews
+{
+    [super viewDidLayoutSubviews];
+    CGFloat extra = MAX(0.0, (CGRectGetHeight(self.scrollView.bounds) - self.scrollView.contentSize.height) / 2.0);
+    self.scrollView.contentInset = UIEdgeInsetsMake(extra, 0.0, extra, 0.0);
 }
 
 - (UILabel *)labelWithFontSize:(CGFloat)fontSize
@@ -112,5 +125,6 @@
 @synthesize noteLabel = _noteLabel;
 @synthesize actionButton = _actionButton;
 @synthesize contentView = _contentView;
+@synthesize scrollView = _scrollView;
 
 @end

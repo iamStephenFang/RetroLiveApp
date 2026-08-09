@@ -5,7 +5,7 @@
 "camera.flash.on" = "閃光燈 開";
 "camera.flash.off" = "閃光燈 關";
 "camera.last_photo" = "上一張相片";
-"camera.mode.photo" = "相片";
+"camera.live.capturing" = "正在拍攝原況相片";
 "camera.ready" = "準備拍攝";
 "camera.shutter" = "快門";
 "camera.switch" = "切換相機";

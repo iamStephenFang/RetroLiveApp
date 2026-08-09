@@ -12,6 +12,7 @@
 @property (nonatomic, strong) RLVCameraOrientationCoordinator *orientationCoordinator;
 @property (nonatomic, strong, readwrite) RLVDeviceCapabilities *capabilities;
 @property (nonatomic, strong) UIView *shutterOverlay;
+@property (nonatomic, strong) UIView *liveCaptureIndicator;
 @property (nonatomic, assign, getter=isViewVisible) BOOL viewVisible;
 @property (nonatomic, copy) NSString *thumbnailRequestAssetId;
 - (void)attachPreviewLayerIfNeeded;
@@ -28,6 +29,7 @@
     self.orientationCoordinator = [[RLVCameraOrientationCoordinator alloc] init];
     self.orientationCoordinator.delegate = self;
     [self configureCameraActions];
+    [self configureLiveCaptureIndicator];
 
     self.shutterOverlay = [[UIView alloc] initWithFrame:self.previewView.bounds];
     self.shutterOverlay.backgroundColor = [UIColor blackColor];
@@ -132,6 +134,62 @@
     [self.previewView addGestureRecognizer:tap];
 }
 
+- (void)configureLiveCaptureIndicator
+{
+    self.liveCaptureIndicator = [[UIView alloc] initWithFrame:CGRectZero];
+    self.liveCaptureIndicator.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.68];
+    self.liveCaptureIndicator.layer.cornerRadius = 14.0;
+    self.liveCaptureIndicator.hidden = YES;
+    self.liveCaptureIndicator.isAccessibilityElement = YES;
+    self.liveCaptureIndicator.accessibilityLabel = NSLocalizedString(@"camera.live.capturing", nil);
+
+    UIImageView *icon = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"InterfaceIcons/RLVLiveEffect"]];
+    icon.contentMode = UIViewContentModeCenter;
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
+    label.backgroundColor = [UIColor clearColor];
+    label.text = @"LIVE";
+    label.textColor = [UIColor colorWithRed:1.0 green:0.78 blue:0.0 alpha:1.0];
+    label.font = [UIFont boldSystemFontOfSize:11.0];
+    label.textAlignment = NSTextAlignmentLeft;
+    label.isAccessibilityElement = NO;
+    [self.liveCaptureIndicator addSubview:icon];
+    [self.liveCaptureIndicator addSubview:label];
+    [self.previewView addSubview:self.liveCaptureIndicator];
+
+    RLVPrepareViewsForAutoLayout(@[self.liveCaptureIndicator, icon, label]);
+    RLVAddVisualConstraints(self.liveCaptureIndicator, @{@"icon": icon, @"label": label},
+        @[@"H:|-8-[icon(20)]-4-[label]-8-|", @"V:|[icon]|", @"V:|[label]|"]);
+    RLVAddVisualConstraints(self.previewView, @{@"live": self.liveCaptureIndicator},
+        @[@"H:[live(76)]", @"V:|-56-[live(28)]"]);
+    RLVAlignViews(self.previewView, self.liveCaptureIndicator, NSLayoutAttributeCenterX,
+        self.previewView, NSLayoutAttributeCenterX);
+
+    NSMutableArray *rotating = [NSMutableArray arrayWithArray:self.rotatingControls ?: [NSArray array]];
+    [rotating addObject:self.liveCaptureIndicator];
+    self.rotatingControls = rotating;
+}
+
+- (void)showLiveCaptureIndicator
+{
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideLiveCaptureIndicator) object:nil];
+    self.liveCaptureIndicator.hidden = NO;
+    self.liveCaptureIndicator.alpha = 1.0;
+    UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification,
+        NSLocalizedString(@"camera.live.capturing", nil));
+    [self performSelector:@selector(hideLiveCaptureIndicator) withObject:nil afterDelay:1.7];
+}
+
+- (void)hideLiveCaptureIndicator
+{
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideLiveCaptureIndicator) object:nil];
+    if (self.liveCaptureIndicator.hidden) return;
+    [UIView animateWithDuration:0.18 animations:^{
+        self.liveCaptureIndicator.alpha = 0.0;
+    } completion:^(BOOL finished) {
+        if (finished) self.liveCaptureIndicator.hidden = YES;
+    }];
+}
+
 - (void)shutterPressed:(id)sender
 {
     (void)sender;
@@ -195,12 +253,14 @@
 
 - (void)captureController:(RLVCaptureController *)controller didChangeState:(RLVCaptureState)state
 {
-    (void)controller;
     self.shutterButton.enabled = state == RLVCaptureStateRunning;
     self.shutterButton.capturing = state == RLVCaptureStateCapturing;
     if (state == RLVCaptureStateCapturing) {
+        if (controller.isRecordingMotion) [self showLiveCaptureIndicator];
         self.shutterOverlay.alpha = 0.72;
         [UIView animateWithDuration:0.16 animations:^{ self.shutterOverlay.alpha = 0.0; }];
+    } else {
+        [self hideLiveCaptureIndicator];
     }
 }
 
@@ -296,6 +356,7 @@
 @synthesize captureController = _captureController;
 @synthesize orientationCoordinator = _orientationCoordinator;
 @synthesize shutterOverlay = _shutterOverlay;
+@synthesize liveCaptureIndicator = _liveCaptureIndicator;
 @synthesize viewVisible = _viewVisible;
 @synthesize thumbnailRequestAssetId = _thumbnailRequestAssetId;
 

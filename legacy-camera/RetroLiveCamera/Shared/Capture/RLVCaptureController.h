@@ -20,6 +20,7 @@ typedef NS_ENUM(NSInteger, RLVCaptureState) {
 @property (nonatomic, strong, readonly) AVCaptureVideoPreviewLayer *previewLayer;
 @property (nonatomic, assign, readonly) AVCaptureDevicePosition cameraPosition;
 @property (nonatomic, assign, readonly) AVCaptureFlashMode flashMode;
+@property (nonatomic, assign, readonly, getter=isRecordingMotion) BOOL recordingMotion;
 
 - (void)prepareWithCompletion:(void (^)(NSError *error))completion;
 - (void)startRunning;

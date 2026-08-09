@@ -5,7 +5,7 @@
 "camera.flash.on" = "Flash On";
 "camera.flash.off" = "Flash Off";
 "camera.last_photo" = "Last Photo";
-"camera.mode.photo" = "PHOTO";
+"camera.live.capturing" = "Capturing Live Photo";
 "camera.ready" = "Ready to capture";
 "camera.shutter" = "Shutter";
 "camera.switch" = "Switch Camera";

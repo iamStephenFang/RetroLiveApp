@@ -249,6 +249,11 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
     });
 }
 
+- (BOOL)isRecordingMotion
+{
+    return [self.movieFileOutput isRecording];
+}
+
 - (void)switchCamera
 {
     if (self.state != RLVCaptureStateRunning) {

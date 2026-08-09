@@ -25,16 +25,7 @@
     [self.topChromeView addSubview:self.flashButton];
     self.cameraSwitchButton = [self flatButtonWithTitle:nil font:[UIFont systemFontOfSize:25.0]];
     self.cameraSwitchButton.accessibilityLabel = NSLocalizedString(@"camera.switch", nil);
-    [self.topChromeView addSubview:self.cameraSwitchButton];
-
-    UILabel *mode = [[UILabel alloc] initWithFrame:CGRectZero];
-    mode.tag = 8001;
-    mode.text = NSLocalizedString(@"camera.mode.photo", nil);
-    mode.textColor = [UIColor colorWithRed:1 green:0.78 blue:0 alpha:1];
-    mode.font = [UIFont systemFontOfSize:12.0];
-    mode.textAlignment = NSTextAlignmentCenter;
-    mode.backgroundColor = [UIColor clearColor];
-    [self.bottomChromeView addSubview:mode];
+    [self.bottomChromeView addSubview:self.cameraSwitchButton];
 
     self.shutterButton = [[RLVClassicShutterButton alloc] initWithFrame:CGRectZero];
     [self.bottomChromeView addSubview:self.shutterButton];
@@ -44,18 +35,19 @@
     [self.bottomChromeView addSubview:self.thumbnailButton];
 
     RLVPrepareViewsForAutoLayout(@[self.previewView, self.topChromeView, self.bottomChromeView,
-        self.flashButton, self.cameraSwitchButton, mode, self.shutterButton, self.thumbnailButton]);
+        self.flashButton, self.cameraSwitchButton, self.shutterButton, self.thumbnailButton]);
     RLVAddVisualConstraints(root,
         @{@"preview": self.previewView, @"top": self.topChromeView, @"bottom": self.bottomChromeView},
         @[@"H:|[preview]|", @"V:|[preview]|", @"H:|[top]|", @"V:|[top(44)]",
           @"H:|[bottom]|", @"V:[bottom(128)]|"]);
-    RLVAddVisualConstraints(self.topChromeView,
-        @{@"flash": self.flashButton, @"switch": self.cameraSwitchButton},
-        @[@"H:|-4-[flash(54)]", @"H:[switch(54)]-4-|", @"V:|[flash]|", @"V:|[switch]|"]);
+    RLVAddVisualConstraints(self.topChromeView, @{@"flash": self.flashButton},
+        @[@"H:[flash(44)]", @"V:|[flash]|"]);
+    RLVAlignViews(self.topChromeView, self.flashButton, NSLayoutAttributeCenterX,
+        self.topChromeView, NSLayoutAttributeCenterX);
     RLVAddVisualConstraints(self.bottomChromeView,
-        @{@"mode": mode, @"shutter": self.shutterButton, @"thumbnail": self.thumbnailButton},
-        @[@"H:|[mode]|", @"V:|-5-[mode(20)]", @"H:[shutter(78)]", @"V:[shutter(78)]-10-|",
-          @"H:|-16-[thumbnail(48)]", @"V:[thumbnail(48)]-21-|"]);
+        @{@"switch": self.cameraSwitchButton, @"shutter": self.shutterButton, @"thumbnail": self.thumbnailButton},
+        @[@"H:[shutter(78)]", @"V:[shutter(78)]-10-|", @"H:|-16-[thumbnail(48)]",
+          @"H:[switch(48)]-16-|", @"V:[thumbnail(48)]-21-|", @"V:[switch(48)]-21-|"]);
     RLVAlignViews(self.bottomChromeView, self.shutterButton, NSLayoutAttributeCenterX,
         self.bottomChromeView, NSLayoutAttributeCenterX);
 
