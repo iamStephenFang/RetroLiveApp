@@ -5,6 +5,34 @@ import XCTest
 final class ManifestParserTests: XCTestCase {
     private let parser = ManifestParser()
 
+    private struct FixtureCatalog: Decodable {
+        let cases: [FixtureCase]
+    }
+
+    private struct FixtureCase: Decodable {
+        let name: String
+        let expectation: String
+    }
+
+    func testSharedFixtureCatalog() throws {
+        let catalog = try JSONDecoder().decode(FixtureCatalog.self, from: fixtureCatalogData())
+        XCTAssertFalse(catalog.cases.isEmpty)
+        for fixture in catalog.cases {
+            let actual: String
+            do {
+                _ = try parser.parse(try fixtureData(fixture.name))
+                actual = "valid"
+            } catch let error as ManifestParserError {
+                if case .unsupportedSchemaVersion = error {
+                    actual = "unsupported"
+                } else {
+                    actual = "invalid"
+                }
+            }
+            XCTAssertEqual(actual, fixture.expectation, fixture.name)
+        }
+    }
+
     func testValidFixture() throws {
         let manifest = try parser.parse(try fixtureData("valid-v1"))
         XCTAssertEqual(manifest.schemaVersion, 1)
@@ -45,7 +73,7 @@ final class ManifestParserTests: XCTestCase {
     }
 
     func testBooleanSchemaVersionFixture() throws {
-        XCTAssertThrowsError(try parser.parse(try fixtureData("invalid-types"))) { error in
+        XCTAssertThrowsError(try parser.parse(try fixtureData("invalid-schema-version-type"))) { error in
             XCTAssertEqual(error as? ManifestParserError, .invalidField("$.schemaVersion"))
         }
     }
@@ -118,6 +146,23 @@ final class ManifestParserTests: XCTestCase {
         }
     }
 
+    func testAllSupportedAspectRatiosParse() throws {
+        for (rawValue, expected) in [
+            ("4:3", ManifestV1.AspectRatio.fourThree),
+            ("1:1", ManifestV1.AspectRatio.square),
+            ("16:9", ManifestV1.AspectRatio.sixteenNine)
+        ] {
+            var object = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: try fixtureData("valid-v1")) as? [String: Any]
+            )
+            var capture = try XCTUnwrap(object["capture"] as? [String: Any])
+            capture["aspectRatio"] = rawValue
+            object["capture"] = capture
+            let manifest = try parser.parse(try JSONSerialization.data(withJSONObject: object))
+            XCTAssertEqual(manifest.capture.aspectRatio, expected)
+        }
+    }
+
     func testFramingGeometryUsesMotionApertureBeforeSelectedCrop() {
         let photo = CGRect(x: 0, y: 0, width: 3264, height: 2448)
         let crop = FramingGeometry.photoCrop(
@@ -142,5 +187,17 @@ final class ManifestParserTests: XCTestCase {
             throw CocoaError(.fileNoSuchFile)
         }
         return try Data(contentsOf: fixtureURL)
+    }
+
+    private func fixtureCatalogData() throws -> Data {
+        let bundle = Bundle(for: Self.self)
+        guard let catalogURL = bundle.url(
+            forResource: "cases",
+            withExtension: "json",
+            subdirectory: "fixtures"
+        ) else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        return try Data(contentsOf: catalogURL)
     }
 }

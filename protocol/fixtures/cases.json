@@ -1,0 +1,16 @@
+{
+  "cases": [
+    { "name": "valid-v1", "expectation": "valid" },
+    { "name": "photo-only-v1", "expectation": "valid" },
+    { "name": "invalid-hash", "expectation": "invalid" },
+    { "name": "invalid-date", "expectation": "invalid" },
+    { "name": "invalid-schema-version-type", "expectation": "invalid" },
+    { "name": "invalid-unsafe-filename", "expectation": "invalid" },
+    { "name": "invalid-timestamp-mismatch", "expectation": "invalid" },
+    { "name": "invalid-missing-motion", "expectation": "invalid" },
+    { "name": "invalid-photo-only-timing", "expectation": "invalid" },
+    { "name": "invalid-motion-boundary", "expectation": "invalid" },
+    { "name": "invalid-aspect-ratio", "expectation": "invalid" },
+    { "name": "unsupported-schema", "expectation": "unsupported" }
+  ]
+}

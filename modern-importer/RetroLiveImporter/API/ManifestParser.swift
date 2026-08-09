@@ -29,6 +29,10 @@ enum ManifestParserError: Error, Equatable, LocalizedError {
 struct ManifestParser: Sendable {
     static let supportedSchemaVersions = [1]
 
+    private struct VersionEnvelope: Decodable {
+        let schemaVersion: Int
+    }
+
     func parse(_ data: Data) throws -> ManifestV1 {
         let object: Any
         do {
@@ -39,7 +43,10 @@ struct ManifestParser: Sendable {
         guard let root = object as? [String: Any] else {
             throw ManifestParserError.invalidJSON(L10n.text("manifest.root_not_object"))
         }
-        guard let schemaVersion = root["schemaVersion"] as? Int else {
+        let schemaVersion: Int
+        do {
+            schemaVersion = try JSONDecoder().decode(VersionEnvelope.self, from: data).schemaVersion
+        } catch {
             throw ManifestParserError.invalidField("$.schemaVersion")
         }
         guard Self.supportedSchemaVersions.contains(schemaVersion) else {

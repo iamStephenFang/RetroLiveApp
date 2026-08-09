@@ -2,15 +2,15 @@
 
 ## Automated repository checks
 
-- Validate motion, photo-only, malformed-hash/date/type, and unsupported-version fixtures with `tools/validate-manifest/validate.py`.
-- Parse both valid asset lifecycles with the Foundation-only Objective-C runner.
+- Run `python3 tools/test-manifest-fixtures/run.py` to validate every case listed in `protocol/fixtures/cases.json` with both the dependency-free Python validator and the Foundation-only Objective-C parser. The runner fails for missing or unlisted fixtures.
+- Cover motion, photo-only, malformed hash/date/type, unsafe filename, mismatched timestamp, missing motion, invalid photo-only timing, motion-boundary timing, unsupported aspect ratio, and unsupported schema-version cases.
 - Type-check the modern Swift Manifest model/parser.
 - Run the Objective-C asset-store integration runner against a temporary Documents root. It commits generated photo/motion payloads, validates both hashes and media metadata, reloads the same UUID, and verifies conservative Temporary recovery.
 - Run the host-side transfer-router integration test for pairing, bearer authorization, pagination, immutable resource routing, byte ranges, and protocol errors.
 - Inspect both camera targets with `xcodebuild -list`.
 - Compile both target source sets with the current SDK using host-compatible deployment/architecture overrides. This is not an iOS 6 binary acceptance build.
 - Run `plutil -lint` and `git diff --check`.
-- Build the modern importer and its XCTest bundle for a generic iOS device. Run the complete test bundle on an available iOS Simulator and inspect the xcresult test count for Manifest boundaries, API authorization/pagination, resumable verified download, photo-only fallback, and durable import-journal recovery.
+- Build the modern importer and its XCTest bundle for a generic iOS device. Run the complete test bundle on an available iOS Simulator and inspect the xcresult test count for the shared Manifest fixture catalog, API authorization/pagination, resumable verified download, photo-only fallback, and durable import-journal recovery.
 - Verify all three aspect values parse, unsupported values fail, missing values preserve V1 pass-through behavior, and framing geometry first intersects the photo with the motion aperture before applying the selected ratio.
 
 ## Additional transaction checks on an iOS test host

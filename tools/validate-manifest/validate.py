@@ -205,7 +205,12 @@ def main():
     try:
         with args.path.open("r", encoding="utf-8") as source:
             document = json.load(source)
-        if isinstance(document, dict) and isinstance(document.get("schemaVersion"), int) and document["schemaVersion"] != 1:
+        if (
+            isinstance(document, dict)
+            and isinstance(document.get("schemaVersion"), int)
+            and not isinstance(document["schemaVersion"], bool)
+            and document["schemaVersion"] != 1
+        ):
             raise UnsupportedSchemaVersion(
                 f"unsupported schemaVersion {document['schemaVersion']}; supported versions: 1"
             )

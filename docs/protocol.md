@@ -1,6 +1,6 @@
 # RetroLive Protocol V1
 
-Protocol V1 consists of JSON metadata and immutable media files transferred over HTTP. `protocol/manifest.schema.json` is the normative Manifest definition. Examples and fixtures are informative test inputs.
+Protocol V1 consists of JSON metadata and immutable media files transferred over HTTP. `protocol/manifest.schema.json` is the normative Manifest definition. Examples and fixtures are informative test inputs. `protocol/fixtures/cases.json` records the expected outcome for every shared fixture so all parser implementations consume the same catalog.
 
 ## Compatibility rules
 

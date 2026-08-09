@@ -1,5 +1,5 @@
 {
-  "schemaVersion": true,
+  "schemaVersion": 1,
   "assetId": "C86142AF-28F4-4F77-911A-82B574AE6823",
   "createdAt": "2026-08-08T12:00:00.000Z",
   "createdAtUnixMilliseconds": 1786190400000,
@@ -8,7 +8,7 @@
     "orientation": 6,
     "mirrored": false,
     "flashMode": "auto",
-    "stillImageTimeSeconds": 0,
+    "stillImageTimeSeconds": 0.5,
     "stillImageTimeAccuracy": "estimated",
     "preRollSeconds": 0,
     "postRollSeconds": 0
