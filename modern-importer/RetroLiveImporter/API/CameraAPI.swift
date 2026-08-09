@@ -6,19 +6,29 @@ struct DiscoveredCamera: Identifiable, Hashable, Sendable {
     let host: String
     let port: Int
 
+    var hostDescription: String {
+        host.hasSuffix(".") ? String(host.dropLast()) : host
+    }
+
     var endpointDescription: String {
-        let normalizedHost = host.hasSuffix(".") ? String(host.dropLast()) : host
-        return normalizedHost + ":" + String(port)
+        hostDescription + ":" + String(port)
     }
 
     var baseURL: URL {
         var components = URLComponents()
         components.scheme = "http"
-        components.host = host.hasSuffix(".") ? String(host.dropLast()) : host
+        components.host = hostDescription
         components.port = port
         components.path = "/api/v1"
         return components.url!
     }
+}
+
+struct PairingSession: Codable, Equatable, Sendable {
+    let token: String
+    let expiresAt: Date
+
+    var isValid: Bool { expiresAt > Date() }
 }
 
 struct CameraDeviceInfo: Codable, Equatable, Sendable {
@@ -43,8 +53,23 @@ struct CameraAssetSummary: Codable, Identifiable, Equatable, Sendable {
     let createdAt: String
     let thumbnailURL: String?
     let manifestURL: String
+    let hasMotion: Bool?
 
     var id: String { assetId }
+
+    init(
+        assetId: String,
+        createdAt: String,
+        thumbnailURL: String?,
+        manifestURL: String,
+        hasMotion: Bool? = nil
+    ) {
+        self.assetId = assetId
+        self.createdAt = createdAt
+        self.thumbnailURL = thumbnailURL
+        self.manifestURL = manifestURL
+        self.hasMotion = hasMotion
+    }
 }
 
 struct CameraAssetPage: Codable, Equatable, Sendable {
@@ -91,6 +116,7 @@ actor CameraAPIClient {
     private struct PairingRequest: Encodable {
         let pairingCode: String
         let clientName: String
+        let rememberDevice: Bool
     }
 
     private struct SessionResponse: Decodable {
@@ -111,7 +137,8 @@ actor CameraAPIClient {
         self.session = session
     }
 
-    func pair(code: String, clientName: String) async throws {
+    @discardableResult
+    func pair(code: String, clientName: String, rememberDevice: Bool = false) async throws -> PairingSession {
         guard code.count == 6, code.allSatisfy(\.isNumber),
               !clientName.isEmpty, clientName.count <= 100 else {
             throw CameraAPIError.invalidRequest
@@ -119,7 +146,13 @@ actor CameraAPIClient {
         var request = URLRequest(url: endpoint("session"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(PairingRequest(pairingCode: code, clientName: clientName))
+        request.httpBody = try JSONEncoder().encode(
+            PairingRequest(
+                pairingCode: code,
+                clientName: clientName,
+                rememberDevice: rememberDevice
+            )
+        )
         let (data, response) = try await session.data(for: request)
         try validate(response: response, data: data)
         let sessionResponse = try JSONDecoder().decode(SessionResponse.self, from: data)
@@ -127,6 +160,17 @@ actor CameraAPIClient {
             throw CameraAPIError.invalidResponse
         }
         token = sessionResponse.token
+        return PairingSession(
+            token: sessionResponse.token,
+            expiresAt: Date().addingTimeInterval(TimeInterval(sessionResponse.expiresInSeconds))
+        )
+    }
+
+    func restore(_ session: PairingSession) throws {
+        guard session.isValid, session.token.count >= 32 else {
+            throw CameraAPIError.unauthorized
+        }
+        token = session.token
     }
 
     func disconnect() {
@@ -167,7 +211,9 @@ actor CameraAPIClient {
             for item in page.items {
                 guard UUID(uuidString: item.assetId) != nil,
                       RetroLiveISO8601.date(from: item.createdAt) != nil,
-                      item.manifestURL == "/api/v1/assets/\(item.assetId)/manifest" else {
+                      item.manifestURL == "/api/v1/assets/\(item.assetId)/manifest",
+                      item.thumbnailURL == nil ||
+                        item.thumbnailURL == "/api/v1/assets/\(item.assetId)/thumbnail" else {
                     throw CameraAPIError.invalidPayload("assets.items")
                 }
                 guard seenAssetIds.insert(item.assetId).inserted else {
@@ -192,6 +238,17 @@ actor CameraAPIClient {
         let request = try authorizedRequest(path: "assets/\(assetId)/manifest")
         let (data, response) = try await session.data(for: request)
         try validate(response: response, data: data)
+        return data
+    }
+
+    func previewData(for summary: CameraAssetSummary) async throws -> Data {
+        let resource = summary.thumbnailURL == nil ? "photo" : "thumbnail"
+        let request = try authorizedRequest(assetId: summary.assetId, resource: resource)
+        let (data, response) = try await session.data(for: request)
+        try validate(response: response, data: data)
+        guard !data.isEmpty, data.count <= 25 * 1_024 * 1_024 else {
+            throw CameraAPIError.invalidPayload("thumbnail")
+        }
         return data
     }
 

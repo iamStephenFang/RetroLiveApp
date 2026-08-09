@@ -7,6 +7,7 @@
 @property (nonatomic, strong) NSDate *createdAt;
 @property (nonatomic, strong) NSDate *captureTimestamp;
 @property (nonatomic, strong) NSURL *photoURL;
+@property (nonatomic, strong) NSURL *thumbnailURL;
 @property (nonatomic, strong) NSURL *motionURL;
 @property (nonatomic, strong) NSURL *manifestURL;
 @property (nonatomic, assign) NSUInteger width;

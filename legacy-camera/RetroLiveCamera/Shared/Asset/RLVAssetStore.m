@@ -31,6 +31,10 @@ static BOOL RLVIsBoolean(id value)
 @property (nonatomic, strong) NSArray *cachedAssets;
 - (NSArray *)cachedAssetsLoadingFromDiskIfNeeded:(NSError **)error;
 - (NSArray *)loadAssetsFromDisk:(NSError **)error;
+- (NSData *)thumbnailDataForPhotoData:(NSData *)photoData
+                         maxPixelSize:(NSUInteger)maxPixelSize
+                                width:(NSUInteger *)width
+                               height:(NSUInteger *)height;
 @end
 
 @implementation RLVAssetStore
@@ -98,12 +102,30 @@ static BOOL RLVIsBoolean(id value)
         if (error == nil && ![photoData writeToURL:photoURL options:NSDataWritingAtomic error:&error]) {
             // error populated by NSData
         }
+        NSUInteger thumbnailWidth = 0;
+        NSUInteger thumbnailHeight = 0;
+        NSData *thumbnailData = error == nil ? [self thumbnailDataForPhotoData:photoData
+                                                                  maxPixelSize:320
+                                                                         width:&thumbnailWidth
+                                                                        height:&thumbnailHeight] : nil;
+        NSURL *thumbnailURL = [stagingURL URLByAppendingPathComponent:@"thumbnail.jpg"];
+        if (thumbnailData && ![thumbnailData writeToURL:thumbnailURL options:NSDataWritingAtomic error:&error]) {
+            // A generated thumbnail is part of the transaction once written.
+        }
         NSData *motionData = motionURL && error == nil ? [NSData dataWithContentsOfURL:motionURL options:NSDataReadingMappedIfSafe error:&error] : nil;
         NSURL *stagedMotionURL = [stagingURL URLByAppendingPathComponent:@"motion.mov"];
         if (motionData && error == nil && ![motionData writeToURL:stagedMotionURL options:NSDataWritingAtomic error:&error]) {
             // error populated by NSData
         }
-        NSDictionary *manifest = error == nil ? [RLVManifest manifestForEvent:event photoData:photoData motionData:motionData width:width height:height capabilities:capabilities] : nil;
+        NSDictionary *manifest = error == nil ? [RLVManifest manifestForEvent:event
+                                                                     photoData:photoData
+                                                                    motionData:motionData
+                                                                 thumbnailData:thumbnailData
+                                                                         width:width
+                                                                        height:height
+                                                                thumbnailWidth:thumbnailWidth
+                                                               thumbnailHeight:thumbnailHeight
+                                                                  capabilities:capabilities] : nil;
         NSData *manifestData = manifest ? [RLVManifest JSONDataForManifest:manifest error:&error] : nil;
         NSURL *manifestURL = [stagingURL URLByAppendingPathComponent:@"manifest.json"];
         if (error == nil && ![manifestData writeToURL:manifestURL options:NSDataWritingAtomic error:&error]) {
@@ -246,6 +268,25 @@ static BOOL RLVIsBoolean(id value)
     NSString *photoFilename = [photo objectForKey:@"filename"];
     NSURL *photoURL = [assetURL URLByAppendingPathComponent:[photoFilename isKindOfClass:[NSString class]] ? photoFilename : @""];
     NSData *photoData = [NSData dataWithContentsOfURL:photoURL options:0 error:error];
+    id thumbnailValue = [manifest objectForKey:@"thumbnail"];
+    BOOL thumbnailValid = thumbnailValue == nil;
+    if ([thumbnailValue isKindOfClass:[NSDictionary class]]) {
+        NSDictionary *thumbnail = thumbnailValue;
+        NSString *thumbnailFilename = [thumbnail objectForKey:@"filename"];
+        NSURL *thumbnailURL = [assetURL URLByAppendingPathComponent:[thumbnailFilename isKindOfClass:[NSString class]] ? thumbnailFilename : @""];
+        NSData *thumbnailData = [NSData dataWithContentsOfURL:thumbnailURL options:0 error:NULL];
+        NSNumber *thumbnailWidth = [thumbnail objectForKey:@"width"];
+        NSNumber *thumbnailHeight = [thumbnail objectForKey:@"height"];
+        NSNumber *thumbnailLength = [thumbnail objectForKey:@"byteLength"];
+        NSString *thumbnailHash = [thumbnail objectForKey:@"sha256"];
+        thumbnailValid = thumbnailData != nil && [thumbnailFilename isEqualToString:@"thumbnail.jpg"] &&
+            [[thumbnail objectForKey:@"mimeType"] isEqualToString:@"image/jpeg"] &&
+            RLVIsNumber(thumbnailWidth) && [thumbnailWidth unsignedIntegerValue] > 0 &&
+            RLVIsNumber(thumbnailHeight) && [thumbnailHeight unsignedIntegerValue] > 0 &&
+            RLVIsNumber(thumbnailLength) && [thumbnailLength unsignedLongLongValue] == [thumbnailData length] &&
+            [thumbnailHash isKindOfClass:[NSString class]] &&
+            [thumbnailHash isEqualToString:[RLVManifest SHA256ForData:thumbnailData]];
+    }
     id motion = [manifest objectForKey:@"motion"];
     NSNumber *stillTimeValue = [capture objectForKey:@"stillImageTimeSeconds"];
     NSNumber *preRollValue = [capture objectForKey:@"preRollSeconds"];
@@ -313,7 +354,7 @@ static BOOL RLVIsBoolean(id value)
         [photoWidth unsignedIntegerValue] > 0 && [photoHeight unsignedIntegerValue] > 0 && RLVIsNumber(photoLength) &&
         [photoLength unsignedLongLongValue] > 0 && [photoLength unsignedLongLongValue] == [photoData length] && [photoHash isKindOfClass:[NSString class]] &&
         [photoHash isEqualToString:[RLVManifest SHA256ForData:photoData]] &&
-        motionValid;
+        motionValid && thumbnailValid;
     if (!valid && error != NULL && *error == nil) {
         *error = [self errorWithCode:3 description:NSLocalizedString(@"asset.error.validation_failed", nil)];
     }
@@ -350,6 +391,10 @@ static BOOL RLVIsBoolean(id value)
     asset.createdAt = [RLVManifest dateFromISO8601String:[manifest objectForKey:@"createdAt"]];
     asset.captureTimestamp = [NSDate dateWithTimeIntervalSince1970:[[manifest objectForKey:@"createdAtUnixMilliseconds"] longLongValue] / 1000.0];
     asset.photoURL = photoURL;
+    NSDictionary *thumbnail = [[manifest objectForKey:@"thumbnail"] isKindOfClass:[NSDictionary class]] ?
+        [manifest objectForKey:@"thumbnail"] : nil;
+    NSURL *thumbnailURL = thumbnail ? [url URLByAppendingPathComponent:[thumbnail objectForKey:@"filename"] ?: @""] : nil;
+    if (thumbnailURL && [[NSFileManager defaultManager] fileExistsAtPath:[thumbnailURL path]]) asset.thumbnailURL = thumbnailURL;
     NSURL *motionURL = [url URLByAppendingPathComponent:@"motion.mov"];
     if ([[NSFileManager defaultManager] fileExistsAtPath:[motionURL path]]) asset.motionURL = motionURL;
     asset.manifestURL = [url URLByAppendingPathComponent:@"manifest.json"];
@@ -363,6 +408,42 @@ static BOOL RLVIsBoolean(id value)
     asset.captureDevice = [device objectForKey:@"modelIdentifier"];
     asset.aspectRatio = [capture objectForKey:@"aspectRatio"] ?: @"native";
     return asset;
+}
+
+- (NSData *)thumbnailDataForPhotoData:(NSData *)photoData
+                         maxPixelSize:(NSUInteger)maxPixelSize
+                                width:(NSUInteger *)width
+                               height:(NSUInteger *)height
+{
+    CGImageSourceRef source = CGImageSourceCreateWithData((__bridge CFDataRef)photoData, NULL);
+    if (!source) return nil;
+    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:
+        [NSNumber numberWithBool:YES], (id)kCGImageSourceCreateThumbnailFromImageAlways,
+        [NSNumber numberWithBool:YES], (id)kCGImageSourceCreateThumbnailWithTransform,
+        [NSNumber numberWithUnsignedInteger:maxPixelSize], (id)kCGImageSourceThumbnailMaxPixelSize, nil];
+    CGImageRef image = CGImageSourceCreateThumbnailAtIndex(source, 0, (__bridge CFDictionaryRef)options);
+    CFRelease(source);
+    if (!image) return nil;
+    NSMutableData *data = [NSMutableData data];
+    CGImageDestinationRef destination = CGImageDestinationCreateWithData(
+        (__bridge CFMutableDataRef)data,
+        CFSTR("public.jpeg"),
+        1,
+        NULL
+    );
+    if (!destination) {
+        CGImageRelease(image);
+        return nil;
+    }
+    NSDictionary *properties = [NSDictionary dictionaryWithObject:[NSNumber numberWithDouble:0.78]
+                                                             forKey:(id)kCGImageDestinationLossyCompressionQuality];
+    CGImageDestinationAddImage(destination, image, (__bridge CFDictionaryRef)properties);
+    BOOL finalized = CGImageDestinationFinalize(destination);
+    if (width) *width = CGImageGetWidth(image);
+    if (height) *height = CGImageGetHeight(image);
+    CFRelease(destination);
+    CGImageRelease(image);
+    return finalized ? [NSData dataWithData:data] : nil;
 }
 
 - (void)ensureDirectories

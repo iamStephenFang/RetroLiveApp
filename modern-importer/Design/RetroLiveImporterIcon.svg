@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#FAF8F3"/>
+
+  <!-- Live Photo motion: mathematically exact concentric circles. -->
+  <g fill="none" stroke="#232527" stroke-linecap="round">
+    <circle cx="512" cy="512" r="326" stroke-width="36"
+            stroke-dasharray="866 158" transform="rotate(-45 512 512)"/>
+    <circle cx="512" cy="512" r="247" stroke-width="30"
+            stroke-dasharray="650 126" transform="rotate(135 512 512)"/>
+  </g>
+
+  <!-- Classic and Legacy capture indicators, now integrated into the orbit. -->
+  <circle cx="744" cy="280" r="25" fill="#F2AA22"/>
+  <circle cx="280" cy="744" r="25" fill="#E95132"/>
+
+  <!-- Flat camera shutter: no pupil, glass, highlight, texture, or depth. -->
+  <circle cx="512" cy="512" r="148" fill="#232527"/>
+  <g fill="none" stroke="#FAF8F3" stroke-width="25" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M512 444 L454 410"/>
+    <path d="M571 478 L571 411"/>
+    <path d="M571 546 L629 512"/>
+    <path d="M512 580 L570 614"/>
+    <path d="M453 546 L453 613"/>
+    <path d="M453 478 L395 512"/>
+  </g>
+</svg>

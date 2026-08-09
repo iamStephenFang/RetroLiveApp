@@ -156,6 +156,9 @@ components:
       properties:
         pairingCode: { type: string, pattern: '^[0-9]{6}$' }
         clientName: { type: string, minLength: 1, maxLength: 100 }
+        rememberDevice:
+          type: boolean
+          description: Client preference to retain the temporary bearer session securely; the server still controls expiry.
     Session:
       type: object
       required: [token, expiresInSeconds]
@@ -188,6 +191,7 @@ components:
         createdAt: { type: string, format: date-time }
         thumbnailURL: { type: string }
         manifestURL: { type: string }
+        hasMotion: { type: boolean }
     AssetPage:
       type: object
       required: [items]

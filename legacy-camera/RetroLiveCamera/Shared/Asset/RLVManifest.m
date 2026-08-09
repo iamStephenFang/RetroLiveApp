@@ -6,8 +6,11 @@
 + (NSDictionary *)manifestForEvent:(RLVCaptureEvent *)event
                          photoData:(NSData *)photoData
                         motionData:(NSData *)motionData
+                     thumbnailData:(NSData *)thumbnailData
                               width:(NSUInteger)width
                              height:(NSUInteger)height
+                    thumbnailWidth:(NSUInteger)thumbnailWidth
+                   thumbnailHeight:(NSUInteger)thumbnailHeight
                        capabilities:(RLVDeviceCapabilities *)capabilities
 {
     NSString *createdAt = [self ISO8601StringFromDate:event.shutterTimestamp];
@@ -49,11 +52,20 @@
             [NSNumber numberWithUnsignedLongLong:[motionData length]], @"byteLength",
             [self SHA256ForData:motionData], @"sha256", nil];
     }
-    return [NSDictionary dictionaryWithObjectsAndKeys:
+    NSMutableDictionary *manifest = [NSMutableDictionary dictionaryWithObjectsAndKeys:
         [NSNumber numberWithInteger:1], @"schemaVersion",
         event.assetId, @"assetId", createdAt, @"createdAt",
         [NSNumber numberWithLongLong:milliseconds], @"createdAtUnixMilliseconds",
         capture, @"capture", photo, @"photo", motion, @"motion", device, @"device", nil];
+    if (thumbnailData != nil && thumbnailWidth > 0 && thumbnailHeight > 0) {
+        [manifest setObject:[NSDictionary dictionaryWithObjectsAndKeys:
+            @"thumbnail.jpg", @"filename", @"image/jpeg", @"mimeType",
+            [NSNumber numberWithUnsignedInteger:thumbnailWidth], @"width",
+            [NSNumber numberWithUnsignedInteger:thumbnailHeight], @"height",
+            [NSNumber numberWithUnsignedLongLong:[thumbnailData length]], @"byteLength",
+            [self SHA256ForData:thumbnailData], @"sha256", nil] forKey:@"thumbnail"];
+    }
+    return manifest;
 }
 
 + (NSData *)JSONDataForManifest:(NSDictionary *)manifest error:(NSError **)error

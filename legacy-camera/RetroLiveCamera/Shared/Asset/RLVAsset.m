@@ -22,6 +22,7 @@
 @synthesize createdAt = _createdAt;
 @synthesize captureTimestamp = _captureTimestamp;
 @synthesize photoURL = _photoURL;
+@synthesize thumbnailURL = _thumbnailURL;
 @synthesize motionURL = _motionURL;
 @synthesize manifestURL = _manifestURL;
 @synthesize width = _width;

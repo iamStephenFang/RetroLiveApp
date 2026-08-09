@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import UIKit
 
 enum ImporterAssetState: Equatable {
     case available
@@ -50,11 +51,16 @@ final class ImporterViewModel: ObservableObject {
     @Published private(set) var cameras: [DiscoveredCamera] = []
     @Published var selectedCamera: DiscoveredCamera?
     @Published var pairingCode = ""
+    @Published var rememberDevice = true
     @Published private(set) var deviceInfo: CameraDeviceInfo?
     @Published private(set) var assets: [CameraAssetSummary] = []
     @Published private(set) var assetStates: [String: ImporterAssetState] = [:]
+    @Published private(set) var thumbnailImages: [String: UIImage] = [:]
     @Published private(set) var isPairing = false
+    @Published private(set) var isRestoringSession = false
     @Published private(set) var isLoadingAssets = false
+    @Published private(set) var pairingErrorMessage: String?
+    @Published private(set) var pairingFailureCount = 0
     @Published var errorMessage: String?
 
     private let discovery: DeviceDiscovery
@@ -62,7 +68,11 @@ final class ImporterViewModel: ObservableObject {
     private let assembler: LivePhotoAssembler
     private let photoImporter: any PhotoLibraryImporting
     private let history: ImportHistoryStore
+    private let rememberedDeviceStore: any RememberedDeviceStoring
     private var inFlightAssetIds: Set<String> = []
+    private var loadingThumbnailIds: Set<String> = []
+    private var failedThumbnailIds: Set<String> = []
+    private var lastAttemptedPairingCode: String?
     private var api: CameraAPIClient?
     private var cancellables: Set<AnyCancellable> = []
 
@@ -71,13 +81,15 @@ final class ImporterViewModel: ObservableObject {
         downloadStore: DownloadStore = DownloadStore(),
         assembler: LivePhotoAssembler = LivePhotoAssembler(),
         photoImporter: any PhotoLibraryImporting = PhotoLibraryImporter(),
-        history: ImportHistoryStore = ImportHistoryStore()
+        history: ImportHistoryStore = ImportHistoryStore(),
+        rememberedDeviceStore: any RememberedDeviceStoring = KeychainRememberedDeviceStore()
     ) {
         self.discovery = discovery
         self.downloadStore = downloadStore
         self.assembler = assembler
         self.photoImporter = photoImporter
         self.history = history
+        self.rememberedDeviceStore = rememberedDeviceStore
         discovery.$cameras
             .receive(on: RunLoop.main)
             .sink { [weak self] in self?.cameras = $0 }
@@ -100,25 +112,103 @@ final class ImporterViewModel: ObservableObject {
         deviceInfo = nil
         assets = []
         assetStates = [:]
+        thumbnailImages = [:]
+        pairingErrorMessage = nil
+        lastAttemptedPairingCode = nil
         api = CameraAPIClient(baseURL: camera.baseURL)
+        restoreRememberedSession(for: camera)
     }
 
     func pair() {
-        guard let api, pairingCode.count == 6 else { return }
+        guard let api,
+              let camera = selectedCamera,
+              pairingCode.count == 6,
+              !isPairing,
+              lastAttemptedPairingCode != pairingCode else { return }
+        let submittedCode = pairingCode
+        lastAttemptedPairingCode = submittedCode
         isPairing = true
-        errorMessage = nil
+        pairingErrorMessage = nil
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await api.pair(code: pairingCode, clientName: "RetroLive Importer")
-                deviceInfo = try await api.deviceInfo()
+                let session = try await api.pair(
+                    code: submittedCode,
+                    clientName: "RetroLive Importer",
+                    rememberDevice: rememberDevice
+                )
+                let info = try await api.deviceInfo()
+                if rememberDevice {
+                    do {
+                        try rememberedDeviceStore.save(
+                            RememberedDeviceRecord(
+                                serviceName: camera.name,
+                                deviceId: info.deviceId,
+                                deviceName: info.deviceName,
+                                session: session,
+                                lastConnectedAt: Date()
+                            )
+                        )
+                    } catch {
+                        errorMessage = error.localizedDescription
+                    }
+                } else {
+                    try? rememberedDeviceStore.remove(serviceName: camera.name)
+                }
+                deviceInfo = info
                 pairingCode = ""
                 isPairing = false
                 await refreshAssets()
             } catch {
                 isPairing = false
-                errorMessage = error.localizedDescription
+                pairingErrorMessage = error.localizedDescription
+                pairingFailureCount += 1
             }
+        }
+    }
+
+    func updatePairingCode(_ value: String) {
+        let sanitized = String(value.filter(\.isNumber).prefix(6))
+        if pairingCode != sanitized {
+            pairingCode = sanitized
+        }
+        if sanitized.count < 6 {
+            pairingErrorMessage = nil
+            lastAttemptedPairingCode = nil
+        } else {
+            pair()
+        }
+    }
+
+    func retryPairing() {
+        lastAttemptedPairingCode = nil
+        pair()
+    }
+
+    func isRemembered(_ camera: DiscoveredCamera) -> Bool {
+        rememberedDeviceStore.record(for: camera.name) != nil
+    }
+
+    func loadThumbnail(for summary: CameraAssetSummary) async {
+        guard thumbnailImages[summary.assetId] == nil,
+              !loadingThumbnailIds.contains(summary.assetId),
+              !failedThumbnailIds.contains(summary.assetId),
+              let api else { return }
+        loadingThumbnailIds.insert(summary.assetId)
+        defer { loadingThumbnailIds.remove(summary.assetId) }
+        do {
+            let data: Data
+            if let cached = try? await downloadStore.cachedAsset(assetId: summary.assetId) {
+                data = try Data(contentsOf: cached.photoURL, options: .mappedIfSafe)
+            } else {
+                data = try await api.previewData(for: summary)
+            }
+            guard let image = UIImage(data: data) else {
+                throw CameraAPIError.invalidPayload("thumbnail")
+            }
+            thumbnailImages[summary.assetId] = image
+        } catch {
+            failedThumbnailIds.insert(summary.assetId)
         }
     }
 
@@ -128,6 +218,9 @@ final class ImporterViewModel: ObservableObject {
         do {
             let loaded = try await api.allAssets()
             assets = loaded
+            let loadedIds = Set(loaded.map(\.assetId))
+            thumbnailImages = thumbnailImages.filter { loadedIds.contains($0.key) }
+            failedThumbnailIds.formIntersection(loadedIds)
             for summary in loaded {
                 if inFlightAssetIds.contains(summary.assetId) {
                     continue
@@ -257,7 +350,44 @@ final class ImporterViewModel: ObservableObject {
         deviceInfo = nil
         assets = []
         assetStates = [:]
+        thumbnailImages = [:]
+        loadingThumbnailIds = []
+        failedThumbnailIds = []
         pairingCode = ""
+        pairingErrorMessage = nil
+        lastAttemptedPairingCode = nil
+        isRestoringSession = false
         discovery.start()
+    }
+
+    func forgetSelectedDevice() {
+        if let camera = selectedCamera {
+            try? rememberedDeviceStore.remove(serviceName: camera.name)
+        }
+        disconnect()
+    }
+
+    private func restoreRememberedSession(for camera: DiscoveredCamera) {
+        guard let api,
+              let record = rememberedDeviceStore.record(for: camera.name) else { return }
+        isRestoringSession = true
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await api.restore(record.session)
+                let info = try await api.deviceInfo()
+                guard info.deviceId == record.deviceId else {
+                    throw CameraAPIError.invalidPayload("deviceId")
+                }
+                deviceInfo = info
+                isRestoringSession = false
+                await refreshAssets()
+            } catch {
+                try? rememberedDeviceStore.remove(serviceName: camera.name)
+                isRestoringSession = false
+                pairingErrorMessage = L10n.text("pairing.saved_expired")
+                pairingFailureCount += 1
+            }
+        }
     }
 }

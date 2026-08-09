@@ -76,7 +76,9 @@ int main(void)
         while (!completed) {
             [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
         }
-        if (!committedAsset || commitError || ![committedAsset isComplete] || ![committedAsset hasMotion] || committedAsset.width != 2 || committedAsset.height != 2) {
+        if (!committedAsset || commitError || ![committedAsset isComplete] || ![committedAsset hasMotion] ||
+            !committedAsset.thumbnailURL || ![[NSFileManager defaultManager] fileExistsAtPath:[committedAsset.thumbnailURL path]] ||
+            committedAsset.width != 2 || committedAsset.height != 2) {
             fprintf(stderr, "FAIL asset commit: %s\n", [[commitError description] UTF8String]);
             return 1;
         }
@@ -88,10 +90,14 @@ int main(void)
         NSDictionary *manifest = [NSJSONSerialization JSONObjectWithData:manifestData options:0 error:&commitError];
         NSDictionary *motion = [manifest objectForKey:@"motion"];
         NSDictionary *capture = [manifest objectForKey:@"capture"];
+        NSDictionary *thumbnail = [manifest objectForKey:@"thumbnail"];
         if (![[motion objectForKey:@"filename"] isEqualToString:@"motion.mov"] ||
             [[motion objectForKey:@"durationSeconds"] doubleValue] != 3.0 ||
             [[motion objectForKey:@"frameRate"] doubleValue] != 30.0 ||
-            [[capture objectForKey:@"stillImageTimeSeconds"] doubleValue] != 1.5) {
+            [[capture objectForKey:@"stillImageTimeSeconds"] doubleValue] != 1.5 ||
+            ![[thumbnail objectForKey:@"filename"] isEqualToString:@"thumbnail.jpg"] ||
+            [[thumbnail objectForKey:@"width"] unsignedIntegerValue] == 0 ||
+            [[thumbnail objectForKey:@"height"] unsignedIntegerValue] == 0) {
             fprintf(stderr, "FAIL motion manifest metadata\n");
             return 1;
         }

@@ -153,9 +153,14 @@ static NSString *RLVPercentDecodedString(NSString *value)
         NSData *manifestData = [NSData dataWithContentsOfURL:asset.manifestURL];
         NSDictionary *manifest = manifestData ? [NSJSONSerialization JSONObjectWithData:manifestData options:0 error:NULL] : nil;
         NSString *base = [NSString stringWithFormat:@"/api/v1/assets/%@", asset.assetId];
-        [items addObject:[NSDictionary dictionaryWithObjectsAndKeys:asset.assetId, @"assetId",
+        NSMutableDictionary *item = [NSMutableDictionary dictionaryWithObjectsAndKeys:asset.assetId, @"assetId",
             [manifest objectForKey:@"createdAt"] ?: [self ISO8601StringForDate:asset.createdAt], @"createdAt",
-            [base stringByAppendingString:@"/manifest"], @"manifestURL", nil]];
+            [base stringByAppendingString:@"/manifest"], @"manifestURL",
+            [NSNumber numberWithBool:[asset hasMotion]], @"hasMotion", nil];
+        if (asset.thumbnailURL) {
+            [item setObject:[base stringByAppendingString:@"/thumbnail"] forKey:@"thumbnailURL"];
+        }
+        [items addObject:item];
     }
     id nextCursor = end < [assets count] && end > 0 ? [[assets objectAtIndex:end - 1] assetId] : [NSNull null];
     return [RLVHTTPResponse JSONResponseWithStatusCode:200 object:[NSDictionary dictionaryWithObjectsAndKeys:items, @"items", nextCursor, @"nextCursor", nil]];
@@ -185,6 +190,10 @@ static NSString *RLVPercentDecodedString(NSString *value)
     } else if ([resource isEqualToString:@"motion"]) {
         fileURL = asset.motionURL;
         contentType = @"video/quicktime";
+        supportsRange = YES;
+    } else if ([resource isEqualToString:@"thumbnail"]) {
+        fileURL = asset.thumbnailURL;
+        contentType = @"image/jpeg";
         supportsRange = YES;
     }
     if (!fileURL || ![[NSFileManager defaultManager] fileExistsAtPath:[fileURL path]]) {
