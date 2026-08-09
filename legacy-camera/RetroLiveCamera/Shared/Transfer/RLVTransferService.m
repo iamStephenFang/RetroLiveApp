@@ -151,6 +151,8 @@ static BOOL RLVContentLengthFromHeaders(NSDictionary *headers, NSUInteger *resul
             return;
         }
         fcntl(client, F_SETFL, fcntl(client, F_GETFL, 0) & ~O_NONBLOCK);
+        int noSigPipe = 1;
+        setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, sizeof(noSigPipe));
         struct timeval timeout;
         timeout.tv_sec = 10;
         timeout.tv_usec = 0;
@@ -292,7 +294,7 @@ static BOOL RLVContentLengthFromHeaders(NSDictionary *headers, NSUInteger *resul
 {
     NSUInteger sent = 0;
     while (sent < length) {
-        ssize_t count = send(client, (const unsigned char *)bytes + sent, length - sent, MSG_NOSIGNAL);
+        ssize_t count = send(client, (const unsigned char *)bytes + sent, length - sent, 0);
         if (count <= 0) return NO;
         sent += (NSUInteger)count;
     }

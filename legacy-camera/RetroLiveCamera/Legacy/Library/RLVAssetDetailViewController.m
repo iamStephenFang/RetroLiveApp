@@ -28,7 +28,7 @@
     self.metadataLabel.textColor = [UIColor whiteColor];
     self.metadataLabel.font = [UIFont systemFontOfSize:12.0];
     self.metadataLabel.numberOfLines = 3;
-    self.metadataLabel.textAlignment = UITextAlignmentCenter;
+    self.metadataLabel.textAlignment = NSTextAlignmentCenter;
     NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
     formatter.dateStyle = NSDateFormatterMediumStyle;
     formatter.timeStyle = NSDateFormatterMediumStyle;

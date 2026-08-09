@@ -74,7 +74,7 @@
     mode.text = @"PHOTO";
     mode.textColor = [UIColor colorWithWhite:0.88 alpha:1];
     mode.font = [UIFont boldSystemFontOfSize:9.0];
-    mode.textAlignment = UITextAlignmentCenter;
+    mode.textAlignment = NSTextAlignmentCenter;
     mode.shadowColor = [UIColor blackColor];
     mode.shadowOffset = CGSizeMake(0, -1);
     [bottom addSubview:mode];

@@ -31,7 +31,7 @@
     mode.text = @"PHOTO";
     mode.textColor = [UIColor colorWithRed:1 green:0.78 blue:0 alpha:1];
     mode.font = [UIFont systemFontOfSize:12.0];
-    mode.textAlignment = UITextAlignmentCenter;
+    mode.textAlignment = NSTextAlignmentCenter;
     mode.backgroundColor = [UIColor clearColor];
     [self.bottomChromeView addSubview:mode];
 
