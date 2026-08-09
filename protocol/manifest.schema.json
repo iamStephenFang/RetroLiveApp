@@ -17,6 +17,7 @@
         "orientation": { "type": "integer", "minimum": 1, "maximum": 8 },
         "mirrored": { "type": "boolean" },
         "flashMode": { "enum": ["off", "on", "auto"] },
+        "aspectRatio": { "enum": ["4:3", "1:1", "16:9"] },
         "stillImageTimeSeconds": { "type": "number", "minimum": 0 },
         "stillImageTimeAccuracy": { "enum": ["measured", "estimated"] },
         "preRollSeconds": { "type": "number", "minimum": 0 },

@@ -20,6 +20,7 @@
         [NSNumber numberWithInteger:event.orientation], @"orientation",
         [NSNumber numberWithBool:event.isMirrored], @"mirrored",
         event.flashMode ?: @"off", @"flashMode",
+        event.aspectRatio ?: @"4:3", @"aspectRatio",
         [NSNumber numberWithDouble:hasMotion ? event.stillImageTimeSeconds : 0.0], @"stillImageTimeSeconds",
         @"estimated", @"stillImageTimeAccuracy",
         [NSNumber numberWithDouble:hasMotion ? event.preRollSeconds : 0.0], @"preRollSeconds",

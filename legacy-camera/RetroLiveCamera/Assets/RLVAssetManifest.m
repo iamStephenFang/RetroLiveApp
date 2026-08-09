@@ -14,6 +14,7 @@
 
 @implementation RLVCaptureMetadata
 @synthesize cameraPosition = _cameraPosition, orientation = _orientation, mirrored = _mirrored, flashMode = _flashMode;
+@synthesize aspectRatio = _aspectRatio;
 @synthesize stillImageTimeSeconds = _stillImageTimeSeconds, stillImageTimeAccuracy = _stillImageTimeAccuracy;
 @synthesize preRollSeconds = _preRollSeconds, postRollSeconds = _postRollSeconds;
 @end

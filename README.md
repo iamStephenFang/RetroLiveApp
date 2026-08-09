@@ -2,6 +2,8 @@
 
 RetroLive is a two-generation legacy camera and modern importer for producing motion-photo assets on iPhones that never supported native Live Photo capture.
 
+Legacy and Classic capture screens offer persistent `4:3`, `1:1`, and `16:9` framing. `4:3` is the default. The legacy device stores the original JPEG/MOV plus the selected framing metadata; the modern importer applies one centered composition to both resources before creating the Live Photo, avoiding video re-encoding on the old phone.
+
 The repository now contains the code-complete portions of **Phase 0–5**: the versioned protocol, iOS 6 Legacy and iOS 8 Classic capture targets, transactional still-plus-motion storage, paired read-only HTTP/Bonjour transfer, a modern downloader with resumable checksum-verified caching, Live Photo assembly, and idempotent PhotoKit import. Hardware-dependent capture, LAN, Photos, and Live Photo playback checks remain device acceptance work.
 
 ## Repository layout
@@ -78,6 +80,7 @@ The legacy project deliberately keeps its deployment target at iOS 6.0. Building
 - Protocol fixtures cover both motion and `motion: null`; the asset-store runner covers a motion commit.
 - iOS 6 archived-toolchain builds, real-camera capture, 20-shot stability, restart persistence, orientation, and pixel-fidelity checks still require the target devices.
 - Real-camera timing, audio, orientation, and 20-shot stability still require the target devices.
+- Aspect-ratio geometry and Manifest compatibility are covered by host tests; preview-to-photo-to-motion composition still requires portrait/landscape checks on each target device and a physical Live Photo import check.
 - Phase 3 routing, pairing, bearer authorization, pagination, immutable media access, and Range behavior are covered by a host integration test.
 - Bonjour discovery, real-device transfer, capture/download concurrency, and archived iOS 6 builds remain device acceptance checks.
 - Phase 4 API, pagination, resumable download, SHA-256 verification, quarantine, and immutable-cache checks are included in the modern test bundle.

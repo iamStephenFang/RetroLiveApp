@@ -52,6 +52,9 @@
 
     self.flashButton = [self chromeButtonWithTitle:nil];
     [top addSubview:self.flashButton];
+    self.aspectRatioButton = [self chromeButtonWithTitle:@"4:3"];
+    self.aspectRatioButton.titleLabel.font = [UIFont boldSystemFontOfSize:12.0];
+    [top addSubview:self.aspectRatioButton];
 
     self.cameraSwitchButton = [self chromeButtonWithTitle:nil];
     self.cameraSwitchButton.accessibilityLabel = NSLocalizedString(@"camera.switch", nil);
@@ -67,12 +70,12 @@
     self.shutterButton = [[RLVLegacyShutterButton alloc] initWithFrame:CGRectZero];
     [bottom addSubview:self.shutterButton];
 
-    RLVPrepareViewsForAutoLayout(@[self.previewView, top, bottom, self.flashButton,
+    RLVPrepareViewsForAutoLayout(@[self.previewView, top, bottom, self.flashButton, self.aspectRatioButton,
         self.cameraSwitchButton, self.thumbnailButton, self.shutterButton]);
     RLVAddVisualConstraints(root, @{@"top": top, @"preview": self.previewView, @"bottom": bottom},
         @[@"H:|[top]|", @"H:|[preview]|", @"H:|[bottom]|", @"V:|[top(44)][preview][bottom(96)]|"]);
-    RLVAddVisualConstraints(top, @{@"flash": self.flashButton},
-        @[@"H:[flash(44)]", @"V:|[flash]|"]);
+    RLVAddVisualConstraints(top, @{@"flash": self.flashButton, @"aspect": self.aspectRatioButton},
+        @[@"H:[flash(44)]", @"V:|[flash]|", @"H:[aspect(52)]-4-|", @"V:|[aspect]|"]);
     RLVAlignViews(top, self.flashButton, NSLayoutAttributeCenterX, top, NSLayoutAttributeCenterX);
     RLVAddVisualConstraints(bottom,
         @{@"thumbnail": self.thumbnailButton, @"shutter": self.shutterButton, @"switch": self.cameraSwitchButton},
@@ -83,7 +86,8 @@
     RLVAlignViews(bottom, self.shutterButton, NSLayoutAttributeCenterY, bottom, NSLayoutAttributeCenterY);
     RLVAlignViews(bottom, self.cameraSwitchButton, NSLayoutAttributeCenterY, bottom, NSLayoutAttributeCenterY);
 
-    self.rotatingControls = [NSArray arrayWithObjects:self.flashButton, self.cameraSwitchButton, self.thumbnailButton, nil];
+    self.rotatingControls = [NSArray arrayWithObjects:self.flashButton, self.aspectRatioButton,
+        self.cameraSwitchButton, self.thumbnailButton, nil];
     self.view = root;
 }
 

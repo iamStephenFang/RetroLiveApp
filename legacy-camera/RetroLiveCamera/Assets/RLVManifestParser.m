@@ -92,6 +92,7 @@ static BOOL RLVParserIsISO8601Date(id value)
     id orientation = [captureJSON objectForKey:@"orientation"];
     id mirrored = [captureJSON objectForKey:@"mirrored"];
     id flashMode = [captureJSON objectForKey:@"flashMode"];
+    id aspectRatio = [captureJSON objectForKey:@"aspectRatio"];
     id stillImageTime = [captureJSON objectForKey:@"stillImageTimeSeconds"];
     id stillImageTimeAccuracy = [captureJSON objectForKey:@"stillImageTimeAccuracy"];
     id preRoll = [captureJSON objectForKey:@"preRollSeconds"];
@@ -108,6 +109,7 @@ static BOOL RLVParserIsISO8601Date(id value)
     capture.orientation = [orientation unsignedIntegerValue];
     capture.mirrored = [mirrored boolValue];
     capture.flashMode = flashMode;
+    capture.aspectRatio = [aspectRatio isKindOfClass:[NSString class]] ? aspectRatio : @"native";
     capture.stillImageTimeSeconds = [stillImageTime doubleValue];
     capture.stillImageTimeAccuracy = stillImageTimeAccuracy;
     capture.preRollSeconds = [preRoll doubleValue];
@@ -115,6 +117,8 @@ static BOOL RLVParserIsISO8601Date(id value)
     if (!([capture.cameraPosition isEqualToString:@"front"] || [capture.cameraPosition isEqualToString:@"back"]) ||
         capture.orientation < 1 || capture.orientation > 8 ||
         !([capture.flashMode isEqualToString:@"off"] || [capture.flashMode isEqualToString:@"on"] || [capture.flashMode isEqualToString:@"auto"]) ||
+        !([capture.aspectRatio isEqualToString:@"native"] || [capture.aspectRatio isEqualToString:@"4:3"] ||
+          [capture.aspectRatio isEqualToString:@"1:1"] || [capture.aspectRatio isEqualToString:@"16:9"]) ||
         !([capture.stillImageTimeAccuracy isEqualToString:@"measured"] || [capture.stillImageTimeAccuracy isEqualToString:@"estimated"]) ||
         capture.stillImageTimeSeconds < 0 || capture.preRollSeconds < 0 || capture.postRollSeconds < 0) {
         [self setError:error code:RLVManifestParserErrorInvalidValue message:@"capture contains an invalid value."];

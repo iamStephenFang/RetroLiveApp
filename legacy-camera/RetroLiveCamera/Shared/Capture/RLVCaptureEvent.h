@@ -16,6 +16,7 @@ typedef NS_ENUM(NSInteger, RLVCaptureOrientation) {
 @property (nonatomic, assign) AVCaptureDevicePosition cameraPosition;
 @property (nonatomic, assign, getter=isMirrored) BOOL mirrored;
 @property (nonatomic, copy) NSString *flashMode;
+@property (nonatomic, copy) NSString *aspectRatio;
 @property (nonatomic, assign) NSTimeInterval stillImageTimeSeconds;
 @property (nonatomic, assign) NSTimeInterval preRollSeconds;
 @property (nonatomic, assign) NSTimeInterval postRollSeconds;

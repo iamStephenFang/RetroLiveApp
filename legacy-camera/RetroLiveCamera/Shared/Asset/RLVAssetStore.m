@@ -283,12 +283,15 @@ static BOOL RLVIsBoolean(id value)
     NSNumber *orientation = [capture objectForKey:@"orientation"];
     NSString *flashMode = [capture objectForKey:@"flashMode"];
     NSString *timeAccuracy = [capture objectForKey:@"stillImageTimeAccuracy"];
+    NSString *aspectRatio = [capture objectForKey:@"aspectRatio"];
     NSNumber *mirrored = [capture objectForKey:@"mirrored"];
     BOOL captureValid = [capture isKindOfClass:[NSDictionary class]] &&
         ([cameraPosition isEqualToString:@"front"] || [cameraPosition isEqualToString:@"back"]) &&
         RLVIsNumber(orientation) && [orientation integerValue] >= 1 && [orientation integerValue] <= 8 &&
         RLVIsBoolean(mirrored) &&
         ([flashMode isEqualToString:@"off"] || [flashMode isEqualToString:@"on"] || [flashMode isEqualToString:@"auto"]) &&
+        (aspectRatio == nil || [aspectRatio isEqualToString:@"4:3"] || [aspectRatio isEqualToString:@"1:1"] ||
+            [aspectRatio isEqualToString:@"16:9"]) &&
         ([timeAccuracy isEqualToString:@"measured"] || [timeAccuracy isEqualToString:@"estimated"]);
     BOOL deviceValid = [device isKindOfClass:[NSDictionary class]] && RLVIsNonEmptyString([device objectForKey:@"modelIdentifier"]) &&
         RLVIsNonEmptyString([device objectForKey:@"systemVersion"]) && RLVIsNonEmptyString([device objectForKey:@"appVersion"]);
@@ -352,8 +355,13 @@ static BOOL RLVIsBoolean(id value)
     asset.manifestURL = [url URLByAppendingPathComponent:@"manifest.json"];
     asset.width = [[photo objectForKey:@"width"] unsignedIntegerValue];
     asset.height = [[photo objectForKey:@"height"] unsignedIntegerValue];
+    NSDictionary *motion = [[manifest objectForKey:@"motion"] isKindOfClass:[NSDictionary class]] ?
+        [manifest objectForKey:@"motion"] : nil;
+    asset.motionWidth = [[motion objectForKey:@"width"] unsignedIntegerValue];
+    asset.motionHeight = [[motion objectForKey:@"height"] unsignedIntegerValue];
     asset.orientation = [[capture objectForKey:@"orientation"] integerValue];
     asset.captureDevice = [device objectForKey:@"modelIdentifier"];
+    asset.aspectRatio = [capture objectForKey:@"aspectRatio"] ?: @"native";
     return asset;
 }
 

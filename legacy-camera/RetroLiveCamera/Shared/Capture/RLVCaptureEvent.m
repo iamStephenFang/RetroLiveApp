@@ -8,6 +8,7 @@
 @synthesize cameraPosition = _cameraPosition;
 @synthesize mirrored = _mirrored;
 @synthesize flashMode = _flashMode;
+@synthesize aspectRatio = _aspectRatio;
 @synthesize stillImageTimeSeconds = _stillImageTimeSeconds;
 @synthesize preRollSeconds = _preRollSeconds;
 @synthesize postRollSeconds = _postRollSeconds;

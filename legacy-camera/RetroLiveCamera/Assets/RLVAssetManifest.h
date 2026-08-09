@@ -25,6 +25,7 @@
 @property (nonatomic, assign) NSUInteger orientation;
 @property (nonatomic, assign) BOOL mirrored;
 @property (nonatomic, copy) NSString *flashMode;
+@property (nonatomic, copy) NSString *aspectRatio;
 @property (nonatomic, assign) NSTimeInterval stillImageTimeSeconds;
 @property (nonatomic, copy) NSString *stillImageTimeAccuracy;
 @property (nonatomic, assign) NSTimeInterval preRollSeconds;

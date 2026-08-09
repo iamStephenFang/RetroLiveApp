@@ -94,6 +94,7 @@ final class ImporterViewModel: ObservableObject {
     }
 
     func select(_ camera: DiscoveredCamera) {
+        discovery.stop()
         selectedCamera = camera
         pairingCode = ""
         deviceInfo = nil

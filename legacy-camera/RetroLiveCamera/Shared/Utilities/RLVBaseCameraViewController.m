@@ -7,6 +7,9 @@
 #import <ImageIO/ImageIO.h>
 #import <QuartzCore/QuartzCore.h>
 
+static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
+static NSInteger const RLVAspectRatioActionSheetTag = 817;
+
 @interface RLVBaseCameraViewController ()
 @property (nonatomic, strong) RLVCaptureController *captureController;
 @property (nonatomic, strong) RLVCameraOrientationCoordinator *orientationCoordinator;
@@ -15,7 +18,9 @@
 @property (nonatomic, strong) UIView *liveCaptureIndicator;
 @property (nonatomic, assign, getter=isViewVisible) BOOL viewVisible;
 @property (nonatomic, copy) NSString *thumbnailRequestAssetId;
+@property (nonatomic, copy) NSString *activeAspectRatio;
 - (void)attachPreviewLayerIfNeeded;
+- (void)updatePreviewFrame;
 @end
 
 @implementation RLVBaseCameraViewController
@@ -28,6 +33,9 @@
     self.captureController.delegate = self;
     self.orientationCoordinator = [[RLVCameraOrientationCoordinator alloc] init];
     self.orientationCoordinator.delegate = self;
+    NSString *savedAspectRatio = [[NSUserDefaults standardUserDefaults] stringForKey:RLVAspectRatioDefaultsKey];
+    if (![@[@"4:3", @"1:1", @"16:9"] containsObject:savedAspectRatio]) savedAspectRatio = @"4:3";
+    self.activeAspectRatio = savedAspectRatio;
     [self configureCameraActions];
     [self configureLiveCaptureIndicator];
 
@@ -96,7 +104,25 @@
 - (void)viewDidLayoutSubviews
 {
     [super viewDidLayoutSubviews];
-    self.captureController.previewLayer.frame = self.previewView.bounds;
+    [self updatePreviewFrame];
+}
+
+- (void)updatePreviewFrame
+{
+    CGRect bounds = self.previewView.bounds;
+    if (CGRectIsEmpty(bounds)) return;
+    CGFloat landscapeRatio = 4.0 / 3.0;
+    if ([self.activeAspectRatio isEqualToString:@"1:1"]) landscapeRatio = 1.0;
+    else if ([self.activeAspectRatio isEqualToString:@"16:9"]) landscapeRatio = 16.0 / 9.0;
+    CGFloat portraitRatio = 1.0 / landscapeRatio;
+    CGFloat width = CGRectGetWidth(bounds);
+    CGFloat height = width / portraitRatio;
+    if (height > CGRectGetHeight(bounds)) {
+        height = CGRectGetHeight(bounds);
+        width = height * portraitRatio;
+    }
+    self.captureController.previewLayer.frame = CGRectIntegral(CGRectMake(
+        CGRectGetMidX(bounds) - width * 0.5, CGRectGetMidY(bounds) - height * 0.5, width, height));
 }
 
 - (void)attachPreviewLayerIfNeeded
@@ -123,6 +149,7 @@
     [self.thumbnailButton addTarget:self action:@selector(thumbnailPressed:) forControlEvents:UIControlEventTouchUpInside];
     [self.cameraSwitchButton addTarget:self action:@selector(cameraSwitchPressed:) forControlEvents:UIControlEventTouchUpInside];
     [self.flashButton addTarget:self action:@selector(flashPressed:) forControlEvents:UIControlEventTouchUpInside];
+    [self.aspectRatioButton addTarget:self action:@selector(aspectRatioPressed:) forControlEvents:UIControlEventTouchUpInside];
     [self.cameraSwitchButton setTitle:nil forState:UIControlStateNormal];
     [self.cameraSwitchButton setImage:[UIImage imageNamed:@"InterfaceIcons/RLVSwitchCamera"]
                              forState:UIControlStateNormal];
@@ -130,6 +157,7 @@
     self.cameraSwitchButton.hidden = !self.capabilities.supportsFrontCamera;
     self.flashButton.hidden = !self.capabilities.supportsFlash;
     [self updateFlashButton];
+    [self updateAspectRatioButton];
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(previewTapped:)];
     [self.previewView addGestureRecognizer:tap];
 }
@@ -194,7 +222,35 @@
 {
     (void)sender;
     [self.captureController capturePhotoWithOrientation:self.orientationCoordinator.captureOrientation
-                                      videoOrientation:self.orientationCoordinator.videoOrientation];
+                                      videoOrientation:self.orientationCoordinator.videoOrientation
+                                            aspectRatio:self.activeAspectRatio];
+}
+
+- (void)aspectRatioPressed:(id)sender
+{
+    (void)sender;
+    UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"camera.aspect.title", nil)
+        delegate:self cancelButtonTitle:NSLocalizedString(@"common.cancel", nil) destructiveButtonTitle:nil
+        otherButtonTitles:@"4:3", @"1:1", @"16:9", nil];
+    sheet.tag = RLVAspectRatioActionSheetTag;
+    [sheet showInView:self.view];
+}
+
+- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if (actionSheet.tag != RLVAspectRatioActionSheetTag || buttonIndex < 0 || buttonIndex > 2) return;
+    self.activeAspectRatio = [@[@"4:3", @"1:1", @"16:9"] objectAtIndex:buttonIndex];
+    [[NSUserDefaults standardUserDefaults] setObject:self.activeAspectRatio forKey:RLVAspectRatioDefaultsKey];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    [self updateAspectRatioButton];
+    [self updatePreviewFrame];
+}
+
+- (void)updateAspectRatioButton
+{
+    [self.aspectRatioButton setTitle:self.activeAspectRatio forState:UIControlStateNormal];
+    self.aspectRatioButton.accessibilityLabel = [NSString stringWithFormat:
+        NSLocalizedString(@"camera.aspect.value", nil), self.activeAspectRatio];
 }
 
 - (void)thumbnailPressed:(id)sender
@@ -247,6 +303,7 @@
 - (void)previewTapped:(UITapGestureRecognizer *)recognizer
 {
     CGPoint point = [recognizer locationInView:self.previewView];
+    point = [self.previewView.layer convertPoint:point toLayer:self.captureController.previewLayer];
     CGPoint devicePoint = [self.captureController.previewLayer captureDevicePointOfInterestForPoint:point];
     [self.captureController focusAtDevicePoint:devicePoint];
 }
@@ -351,6 +408,7 @@
 @synthesize thumbnailButton = _thumbnailButton;
 @synthesize flashButton = _flashButton;
 @synthesize cameraSwitchButton = _cameraSwitchButton;
+@synthesize aspectRatioButton = _aspectRatioButton;
 @synthesize rotatingControls = _rotatingControls;
 @synthesize capabilities = _capabilities;
 @synthesize captureController = _captureController;
@@ -359,5 +417,6 @@
 @synthesize liveCaptureIndicator = _liveCaptureIndicator;
 @synthesize viewVisible = _viewVisible;
 @synthesize thumbnailRequestAssetId = _thumbnailRequestAssetId;
+@synthesize activeAspectRatio = _activeAspectRatio;
 
 @end

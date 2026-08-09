@@ -188,6 +188,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 
 - (void)capturePhotoWithOrientation:(RLVCaptureOrientation)orientation
                    videoOrientation:(AVCaptureVideoOrientation)videoOrientation
+                         aspectRatio:(NSString *)aspectRatio
 {
     if (self.state != RLVCaptureStateRunning) {
         return;
@@ -200,6 +201,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
     event.cameraPosition = self.cameraPosition;
     event.mirrored = self.cameraPosition == AVCaptureDevicePositionFront;
     event.flashMode = [self stringForFlashMode:self.flashMode];
+    event.aspectRatio = aspectRatio ?: @"4:3";
     self.pendingEvent = event;
     self.pendingPhotoData = nil;
     self.pendingMotionURL = nil;

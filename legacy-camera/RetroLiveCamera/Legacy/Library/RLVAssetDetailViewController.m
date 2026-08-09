@@ -20,6 +20,7 @@ typedef NS_ENUM(NSInteger, RLVLivePlaybackMode) {
 @property (nonatomic, assign) RLVLivePlaybackMode playbackMode;
 @property (nonatomic, assign) BOOL playingBackward;
 @property (nonatomic, assign) BOOL didAutoPlay;
+- (UIImage *)framedImage:(UIImage *)image;
 @end
 
 @implementation RLVAssetDetailViewController
@@ -42,8 +43,9 @@ typedef NS_ENUM(NSInteger, RLVLivePlaybackMode) {
     UIView *root = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     root.backgroundColor = [UIColor blackColor];
     self.imageView = [[UIImageView alloc] initWithFrame:CGRectZero];
-    self.imageView.contentMode = UIViewContentModeScaleAspectFit;
-    self.imageView.image = [UIImage imageWithContentsOfFile:[self.asset.photoURL path]];
+    self.imageView.contentMode = UIViewContentModeScaleAspectFill;
+    self.imageView.clipsToBounds = YES;
+    self.imageView.image = [self framedImage:[UIImage imageWithContentsOfFile:[self.asset.photoURL path]]];
     self.imageView.userInteractionEnabled = YES;
     [root addSubview:self.imageView];
     self.metadataLabel = [[UILabel alloc] initWithFrame:CGRectZero];
@@ -69,9 +71,9 @@ typedef NS_ENUM(NSInteger, RLVLivePlaybackMode) {
     [self.liveBadge addTarget:self action:@selector(showPlaybackModes:) forControlEvents:UIControlEventTouchUpInside];
     [root addSubview:self.liveBadge];
 
-    RLVPrepareViewsForAutoLayout(@[self.imageView, self.metadataLabel, self.liveBadge]);
-    RLVAddVisualConstraints(root, @{ @"image": self.imageView, @"metadata": self.metadataLabel },
-        @[@"H:|[image]|", @"V:|[image]|", @"H:|[metadata]|", @"V:[metadata(82)]|"]);
+    RLVPrepareViewsForAutoLayout(@[self.metadataLabel, self.liveBadge]);
+    RLVAddVisualConstraints(root, @{ @"metadata": self.metadataLabel },
+        @[@"H:|[metadata]|", @"V:[metadata(82)]|"]);
     [root addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-(12)-[live]"
         options:0 metrics:nil views:@{ @"live": self.liveBadge }]];
     [root addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|-(12)-[live(28)]"
@@ -113,7 +115,60 @@ typedef NS_ENUM(NSInteger, RLVLivePlaybackMode) {
 - (void)viewDidLayoutSubviews
 {
     [super viewDidLayoutSubviews];
+    CGSize imageSize = self.imageView.image.size;
+    CGFloat ratio = imageSize.height > 0 ? imageSize.width / imageSize.height : 1.0;
+    CGRect bounds = self.view.bounds;
+    CGFloat width = CGRectGetWidth(bounds);
+    CGFloat height = width / ratio;
+    if (height > CGRectGetHeight(bounds)) {
+        height = CGRectGetHeight(bounds);
+        width = height * ratio;
+    }
+    self.imageView.frame = CGRectIntegral(CGRectMake(CGRectGetMidX(bounds) - width * 0.5,
+        CGRectGetMidY(bounds) - height * 0.5, width, height));
     self.playerLayer.frame = self.imageView.bounds;
+}
+
+- (UIImage *)framedImage:(UIImage *)image
+{
+    if (!image || [self.asset.aspectRatio isEqualToString:@"native"]) return image;
+    CGFloat landscapeRatio = 4.0 / 3.0;
+    if ([self.asset.aspectRatio isEqualToString:@"1:1"]) landscapeRatio = 1.0;
+    else if ([self.asset.aspectRatio isEqualToString:@"16:9"]) landscapeRatio = 16.0 / 9.0;
+    CGRect aperture = CGRectMake(0.0, 0.0, image.size.width, image.size.height);
+    if (self.asset.motionWidth > 0 && self.asset.motionHeight > 0) {
+        CGFloat motionRatio = (CGFloat)self.asset.motionWidth / (CGFloat)self.asset.motionHeight;
+        CGFloat currentRatio = CGRectGetWidth(aperture) / CGRectGetHeight(aperture);
+        if (currentRatio > motionRatio) {
+            CGFloat width = CGRectGetHeight(aperture) * motionRatio;
+            aperture.origin.x = CGRectGetMidX(aperture) - width * 0.5;
+            aperture.size.width = width;
+        } else {
+            CGFloat height = CGRectGetWidth(aperture) / motionRatio;
+            aperture.origin.y = CGRectGetMidY(aperture) - height * 0.5;
+            aperture.size.height = height;
+        }
+    }
+    CGFloat targetRatio = image.size.width >= image.size.height ? landscapeRatio : 1.0 / landscapeRatio;
+    CGFloat apertureRatio = CGRectGetWidth(aperture) / CGRectGetHeight(aperture);
+    CGRect crop = aperture;
+    if (apertureRatio > targetRatio) {
+        crop.size.width = CGRectGetHeight(aperture) * targetRatio;
+        crop.origin.x = CGRectGetMidX(aperture) - crop.size.width * 0.5;
+    } else {
+        crop.size.height = CGRectGetWidth(aperture) / targetRatio;
+        crop.origin.y = CGRectGetMidY(aperture) - crop.size.height * 0.5;
+    }
+    CGFloat outputScale = MIN(1.0, 1024.0 / MAX(CGRectGetWidth(crop), CGRectGetHeight(crop)));
+    CGSize outputSize = CGSizeMake(MAX(1.0, floor(CGRectGetWidth(crop) * outputScale)),
+        MAX(1.0, floor(CGRectGetHeight(crop) * outputScale)));
+    UIGraphicsBeginImageContextWithOptions(outputSize, YES, 1.0);
+    CGFloat drawScale = outputSize.width / CGRectGetWidth(crop);
+    [image drawInRect:CGRectMake(-crop.origin.x * drawScale, -crop.origin.y * drawScale,
+        image.size.width * drawScale, image.size.height * drawScale)];
+    UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return result ?: image;
 }
 
 - (void)preparePlayer
@@ -121,7 +176,7 @@ typedef NS_ENUM(NSInteger, RLVLivePlaybackMode) {
     self.player = [AVPlayer playerWithURL:self.asset.motionURL];
     self.player.actionAtItemEnd = AVPlayerActionAtItemEndPause;
     self.playerLayer = [AVPlayerLayer playerLayerWithPlayer:self.player];
-    self.playerLayer.videoGravity = AVLayerVideoGravityResizeAspect;
+    self.playerLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
     self.playerLayer.hidden = YES;
     [self.imageView.layer addSublayer:self.playerLayer];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(playerItemDidReachEnd:)

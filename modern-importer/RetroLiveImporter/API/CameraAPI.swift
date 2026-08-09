@@ -6,6 +6,11 @@ struct DiscoveredCamera: Identifiable, Hashable, Sendable {
     let host: String
     let port: Int
 
+    var endpointDescription: String {
+        let normalizedHost = host.hasSuffix(".") ? String(host.dropLast()) : host
+        return normalizedHost + ":" + String(port)
+    }
+
     var baseURL: URL {
         var components = URLComponents()
         components.scheme = "http"

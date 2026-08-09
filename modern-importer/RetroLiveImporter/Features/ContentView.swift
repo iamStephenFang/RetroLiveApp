@@ -5,46 +5,59 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if model.selectedCamera == nil {
-                    deviceList
-                } else if model.deviceInfo == nil {
-                    pairingView
-                } else {
-                    assetList
+            deviceList
+                .navigationTitle("RetroLive")
+                .navigationDestination(isPresented: cameraIsSelected) {
+                    selectedCameraView
                 }
-            }
-            .navigationTitle(model.deviceInfo?.deviceName ?? "RetroLive")
-            .toolbar {
-                if model.selectedCamera != nil {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button(L10n.text("common.disconnect")) { model.disconnect() }
-                    }
-                }
-                if model.deviceInfo != nil {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            Task { await model.refreshAssets() }
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .disabled(model.isLoadingAssets)
-                    }
-                }
-            }
-            .alert(
-                L10n.text("error.operation_failed"),
-                isPresented: Binding(
-                    get: { model.errorMessage != nil },
-                    set: { if !$0 { model.errorMessage = nil } }
-                )
-            ) {
-                Button(L10n.text("common.ok"), role: .cancel) {}
-            } message: {
-                Text(model.errorMessage ?? "")
-            }
+        }
+        .alert(
+            L10n.text("error.operation_failed"),
+            isPresented: Binding(
+                get: { model.errorMessage != nil },
+                set: { if !$0 { model.errorMessage = nil } }
+            )
+        ) {
+            Button(L10n.text("common.ok"), role: .cancel) {}
+        } message: {
+            Text(model.errorMessage ?? "")
         }
         .task { model.startDiscovery() }
+    }
+
+    private var cameraIsSelected: Binding<Bool> {
+        Binding(
+            get: { model.selectedCamera != nil },
+            set: { isSelected in
+                if !isSelected {
+                    model.disconnect()
+                }
+            }
+        )
+    }
+
+    private var selectedCameraView: some View {
+        Group {
+            if model.deviceInfo == nil {
+                pairingView
+            } else {
+                assetList
+            }
+        }
+        .navigationTitle(model.deviceInfo?.deviceName ?? model.selectedCamera?.name ?? "RetroLive")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if model.deviceInfo != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task { await model.refreshAssets() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .disabled(model.isLoadingAssets)
+                }
+            }
+        }
     }
 
     private var deviceList: some View {
@@ -60,18 +73,27 @@ struct ContentView: View {
                     Button {
                         model.select(camera)
                     } label: {
-                        HStack {
+                        HStack(spacing: 14) {
                             Image(systemName: "camera")
-                            VStack(alignment: .leading) {
+                                .font(.title3)
+                                .foregroundStyle(Color.accentColor)
+                                .frame(width: 42, height: 42)
+                                .background(Color.accentColor.opacity(0.12), in: Circle())
+                            VStack(alignment: .leading, spacing: 3) {
                                 Text(camera.name)
-                                Text("\(camera.host):\(camera.port)")
+                                    .font(.headline)
+                                Text(verbatim: camera.endpointDescription)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                                    .lineLimit(1)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .foregroundStyle(.tertiary)
                         }
+                        .padding(.vertical, 5)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }

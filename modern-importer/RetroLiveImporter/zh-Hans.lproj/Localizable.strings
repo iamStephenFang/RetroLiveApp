@@ -53,6 +53,7 @@
 "assembly.timed_metadata" = "无法写入 Live Photo 静态帧时间。";
 "assembly.identifier_mismatch" = "生成资源的配对标识不一致。";
 "assembly.media_validation" = "生成资源的尺寸、轨道、方向或时间信息与源素材不一致。";
+"assembly.crop" = "无法将所选画幅应用到 Live Photo。";
 "photos.permission_denied" = "没有添加照片的权限，请在系统设置中允许 RetroLive 写入照片。";
 "photos.missing_placeholder" = "“照片”没有返回新素材的标识。";
 "photos.write_failed" = "“照片”未能完成素材写入。";

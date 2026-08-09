@@ -5,7 +5,7 @@
 @class RLVDeviceCapabilities;
 @class RLVShutterButton;
 
-@interface RLVBaseCameraViewController : UIViewController <RLVCaptureControllerDelegate, RLVCameraOrientationCoordinatorDelegate>
+@interface RLVBaseCameraViewController : UIViewController <RLVCaptureControllerDelegate, RLVCameraOrientationCoordinatorDelegate, UIActionSheetDelegate>
 
 @property (nonatomic, strong) UIView *previewView;
 @property (nonatomic, strong) UIView *topChromeView;
@@ -14,6 +14,7 @@
 @property (nonatomic, strong) UIButton *thumbnailButton;
 @property (nonatomic, strong) UIButton *flashButton;
 @property (nonatomic, strong) UIButton *cameraSwitchButton;
+@property (nonatomic, strong) UIButton *aspectRatioButton;
 @property (nonatomic, strong) NSArray *rotatingControls;
 @property (nonatomic, strong, readonly) RLVDeviceCapabilities *capabilities;
 

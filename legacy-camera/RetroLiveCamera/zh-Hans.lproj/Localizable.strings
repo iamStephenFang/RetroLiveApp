@@ -54,3 +54,5 @@
 "transfer.error.socket" = "无法创建传输套接字。";
 "transfer.error.bind" = "无法绑定本地传输端口。";
 "transfer.error.listen" = "无法监听传输客户端。";
+"camera.aspect.title" = "画幅";
+"camera.aspect.value" = "画幅，%@";

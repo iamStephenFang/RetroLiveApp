@@ -20,6 +20,7 @@ This file separates current implementation metrics from pixel-accepted measureme
 | Classic bottom overlay | n/a | 128 | 142 |
 | Classic shutter visual frame | n/a | 78 | 78 |
 | Classic thumbnail | n/a | 48 | 48 |
+| Aspect control | 52 × 44 | 52 × 44 | 52 × 44 |
 
 All values are points and **provisional**. Visual sizes are distinct from their surrounding control frames/hit regions.
 
@@ -30,6 +31,7 @@ All values are points and **provisional**. Visual sizes are distinct from their 
 3. Measure preview, chrome, shutter, thumbnail, flash, switch, and mode label frames.
 4. Overlay at 50% opacity and record each delta in points.
 5. Record normal/highlighted/capturing states and control-rotation duration.
-6. Adjust structural metrics before gradients, texture, gloss, or other decorative material.
+6. Repeat with `4:3`, `1:1`, and `16:9`; verify the centered framing window, focus coordinate, saved still, and motion playback show the same composition.
+7. Adjust structural metrics before gradients, texture, gloss, or other decorative material.
 
 No release claim of native fidelity should be made until at least iPhone 5/iOS 6 and iPhone 5s-or-6/iOS 8 references complete this table.

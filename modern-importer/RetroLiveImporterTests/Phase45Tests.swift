@@ -38,6 +38,7 @@ final class Phase45Tests: XCTestCase {
             port: 8080
         )
         XCTAssertEqual(camera.baseURL.absoluteString, "http://camera.local:8080/api/v1")
+        XCTAssertEqual(camera.endpointDescription, "camera.local:8080")
         let session = mockSession()
         let client = CameraAPIClient(baseURL: camera.baseURL, session: session)
         MockURLProtocol.handler = { request in

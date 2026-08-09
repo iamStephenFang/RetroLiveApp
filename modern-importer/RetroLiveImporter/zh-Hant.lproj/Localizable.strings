@@ -53,6 +53,7 @@
 "assembly.timed_metadata" = "無法寫入 Live Photo 靜態影格時間。";
 "assembly.identifier_mismatch" = "產生的資源配對識別碼不一致。";
 "assembly.media_validation" = "產生資源的尺寸、軌道、方向或時間資訊與來源素材不一致。";
+"assembly.crop" = "無法將所選畫幅套用至 Live Photo。";
 "photos.permission_denied" = "沒有加入相片的權限，請在系統設定中允許 RetroLive 寫入相片。";
 "photos.missing_placeholder" = "「相片」沒有傳回新素材的識別碼。";
 "photos.write_failed" = "「相片」未能完成素材寫入。";

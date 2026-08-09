@@ -54,3 +54,5 @@
 "transfer.error.socket" = "無法建立傳輸通訊端。";
 "transfer.error.bind" = "無法繫結本機傳輸連接埠。";
 "transfer.error.listen" = "無法監聽傳輸用戶端。";
+"camera.aspect.title" = "畫幅";
+"camera.aspect.value" = "畫幅，%@";

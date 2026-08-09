@@ -11,6 +11,7 @@ final class ManifestParserTests: XCTestCase {
         XCTAssertEqual(manifest.assetId, "75A14CE4-3E3F-4BB1-BC27-EFE37D8C2A84")
         XCTAssertTrue(try XCTUnwrap(manifest.motion).hasAudio)
         XCTAssertEqual(manifest.capture.stillImageTimeSeconds, 1.486)
+        XCTAssertEqual(manifest.capture.aspectRatio, .fourThree)
     }
 
     func testPhotoOnlyFixture() throws {
@@ -18,6 +19,7 @@ final class ManifestParserTests: XCTestCase {
         XCTAssertNil(manifest.motion)
         XCTAssertNil(manifest.thumbnail)
         XCTAssertEqual(manifest.capture.stillImageTimeSeconds, 0)
+        XCTAssertNil(manifest.capture.aspectRatio)
     }
 
     func testMissingMotionIsRejected() throws {
@@ -100,6 +102,34 @@ final class ManifestParserTests: XCTestCase {
                 .invalidField("$.createdAtUnixMilliseconds")
             )
         }
+    }
+
+    func testUnknownAspectRatioIsRejected() throws {
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try fixtureData("valid-v1")) as? [String: Any]
+        )
+        var capture = try XCTUnwrap(object["capture"] as? [String: Any])
+        capture["aspectRatio"] = "3:2"
+        object["capture"] = capture
+        XCTAssertThrowsError(
+            try parser.parse(try JSONSerialization.data(withJSONObject: object))
+        ) { error in
+            XCTAssertEqual(error as? ManifestParserError, .invalidField("$.capture.aspectRatio"))
+        }
+    }
+
+    func testFramingGeometryUsesMotionApertureBeforeSelectedCrop() {
+        let photo = CGRect(x: 0, y: 0, width: 3264, height: 2448)
+        let crop = FramingGeometry.photoCrop(
+            in: photo,
+            motionSize: CGSize(width: 1920, height: 1080),
+            aspectRatio: .fourThree
+        )
+        XCTAssertEqual(crop.width / crop.height, 4.0 / 3.0, accuracy: 0.001)
+        XCTAssertLessThan(crop.width, photo.width)
+        XCTAssertLessThan(crop.height, photo.height)
+        XCTAssertEqual(crop.midX, photo.midX, accuracy: 0.001)
+        XCTAssertEqual(crop.midY, photo.midY, accuracy: 0.001)
     }
 
     private func fixtureData(_ name: String) throws -> Data {

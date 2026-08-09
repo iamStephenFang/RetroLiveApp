@@ -54,3 +54,5 @@
 "transfer.error.socket" = "Unable to create the transfer socket.";
 "transfer.error.bind" = "Unable to bind a local transfer port.";
 "transfer.error.listen" = "Unable to listen for transfer clients.";
+"camera.aspect.title" = "Aspect Ratio";
+"camera.aspect.value" = "Aspect ratio, %@";

@@ -53,6 +53,7 @@
 "assembly.timed_metadata" = "The Live Photo still-frame time could not be written.";
 "assembly.identifier_mismatch" = "The generated resources have mismatched pairing identifiers.";
 "assembly.media_validation" = "The dimensions, tracks, orientation, or timing of the generated resources do not match the source asset.";
+"assembly.crop" = "The selected aspect ratio could not be applied to the Live Photo.";
 "photos.permission_denied" = "RetroLive does not have permission to add photos. Allow Photos access in Settings.";
 "photos.missing_placeholder" = "Photos did not return an identifier for the new asset.";
 "photos.write_failed" = "Photos could not finish saving the asset.";

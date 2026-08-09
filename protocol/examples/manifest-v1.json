@@ -8,6 +8,7 @@
     "orientation": 6,
     "mirrored": false,
     "flashMode": "off",
+    "aspectRatio": "4:3",
     "stillImageTimeSeconds": 1.486,
     "stillImageTimeAccuracy": "measured",
     "preRollSeconds": 1.486,

@@ -14,6 +14,11 @@ Protocol V1 consists of JSON metadata and immutable media files transferred over
 - `motion` is required but nullable. `null` describes a valid photo-only asset; an object describes a photo-plus-motion asset.
 - `thumbnail` is optional. Clients may derive a display thumbnail from `photo.jpg`.
 - Photo-only assets use zero for `stillImageTimeSeconds`, `preRollSeconds`, and `postRollSeconds`.
+- `capture.aspectRatio` is an optional V1 framing hint with values `4:3`, `1:1`, or `16:9`. New camera builds always write it; older V1 assets without it retain their original, uncropped behavior.
+
+## Framing
+
+The selected aspect ratio is non-destructive on the legacy device. The immutable `photo.jpg` and `motion.mov` remain the camera outputs, while the camera preview and local detail playback display the selected centered frame. During Live Photo assembly, the modern importer treats the motion aperture as the composition reference, center-crops the still into that aperture, and then applies the selected ratio to both resources. This prevents a visible still-to-motion jump when the old camera produces a 4:3 JPEG and a 16:9 movie.
 
 ## Asset identity
 

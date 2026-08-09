@@ -26,7 +26,10 @@
 @synthesize manifestURL = _manifestURL;
 @synthesize width = _width;
 @synthesize height = _height;
+@synthesize motionWidth = _motionWidth;
+@synthesize motionHeight = _motionHeight;
 @synthesize orientation = _orientation;
 @synthesize captureDevice = _captureDevice;
+@synthesize aspectRatio = _aspectRatio;
 
 @end

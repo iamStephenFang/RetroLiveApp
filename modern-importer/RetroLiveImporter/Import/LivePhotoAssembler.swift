@@ -1,4 +1,5 @@
 @preconcurrency import AVFoundation
+import CoreImage
 import CoreMedia
 import ImageIO
 import UniformTypeIdentifiers
@@ -21,6 +22,7 @@ enum LivePhotoAssemblyError: Error, LocalizedError {
     case timedMetadata
     case identifierMismatch
     case mediaValidation
+    case crop
 
     var errorDescription: String? {
         switch self {
@@ -44,7 +46,57 @@ enum LivePhotoAssemblyError: Error, LocalizedError {
             L10n.text("assembly.identifier_mismatch")
         case .mediaValidation:
             L10n.text("assembly.media_validation")
+        case .crop:
+            L10n.text("assembly.crop")
         }
+    }
+}
+
+enum FramingGeometry {
+    static func targetRatio(
+        _ aspectRatio: ManifestV1.AspectRatio,
+        for size: CGSize
+    ) -> CGFloat {
+        size.width >= size.height
+            ? aspectRatio.landscapeValue
+            : 1.0 / aspectRatio.landscapeValue
+    }
+
+    static func centeredCrop(in bounds: CGRect, ratio: CGFloat) -> CGRect {
+        guard bounds.width > 0, bounds.height > 0, ratio > 0 else { return .zero }
+        let current = bounds.width / bounds.height
+        if current > ratio {
+            let width = bounds.height * ratio
+            return CGRect(x: bounds.midX - width * 0.5, y: bounds.minY, width: width, height: bounds.height)
+        }
+        let height = bounds.width / ratio
+        return CGRect(x: bounds.minX, y: bounds.midY - height * 0.5, width: bounds.width, height: height)
+    }
+
+    static func photoCrop(
+        in bounds: CGRect,
+        motionSize: CGSize?,
+        aspectRatio: ManifestV1.AspectRatio
+    ) -> CGRect {
+        var aperture = bounds
+        if let motionSize, motionSize.width > 0, motionSize.height > 0 {
+            aperture = centeredCrop(in: bounds, ratio: motionSize.width / motionSize.height)
+        }
+        return centeredCrop(
+            in: aperture,
+            ratio: targetRatio(aspectRatio, for: aperture.size)
+        )
+    }
+
+    static func evenPixelCrop(_ crop: CGRect, within bounds: CGRect) -> CGRect {
+        let width = max(2, floor(crop.width / 2) * 2)
+        let height = max(2, floor(crop.height / 2) * 2)
+        return CGRect(
+            x: min(max(bounds.minX, crop.midX - width * 0.5), bounds.maxX - width),
+            y: min(max(bounds.minY, crop.midY - height * 0.5), bounds.maxY - height),
+            width: width,
+            height: height
+        )
     }
 }
 
@@ -85,6 +137,14 @@ private final class AssemblyIO: @unchecked Sendable {
     }
 }
 
+private final class AssemblyExport: @unchecked Sendable {
+    let session: AVAssetExportSession
+
+    init(_ session: AVAssetExportSession) {
+        self.session = session
+    }
+}
+
 actor LivePhotoAssembler {
     private let rootURL: URL
     private let fileManager: FileManager
@@ -121,13 +181,36 @@ actor LivePhotoAssembler {
             }
         }
 
+        let aspectRatio = cached.manifest.capture.aspectRatio
+        let motionSize = cached.manifest.motion.map {
+            CGSize(width: $0.width, height: $0.height)
+        }
         let pairedPhoto = staging.appendingPathComponent("paired-photo.jpg")
-        try writePairedPhoto(sourceURL: cached.photoURL, destinationURL: pairedPhoto, assetId: assetId)
+        let pairedPhotoSize = try writePairedPhoto(
+            sourceURL: cached.photoURL,
+            destinationURL: pairedPhoto,
+            assetId: assetId,
+            aspectRatio: aspectRatio,
+            motionSize: motionSize
+        )
         var pairedVideo: URL?
+        var croppedVideo: URL?
         if let sourceVideo = cached.motionURL {
+            let assemblySource: URL
+            if let aspectRatio {
+                let cropped = staging.appendingPathComponent("cropped-video.mov")
+                assemblySource = try await writeCroppedVideo(
+                    sourceURL: sourceVideo,
+                    destinationURL: cropped,
+                    aspectRatio: aspectRatio
+                )
+                if assemblySource == cropped { croppedVideo = cropped }
+            } else {
+                assemblySource = sourceVideo
+            }
             let destination = staging.appendingPathComponent("paired-video.mov")
             try await writePairedVideo(
-                sourceURL: sourceVideo,
+                sourceURL: assemblySource,
                 destinationURL: destination,
                 assetId: assetId,
                 stillTimeSeconds: cached.manifest.capture.stillImageTimeSeconds
@@ -137,17 +220,18 @@ actor LivePhotoAssembler {
         try validatePhoto(
             pairedPhoto,
             assetId: assetId,
-            expectedWidth: cached.manifest.photo.width,
-            expectedHeight: cached.manifest.photo.height
+            expectedWidth: Int(pairedPhotoSize.width),
+            expectedHeight: Int(pairedPhotoSize.height)
         )
         if let pairedVideo {
             try await validateVideo(
                 pairedVideo,
-                sourceURL: cached.motionURL!,
+                sourceURL: croppedVideo ?? cached.motionURL!,
                 assetId: assetId,
                 stillTimeSeconds: cached.manifest.capture.stillImageTimeSeconds
             )
         }
+        if let croppedVideo { try fileManager.removeItem(at: croppedVideo) }
 
         let finalURL = assetsRoot.appendingPathComponent(assetId, isDirectory: true)
         if fileManager.fileExists(atPath: finalURL.path) {
@@ -182,7 +266,13 @@ actor LivePhotoAssembler {
         }
     }
 
-    private func writePairedPhoto(sourceURL: URL, destinationURL: URL, assetId: String) throws {
+    private func writePairedPhoto(
+        sourceURL: URL,
+        destinationURL: URL,
+        assetId: String,
+        aspectRatio: ManifestV1.AspectRatio?,
+        motionSize: CGSize?
+    ) throws -> CGSize {
         guard let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil),
               let type = CGImageSourceGetType(source) else {
             throw LivePhotoAssemblyError.imageSource
@@ -202,10 +292,120 @@ actor LivePhotoAssembler {
             as? [String: Any] ?? [:]
         makerApple["17"] = assetId
         properties[kCGImagePropertyMakerAppleDictionary] = makerApple
-        CGImageDestinationAddImageFromSource(destination, source, 0, properties as CFDictionary)
+        let outputSize: CGSize
+        if let aspectRatio {
+            guard let image = CIImage(
+                contentsOf: sourceURL,
+                options: [.applyOrientationProperty: true]
+            ) else {
+                throw LivePhotoAssemblyError.imageSource
+            }
+            let translated = image.transformed(by: CGAffineTransform(
+                translationX: -image.extent.minX,
+                y: -image.extent.minY
+            ))
+            let crop = FramingGeometry.photoCrop(
+                in: translated.extent,
+                motionSize: motionSize,
+                aspectRatio: aspectRatio
+            ).integral
+            let cropped = translated.cropped(to: crop).transformed(by: CGAffineTransform(
+                translationX: -crop.minX,
+                y: -crop.minY
+            ))
+            let context = CIContext(options: [.cacheIntermediates: false])
+            guard let image = context.createCGImage(cropped, from: cropped.extent) else {
+                throw LivePhotoAssemblyError.crop
+            }
+            outputSize = CGSize(width: image.width, height: image.height)
+            properties[kCGImagePropertyOrientation] = 1
+            properties[kCGImagePropertyPixelWidth] = image.width
+            properties[kCGImagePropertyPixelHeight] = image.height
+            properties[kCGImageDestinationLossyCompressionQuality] = 1.0
+            CGImageDestinationAddImage(destination, image, properties as CFDictionary)
+        } else {
+            outputSize = CGSize(
+                width: (sourceProperties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue ?? 0,
+                height: (sourceProperties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue ?? 0
+            )
+            CGImageDestinationAddImageFromSource(destination, source, 0, properties as CFDictionary)
+        }
         guard CGImageDestinationFinalize(destination) else {
             throw LivePhotoAssemblyError.imageDestination
         }
+        return outputSize
+    }
+
+    private func writeCroppedVideo(
+        sourceURL: URL,
+        destinationURL: URL,
+        aspectRatio: ManifestV1.AspectRatio
+    ) async throws -> URL {
+        let asset = AVURLAsset(url: sourceURL)
+        let duration = try await asset.load(.duration)
+        guard let track = try await asset.loadTracks(withMediaType: .video).first else {
+            throw LivePhotoAssemblyError.missingVideoTrack
+        }
+        let naturalSize = try await track.load(.naturalSize)
+        let preferredTransform = try await track.load(.preferredTransform)
+        let transformedBounds = CGRect(origin: .zero, size: naturalSize).applying(preferredTransform)
+        let displayBounds = CGRect(
+            origin: .zero,
+            size: CGSize(width: abs(transformedBounds.width), height: abs(transformedBounds.height))
+        )
+        let targetRatio = FramingGeometry.targetRatio(aspectRatio, for: displayBounds.size)
+        let crop = FramingGeometry.evenPixelCrop(
+            FramingGeometry.centeredCrop(in: displayBounds, ratio: targetRatio),
+            within: displayBounds
+        )
+        if abs(crop.width - displayBounds.width) < 1,
+           abs(crop.height - displayBounds.height) < 1 {
+            return sourceURL
+        }
+        if fileManager.fileExists(atPath: destinationURL.path) {
+            try fileManager.removeItem(at: destinationURL)
+        }
+        let composition = AVMutableVideoComposition()
+        composition.renderSize = crop.size
+        let frameRate = try await track.load(.nominalFrameRate)
+        composition.frameDuration = CMTime(
+            value: 1,
+            timescale: CMTimeScale(max(1, lroundf(frameRate > 0 ? frameRate : 30)))
+        )
+        let instruction = AVMutableVideoCompositionInstruction()
+        instruction.timeRange = CMTimeRange(start: .zero, duration: duration)
+        let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: track)
+        let normalization = CGAffineTransform(
+            translationX: -transformedBounds.minX - crop.minX,
+            y: -transformedBounds.minY - crop.minY
+        )
+        layerInstruction.setTransform(preferredTransform.concatenating(normalization), at: .zero)
+        instruction.layerInstructions = [layerInstruction]
+        composition.instructions = [instruction]
+
+        guard let export = AVAssetExportSession(
+            asset: asset,
+            presetName: AVAssetExportPresetHighestQuality
+        ) else {
+            throw LivePhotoAssemblyError.crop
+        }
+        export.outputURL = destinationURL
+        export.outputFileType = .mov
+        export.videoComposition = composition
+        let exportState = AssemblyExport(export)
+        try await withCheckedThrowingContinuation {
+            (continuation: CheckedContinuation<Void, Error>) in
+            exportState.session.exportAsynchronously {
+                if exportState.session.status == .completed {
+                    continuation.resume()
+                } else {
+                    continuation.resume(
+                        throwing: exportState.session.error ?? LivePhotoAssemblyError.crop
+                    )
+                }
+            }
+        }
+        return destinationURL
     }
 
     private func writePairedVideo(
