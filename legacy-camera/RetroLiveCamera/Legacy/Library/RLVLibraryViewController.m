@@ -28,6 +28,9 @@
 
 @interface RLVLibraryViewController ()
 @property (nonatomic, strong) NSArray *assets;
+@property (nonatomic, strong) NSCache *thumbnailCache;
+@property (nonatomic, strong) NSOperationQueue *thumbnailQueue;
+@property (nonatomic, assign) NSUInteger reloadGeneration;
 @end
 
 @implementation RLVLibraryViewController
@@ -48,11 +51,18 @@
         self.edgesForExtendedLayout = UIRectEdgeNone;
     }
     self.title = @"RetroLive";
+    self.thumbnailCache = [[NSCache alloc] init];
+    self.thumbnailCache.countLimit = 60;
+    self.thumbnailCache.totalCostLimit = 8 * 1024 * 1024;
+    self.thumbnailQueue = [[NSOperationQueue alloc] init];
+    self.thumbnailQueue.maxConcurrentOperationCount = 2;
     self.collectionView.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1];
     [self.collectionView registerClass:[RLVAssetCell class] forCellWithReuseIdentifier:@"AssetCell"];
-    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"transfer.title", nil)
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
+        initWithImage:[UIImage imageNamed:@"InterfaceIcons/RLVTransfer"]
         style:UIBarButtonItemStylePlain target:self action:@selector(showTransfer:)];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reloadAssets)
+    self.navigationItem.rightBarButtonItem.accessibilityLabel = NSLocalizedString(@"transfer.title", nil);
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(assetStoreDidChange:)
                                                  name:RLVAssetStoreDidChangeNotification object:nil];
 }
 
@@ -79,8 +89,20 @@
 
 - (void)reloadAssets
 {
-    self.assets = [[RLVAssetStore sharedStore] loadAssets:NULL] ?: [NSArray array];
-    [self.collectionView reloadData];
+    NSUInteger generation = ++self.reloadGeneration;
+    __weak RLVLibraryViewController *controller = self;
+    [[RLVAssetStore sharedStore] loadAssetsWithCompletion:^(NSArray *assets, NSError *error) {
+        (void)error;
+        if (!controller || generation != controller.reloadGeneration) return;
+        controller.assets = assets ?: [NSArray array];
+        [controller.collectionView reloadData];
+    }];
+}
+
+- (void)assetStoreDidChange:(NSNotification *)notification
+{
+    (void)notification;
+    [self reloadAssets];
 }
 
 - (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section
@@ -93,8 +115,36 @@
 {
     RLVAssetCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"AssetCell" forIndexPath:indexPath];
     RLVAsset *asset = [self.assets objectAtIndex:indexPath.item];
-    cell.imageView.image = [self thumbnailAtURL:asset.photoURL maximumSize:240];
+    UIImage *cachedImage = [self.thumbnailCache objectForKey:asset.assetId];
+    cell.imageView.image = cachedImage;
+    if (!cachedImage) {
+        NSString *assetId = [asset.assetId copy];
+        NSURL *photoURL = asset.photoURL;
+        __weak RLVLibraryViewController *controller = self;
+        [self.thumbnailQueue addOperationWithBlock:^{
+            UIImage *image = [controller thumbnailAtURL:photoURL maximumSize:240];
+            if (image) {
+                CGImageRef imageRef = image.CGImage;
+                NSUInteger cost = imageRef ? CGImageGetBytesPerRow(imageRef) * CGImageGetHeight(imageRef) : 0;
+                [controller.thumbnailCache setObject:image forKey:assetId cost:cost];
+            }
+            [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+                if (!controller || indexPath.item >= [controller.assets count]) return;
+                RLVAsset *currentAsset = [controller.assets objectAtIndex:indexPath.item];
+                if (![currentAsset.assetId isEqualToString:assetId]) return;
+                RLVAssetCell *visibleCell = (RLVAssetCell *)[controller.collectionView cellForItemAtIndexPath:indexPath];
+                visibleCell.imageView.image = image;
+            }];
+        }];
+    }
     return cell;
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    [self.thumbnailQueue cancelAllOperations];
+    [self.thumbnailCache removeAllObjects];
 }
 
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
@@ -125,5 +175,8 @@
 }
 
 @synthesize assets = _assets;
+@synthesize thumbnailCache = _thumbnailCache;
+@synthesize thumbnailQueue = _thumbnailQueue;
+@synthesize reloadGeneration = _reloadGeneration;
 
 @end

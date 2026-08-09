@@ -1,4 +1,5 @@
 "common.ok" = "OK";
+"common.cancel" = "Cancel";
 "camera.error.title" = "Camera Error";
 "camera.flash.auto" = "Flash Auto";
 "camera.flash.on" = "Flash On";
@@ -9,6 +10,18 @@
 "camera.shutter" = "Shutter";
 "camera.switch" = "Switch Camera";
 "asset.unknown_device" = "Unknown device";
+"asset.live.effect" = "Effect";
+"asset.live.effect.title" = "Live Photo Effect";
+"asset.live.mode.live" = "Live";
+"asset.live.mode.loop" = "Loop";
+"asset.live.mode.bounce" = "Bounce";
+"asset.live.mode.still" = "Still";
+"asset.live.badge.live" = "LIVE";
+"asset.live.badge.loop" = "LOOP";
+"asset.live.badge.bounce" = "BOUNCE";
+"asset.live.badge.still" = "STILL";
+"asset.live.bounce.unsupported.title" = "Bounce Unavailable";
+"asset.live.bounce.unsupported.message" = "This device cannot play this motion clip in reverse.";
 "transfer.title" = "Transfer";
 "transfer.error.title" = "Transfer Error";
 "transfer.status.on" = "Sharing on Local Network";

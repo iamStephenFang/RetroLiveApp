@@ -1,4 +1,5 @@
 "common.ok" = "好";
+"common.cancel" = "取消";
 "camera.error.title" = "相机错误";
 "camera.flash.auto" = "闪光灯 自动";
 "camera.flash.on" = "闪光灯 开";
@@ -9,6 +10,18 @@
 "camera.shutter" = "快门";
 "camera.switch" = "切换相机";
 "asset.unknown_device" = "未知设备";
+"asset.live.effect" = "效果";
+"asset.live.effect.title" = "Live 实况效果";
+"asset.live.mode.live" = "实况";
+"asset.live.mode.loop" = "循环";
+"asset.live.mode.bounce" = "来回播放";
+"asset.live.mode.still" = "静止";
+"asset.live.badge.live" = "LIVE";
+"asset.live.badge.loop" = "循环";
+"asset.live.badge.bounce" = "来回";
+"asset.live.badge.still" = "静止";
+"asset.live.bounce.unsupported.title" = "无法来回播放";
+"asset.live.bounce.unsupported.message" = "此设备无法反向播放这段动态视频。";
 "transfer.title" = "传输";
 "transfer.error.title" = "传输错误";
 "transfer.status.on" = "正在通过局域网共享";

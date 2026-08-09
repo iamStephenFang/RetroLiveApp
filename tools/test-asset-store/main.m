@@ -32,6 +32,22 @@ int main(void)
         [[NSFileManager defaultManager] createDirectoryAtURL:documentsURL withIntermediateDirectories:YES attributes:nil error:NULL];
         RLVAssetStore *store = [[RLVAssetStore alloc] initWithDocumentsURL:documentsURL];
 
+        __block NSArray *preloadedAssets = nil;
+        __block BOOL preloadCompleted = NO;
+        __block NSError *preloadError = nil;
+        [store loadAssetsWithCompletion:^(NSArray *assets, NSError *error) {
+            preloadedAssets = assets;
+            preloadError = error;
+            preloadCompleted = YES;
+        }];
+        while (!preloadCompleted) {
+            [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
+        }
+        if (preloadError || [preloadedAssets count] != 0) {
+            fprintf(stderr, "FAIL initial asynchronous catalog preload: %s\n", [[preloadError description] UTF8String]);
+            return 1;
+        }
+
         RLVCaptureEvent *event = [[RLVCaptureEvent alloc] init];
         event.assetId = [[[NSUUID UUID] UUIDString] uppercaseString];
         event.shutterTimestamp = [NSDate dateWithTimeIntervalSince1970:1786190400.125];
@@ -116,7 +132,7 @@ int main(void)
         NSURL *partial = [[store temporaryURL] URLByAppendingPathComponent:@"PARTIAL" isDirectory:YES];
         [[NSFileManager defaultManager] createDirectoryAtURL:partial withIntermediateDirectories:NO attributes:nil error:NULL];
         [@"partial" writeToURL:[partial URLByAppendingPathComponent:@"photo.jpg"] atomically:YES encoding:NSUTF8StringEncoding error:NULL];
-        __unused RLVAssetStore *restartedStore = [[RLVAssetStore alloc] initWithDocumentsURL:documentsURL];
+        RLVAssetStore *restartedStore = [[RLVAssetStore alloc] initWithDocumentsURL:documentsURL];
         if ([[NSFileManager defaultManager] fileExistsAtPath:[partial path]]) {
             fprintf(stderr, "FAIL recovery left partial staging directory\n");
             return 1;
@@ -139,7 +155,12 @@ int main(void)
         [[NSFileManager defaultManager] createDirectoryAtURL:missingURL withIntermediateDirectories:NO attributes:nil error:NULL];
         [photoManifestData writeToURL:[missingURL URLByAppendingPathComponent:@"manifest.json"] atomically:YES];
 
-        NSArray *assets = [store loadAssets:&commitError];
+        NSArray *cachedAssets = [store loadAssets:&commitError];
+        if ([cachedAssets count] != 2) {
+            fprintf(stderr, "FAIL verified catalog cache update: %s\n", [[commitError description] UTF8String]);
+            return 1;
+        }
+        NSArray *assets = [restartedStore loadAssets:&commitError];
         if ([assets count] != 2) {
             fprintf(stderr, "FAIL asset reload: %s\n", [[commitError description] UTF8String]);
             return 1;

@@ -1,4 +1,5 @@
 "common.ok" = "好";
+"common.cancel" = "取消";
 "camera.error.title" = "相機錯誤";
 "camera.flash.auto" = "閃光燈 自動";
 "camera.flash.on" = "閃光燈 開";
@@ -9,6 +10,18 @@
 "camera.shutter" = "快門";
 "camera.switch" = "切換相機";
 "asset.unknown_device" = "未知裝置";
+"asset.live.effect" = "效果";
+"asset.live.effect.title" = "Live 實況效果";
+"asset.live.mode.live" = "實況";
+"asset.live.mode.loop" = "循環";
+"asset.live.mode.bounce" = "來回播放";
+"asset.live.mode.still" = "靜止";
+"asset.live.badge.live" = "LIVE";
+"asset.live.badge.loop" = "循環";
+"asset.live.badge.bounce" = "來回";
+"asset.live.badge.still" = "靜止";
+"asset.live.bounce.unsupported.title" = "無法來回播放";
+"asset.live.bounce.unsupported.message" = "此裝置無法反向播放這段動態影片。";
 "transfer.title" = "傳輸";
 "transfer.error.title" = "傳輸錯誤";
 "transfer.status.on" = "正在透過區域網路共享";

@@ -50,12 +50,10 @@
     self.bottomChromeView = bottom;
     [root addSubview:bottom];
 
-    self.flashButton = [self chromeButtonWithTitle:NSLocalizedString(@"camera.flash.auto", nil)];
-    self.flashButton.titleLabel.font = [UIFont boldSystemFontOfSize:11.0];
+    self.flashButton = [self chromeButtonWithTitle:nil];
     [top addSubview:self.flashButton];
 
-    self.cameraSwitchButton = [self chromeButtonWithTitle:@"↻"];
-    self.cameraSwitchButton.titleLabel.font = [UIFont boldSystemFontOfSize:23.0];
+    self.cameraSwitchButton = [self chromeButtonWithTitle:nil];
     self.cameraSwitchButton.accessibilityLabel = NSLocalizedString(@"camera.switch", nil);
     [top addSubview:self.cameraSwitchButton];
 
@@ -85,7 +83,7 @@
     RLVAddVisualConstraints(root, @{@"top": top, @"preview": self.previewView, @"bottom": bottom},
         @[@"H:|[top]|", @"H:|[preview]|", @"H:|[bottom]|", @"V:|[top(44)][preview][bottom(96)]|"]);
     RLVAddVisualConstraints(top, @{@"flash": self.flashButton, @"switch": self.cameraSwitchButton},
-        @[@"H:|-4-[flash(86)]", @"H:[switch(54)]-4-|", @"V:|[flash]|", @"V:|[switch]|"]);
+        @[@"H:|-4-[flash(54)]", @"H:[switch(54)]-4-|", @"V:|[flash]|", @"V:|[switch]|"]);
     RLVAddVisualConstraints(bottom,
         @{@"thumbnail": self.thumbnailButton, @"shutter": self.shutterButton, @"mode": mode},
         @[@"H:|-14-[thumbnail(48)]", @"H:[mode(54)]-16-|", @"V:[thumbnail(48)]",

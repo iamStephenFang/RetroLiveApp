@@ -32,6 +32,10 @@
 - Confirm no capture is copied into the system Camera Roll.
 - For warmed captures, verify approximately 1.5 seconds of pre-roll and post-roll, still-time error no greater than 200 ms, correct movie orientation, and audio when permission is granted.
 - Repeat near startup and a rolling-segment boundary and verify any shortened duration is reported accurately rather than padded or fabricated.
+- Open a motion asset in the legacy library and verify it plays once, press-and-hold restarts playback, release returns to the still photo, and Live/Loop/Bounce/Still preferences survive reopening. A photo-only asset must remain static and show no Live controls.
+- Leave the camera while its session is still preparing, and background/foreground the app from both camera and asset detail screens. Confirm the hidden camera does not restart, while visible Loop/Bounce playback resumes appropriately.
+- Populate at least 20 motion assets, then open and rapidly scroll the library while capturing additional photos. Confirm catalog verification and thumbnail decoding do not block camera controls or scrolling, and reused cells never display another asset's thumbnail.
+- On a device or clip that cannot reverse-play, confirm Bounce is rejected with a clear message instead of silently behaving like Loop.
 
 ## UI fidelity acceptance
 

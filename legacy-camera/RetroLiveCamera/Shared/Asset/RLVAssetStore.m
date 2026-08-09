@@ -5,6 +5,7 @@
 
 NSString * const RLVAssetStoreDidChangeNotification = @"RLVAssetStoreDidChangeNotification";
 NSString * const RLVAssetStoreErrorDomain = @"com.retrolive.asset-store";
+static void *RLVAssetStoreFileQueueKey = &RLVAssetStoreFileQueueKey;
 
 static BOOL RLVIsNonEmptyString(id value)
 {
@@ -27,6 +28,9 @@ static BOOL RLVIsBoolean(id value)
 @property (nonatomic, strong, readwrite) NSURL *rootURL;
 @property (nonatomic, strong, readwrite) NSURL *assetsURL;
 @property (nonatomic, strong, readwrite) NSURL *temporaryURL;
+@property (nonatomic, strong) NSArray *cachedAssets;
+- (NSArray *)cachedAssetsLoadingFromDiskIfNeeded:(NSError **)error;
+- (NSArray *)loadAssetsFromDisk:(NSError **)error;
 @end
 
 @implementation RLVAssetStore
@@ -47,6 +51,7 @@ static BOOL RLVIsBoolean(id value)
     self = [super init];
     if (self) {
         _fileQueue = dispatch_queue_create("com.retrolive.asset-store", DISPATCH_QUEUE_SERIAL);
+        dispatch_queue_set_specific(_fileQueue, RLVAssetStoreFileQueueKey, (__bridge void *)self, NULL);
         _rootURL = [documentsURL URLByAppendingPathComponent:@"RetroLive" isDirectory:YES];
         _assetsURL = [_rootURL URLByAppendingPathComponent:@"Assets" isDirectory:YES];
         _temporaryURL = [_rootURL URLByAppendingPathComponent:@"Temporary" isDirectory:YES];
@@ -113,6 +118,14 @@ static BOOL RLVIsBoolean(id value)
         if (error == nil) {
             asset = [self loadAssetAtURL:finalURL error:&error];
         }
+        if (asset && self.cachedAssets) {
+            NSMutableArray *updatedAssets = [self.cachedAssets mutableCopy];
+            [updatedAssets addObject:asset];
+            [updatedAssets sortUsingComparator:^NSComparisonResult(RLVAsset *first, RLVAsset *second) {
+                return [second.createdAt compare:first.createdAt];
+            }];
+            self.cachedAssets = [NSArray arrayWithArray:updatedAssets];
+        }
         if (error != nil) {
             [manager removeItemAtURL:stagingURL error:NULL];
         }
@@ -126,6 +139,41 @@ static BOOL RLVIsBoolean(id value)
 }
 
 - (NSArray *)loadAssets:(NSError **)error
+{
+    __block NSArray *assets = nil;
+    __block NSError *loadError = nil;
+    void (^loadBlock)(void) = ^{
+        assets = [self cachedAssetsLoadingFromDiskIfNeeded:&loadError];
+    };
+    if (dispatch_get_specific(RLVAssetStoreFileQueueKey) == (__bridge void *)self) {
+        loadBlock();
+    } else {
+        dispatch_sync(_fileQueue, loadBlock);
+    }
+    if (error) *error = loadError;
+    return assets;
+}
+
+- (void)loadAssetsWithCompletion:(void (^)(NSArray *assets, NSError *error))completion
+{
+    dispatch_async(_fileQueue, ^{
+        NSError *error = nil;
+        NSArray *assets = [self cachedAssetsLoadingFromDiskIfNeeded:&error];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (completion) completion(assets, error);
+        });
+    });
+}
+
+- (NSArray *)cachedAssetsLoadingFromDiskIfNeeded:(NSError **)error
+{
+    if (self.cachedAssets) return self.cachedAssets;
+    NSArray *assets = [self loadAssetsFromDisk:error];
+    if (assets) self.cachedAssets = assets;
+    return assets;
+}
+
+- (NSArray *)loadAssetsFromDisk:(NSError **)error
 {
     NSArray *children = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:self.assetsURL
                                                       includingPropertiesForKeys:nil options:0 error:error];
@@ -153,15 +201,32 @@ static BOOL RLVIsBoolean(id value)
 
 - (BOOL)deleteAsset:(RLVAsset *)asset error:(NSError **)error
 {
-    NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:asset.assetId];
-    NSURL *directory = [asset.photoURL URLByDeletingLastPathComponent];
-    NSURL *expectedDirectory = uuid ? [self.assetsURL URLByAppendingPathComponent:[uuid UUIDString] isDirectory:YES] : nil;
-    if (!expectedDirectory || ![[directory URLByStandardizingPath] isEqual:[expectedDirectory URLByStandardizingPath]]) {
-        if (error) *error = [self errorWithCode:4 description:NSLocalizedString(@"asset.error.outside_store", nil)];
-        return NO;
+    __block BOOL deleted = NO;
+    __block NSError *deleteError = nil;
+    void (^deleteBlock)(void) = ^{
+        NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:asset.assetId];
+        NSURL *directory = [asset.photoURL URLByDeletingLastPathComponent];
+        NSURL *expectedDirectory = uuid ? [self.assetsURL URLByAppendingPathComponent:[uuid UUIDString] isDirectory:YES] : nil;
+        if (!expectedDirectory || ![[directory URLByStandardizingPath] isEqual:[expectedDirectory URLByStandardizingPath]]) {
+            deleteError = [self errorWithCode:4 description:NSLocalizedString(@"asset.error.outside_store", nil)];
+            return;
+        }
+        deleted = [[NSFileManager defaultManager] removeItemAtURL:directory error:&deleteError];
+        if (deleted) self.cachedAssets = nil;
+    };
+    if (dispatch_get_specific(RLVAssetStoreFileQueueKey) == (__bridge void *)self) {
+        deleteBlock();
+    } else {
+        dispatch_sync(_fileQueue, deleteBlock);
     }
-    BOOL deleted = [[NSFileManager defaultManager] removeItemAtURL:directory error:error];
-    if (deleted) [[NSNotificationCenter defaultCenter] postNotificationName:RLVAssetStoreDidChangeNotification object:self];
+    if (error) *error = deleteError;
+    if (deleted) {
+        void (^notifyBlock)(void) = ^{
+            [[NSNotificationCenter defaultCenter] postNotificationName:RLVAssetStoreDidChangeNotification object:self];
+        };
+        if ([NSThread isMainThread]) notifyBlock();
+        else dispatch_async(dispatch_get_main_queue(), notifyBlock);
+    }
     return deleted;
 }
 
@@ -309,5 +374,6 @@ static BOOL RLVIsBoolean(id value)
 @synthesize rootURL = _rootURL;
 @synthesize assetsURL = _assetsURL;
 @synthesize temporaryURL = _temporaryURL;
+@synthesize cachedAssets = _cachedAssets;
 
 @end

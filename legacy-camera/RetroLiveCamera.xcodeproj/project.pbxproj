@@ -1,239 +1,857 @@
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
-	classes = {};
+	classes = {
+	};
 	objectVersion = 46;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A00000000000000000000001 = {isa = PBXBuildFile; fileRef = F00000000000000000000001; };
-		A00000000000000000000002 = {isa = PBXBuildFile; fileRef = F00000000000000000000002; };
-		A00000000000000000000003 = {isa = PBXBuildFile; fileRef = F00000000000000000000003; };
-		A00000000000000000000004 = {isa = PBXBuildFile; fileRef = F00000000000000000000004; };
-		A00000000000000000000005 = {isa = PBXBuildFile; fileRef = F00000000000000000000005; };
-		A00000000000000000000006 = {isa = PBXBuildFile; fileRef = F00000000000000000000006; };
-		A00000000000000000000007 = {isa = PBXBuildFile; fileRef = F00000000000000000000007; };
-		A00000000000000000000008 = {isa = PBXBuildFile; fileRef = F00000000000000000000008; };
-		A00000000000000000000009 = {isa = PBXBuildFile; fileRef = F00000000000000000000009; };
-		A0000000000000000000000A = {isa = PBXBuildFile; fileRef = F0000000000000000000000A; };
-		A0000000000000000000000B = {isa = PBXBuildFile; fileRef = F0000000000000000000000B; };
-		A0000000000000000000000C = {isa = PBXBuildFile; fileRef = F0000000000000000000000C; };
-		A0000000000000000000000D = {isa = PBXBuildFile; fileRef = F0000000000000000000000D; };
-		A0000000000000000000000E = {isa = PBXBuildFile; fileRef = F0000000000000000000000E; };
-		A0000000000000000000000F = {isa = PBXBuildFile; fileRef = F0000000000000000000000F; };
-		A00000000000000000000010 = {isa = PBXBuildFile; fileRef = F00000000000000000000010; };
-		A00000000000000000000011 = {isa = PBXBuildFile; fileRef = F00000000000000000000011; };
-		A00000000000000000000012 = {isa = PBXBuildFile; fileRef = F00000000000000000000012; };
-		A00000000000000000000013 = {isa = PBXBuildFile; fileRef = F00000000000000000000013; };
-		A00000000000000000000014 = {isa = PBXBuildFile; fileRef = F00000000000000000000014; };
-		A00000000000000000000015 = {isa = PBXBuildFile; fileRef = F00000000000000000000015; };
-		A00000000000000000000016 = {isa = PBXBuildFile; fileRef = F00000000000000000000016; };
-		B00000000000000000000001 = {isa = PBXBuildFile; fileRef = F00000000000000000000001; };
-		B00000000000000000000002 = {isa = PBXBuildFile; fileRef = F00000000000000000000002; };
-		B00000000000000000000003 = {isa = PBXBuildFile; fileRef = F00000000000000000000003; };
-		B00000000000000000000004 = {isa = PBXBuildFile; fileRef = F00000000000000000000004; };
-		B00000000000000000000005 = {isa = PBXBuildFile; fileRef = F00000000000000000000005; };
-		B00000000000000000000006 = {isa = PBXBuildFile; fileRef = F00000000000000000000006; };
-		B00000000000000000000007 = {isa = PBXBuildFile; fileRef = F00000000000000000000007; };
-		B00000000000000000000008 = {isa = PBXBuildFile; fileRef = F00000000000000000000008; };
-		B00000000000000000000009 = {isa = PBXBuildFile; fileRef = F00000000000000000000009; };
-		B0000000000000000000000A = {isa = PBXBuildFile; fileRef = F0000000000000000000000A; };
-		B0000000000000000000000B = {isa = PBXBuildFile; fileRef = F0000000000000000000000B; };
-		B0000000000000000000000C = {isa = PBXBuildFile; fileRef = F0000000000000000000000C; };
-		B0000000000000000000000D = {isa = PBXBuildFile; fileRef = F0000000000000000000000D; };
-		B0000000000000000000000E = {isa = PBXBuildFile; fileRef = F0000000000000000000000E; };
-		B0000000000000000000000F = {isa = PBXBuildFile; fileRef = F0000000000000000000000F; };
-		B00000000000000000000010 = {isa = PBXBuildFile; fileRef = F00000000000000000000010; };
-		B00000000000000000000011 = {isa = PBXBuildFile; fileRef = F00000000000000000000011; };
-		B00000000000000000000012 = {isa = PBXBuildFile; fileRef = F00000000000000000000012; };
-		B00000000000000000000013 = {isa = PBXBuildFile; fileRef = F00000000000000000000013; };
-		B00000000000000000000014 = {isa = PBXBuildFile; fileRef = F00000000000000000000014; };
-		B00000000000000000000015 = {isa = PBXBuildFile; fileRef = F00000000000000000000015; };
-		B00000000000000000000016 = {isa = PBXBuildFile; fileRef = F00000000000000000000016; };
-		A10000000000000000000001 = {isa = PBXBuildFile; fileRef = F10000000000000000000001; };
-		A10000000000000000000002 = {isa = PBXBuildFile; fileRef = F10000000000000000000002; };
-		A10000000000000000000003 = {isa = PBXBuildFile; fileRef = F10000000000000000000003; };
-		A10000000000000000000004 = {isa = PBXBuildFile; fileRef = F10000000000000000000004; };
-		A10000000000000000000005 = {isa = PBXBuildFile; fileRef = F10000000000000000000005; };
-		A10000000000000000000006 = {isa = PBXBuildFile; fileRef = F10000000000000000000006; };
-		B10000000000000000000001 = {isa = PBXBuildFile; fileRef = F10000000000000000000001; };
-		B10000000000000000000002 = {isa = PBXBuildFile; fileRef = F10000000000000000000002; };
-		B10000000000000000000003 = {isa = PBXBuildFile; fileRef = F10000000000000000000003; };
-		B10000000000000000000004 = {isa = PBXBuildFile; fileRef = F10000000000000000000004; };
-		B10000000000000000000005 = {isa = PBXBuildFile; fileRef = F10000000000000000000005; };
-		B10000000000000000000006 = {isa = PBXBuildFile; fileRef = F10000000000000000000006; };
-		A10000000000000000000007 = {isa = PBXBuildFile; fileRef = F10000000000000000000007; };
-		B10000000000000000000007 = {isa = PBXBuildFile; fileRef = F10000000000000000000007; };
-		A30000000000000000000001 = {isa = PBXBuildFile; fileRef = F30000000000000000000001; };
-		A30000000000000000000002 = {isa = PBXBuildFile; fileRef = F30000000000000000000002; };
-		A30000000000000000000003 = {isa = PBXBuildFile; fileRef = F30000000000000000000003; };
-		A30000000000000000000004 = {isa = PBXBuildFile; fileRef = F30000000000000000000004; };
-		A30000000000000000000005 = {isa = PBXBuildFile; fileRef = F30000000000000000000005; };
-		A30000000000000000000006 = {isa = PBXBuildFile; fileRef = F30000000000000000000006; };
-		B30000000000000000000001 = {isa = PBXBuildFile; fileRef = F40000000000000000000001; };
-		B30000000000000000000002 = {isa = PBXBuildFile; fileRef = F40000000000000000000002; };
-		B30000000000000000000003 = {isa = PBXBuildFile; fileRef = F40000000000000000000003; };
-		B30000000000000000000004 = {isa = PBXBuildFile; fileRef = F40000000000000000000004; };
-		B30000000000000000000005 = {isa = PBXBuildFile; fileRef = F40000000000000000000005; };
-		B30000000000000000000006 = {isa = PBXBuildFile; fileRef = F40000000000000000000006; };
-		C00000000000000000000001 = {isa = PBXBuildFile; fileRef = 400000000000000000000016; };
-		C00000000000000000000002 = {isa = PBXBuildFile; fileRef = 400000000000000000000017; };
-		C00000000000000000000003 = {isa = PBXBuildFile; fileRef = F60000000000000000000001; };
-		D00000000000000000000001 = {isa = PBXBuildFile; fileRef = 400000000000000000000016; };
-		D00000000000000000000002 = {isa = PBXBuildFile; fileRef = 400000000000000000000018; };
-		D00000000000000000000003 = {isa = PBXBuildFile; fileRef = F60000000000000000000002; };
+		A00000000000000000000001 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000001 /* main.m */; };
+		A00000000000000000000002 /* RLVAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000002 /* RLVAppDelegate.m */; };
+		A00000000000000000000003 /* RLVAssetManifest.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000003 /* RLVAssetManifest.m */; };
+		A00000000000000000000004 /* RLVManifestParser.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000004 /* RLVManifestParser.m */; };
+		A00000000000000000000005 /* RLVCaptureEvent.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000005 /* RLVCaptureEvent.m */; };
+		A00000000000000000000006 /* RLVCameraOrientationCoordinator.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000006 /* RLVCameraOrientationCoordinator.m */; };
+		A00000000000000000000007 /* RLVCaptureController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000007 /* RLVCaptureController.m */; };
+		A00000000000000000000008 /* RLVDeviceCapabilities.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000008 /* RLVDeviceCapabilities.m */; };
+		A00000000000000000000009 /* RLVAsset.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000009 /* RLVAsset.m */; };
+		A0000000000000000000000A /* RLVManifest.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000A /* RLVManifest.m */; };
+		A0000000000000000000000B /* RLVAssetStore.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000B /* RLVAssetStore.m */; };
+		A0000000000000000000000C /* RLVShutterButton.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000C /* RLVShutterButton.m */; };
+		A0000000000000000000000D /* RLVBaseCameraViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000D /* RLVBaseCameraViewController.m */; };
+		A0000000000000000000000E /* RLVLegacyCameraViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000E /* RLVLegacyCameraViewController.m */; };
+		A0000000000000000000000F /* RLVClassicCameraViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000F /* RLVClassicCameraViewController.m */; };
+		A00000000000000000000010 /* RLVLibraryViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000010 /* RLVLibraryViewController.m */; };
+		A00000000000000000000011 /* RLVAssetDetailViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000011 /* RLVAssetDetailViewController.m */; };
+		A00000000000000000000012 /* RLVHTTPResponse.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000012 /* RLVHTTPResponse.m */; };
+		A00000000000000000000013 /* RLVTransferRouter.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000013 /* RLVTransferRouter.m */; };
+		A00000000000000000000014 /* RLVTransferService.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000014 /* RLVTransferService.m */; };
+		A00000000000000000000015 /* RLVTransferViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000015 /* RLVTransferViewController.m */; };
+		A00000000000000000000016 /* RLVLayout.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000016 /* RLVLayout.m */; };
+		A10000000000000000000001 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* UIKit.framework */; };
+		A10000000000000000000002 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* Foundation.framework */; };
+		A10000000000000000000003 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000003 /* AVFoundation.framework */; };
+		A10000000000000000000004 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000004 /* QuartzCore.framework */; };
+		A10000000000000000000005 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* ImageIO.framework */; };
+		A10000000000000000000006 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000006 /* CoreGraphics.framework */; };
+		A10000000000000000000007 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000007 /* CoreMedia.framework */; };
+		A30000000000000000000001 /* RetroLiveLegacyIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = F30000000000000000000001 /* RetroLiveLegacyIcon.png */; };
+		A30000000000000000000002 /* RetroLiveLegacyIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F30000000000000000000002 /* RetroLiveLegacyIcon@2x.png */; };
+		A30000000000000000000003 /* RetroLiveLegacyIcon-Small.png in Resources */ = {isa = PBXBuildFile; fileRef = F30000000000000000000003 /* RetroLiveLegacyIcon-Small.png */; };
+		A30000000000000000000004 /* RetroLiveLegacyIcon-Small@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F30000000000000000000004 /* RetroLiveLegacyIcon-Small@2x.png */; };
+		A30000000000000000000005 /* RetroLiveLegacyIcon-Spotlight.png in Resources */ = {isa = PBXBuildFile; fileRef = F30000000000000000000005 /* RetroLiveLegacyIcon-Spotlight.png */; };
+		A30000000000000000000006 /* RetroLiveLegacyIcon-Spotlight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F30000000000000000000006 /* RetroLiveLegacyIcon-Spotlight@2x.png */; };
+		B00000000000000000000001 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000001 /* main.m */; };
+		B00000000000000000000002 /* RLVAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000002 /* RLVAppDelegate.m */; };
+		B00000000000000000000003 /* RLVAssetManifest.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000003 /* RLVAssetManifest.m */; };
+		B00000000000000000000004 /* RLVManifestParser.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000004 /* RLVManifestParser.m */; };
+		B00000000000000000000005 /* RLVCaptureEvent.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000005 /* RLVCaptureEvent.m */; };
+		B00000000000000000000006 /* RLVCameraOrientationCoordinator.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000006 /* RLVCameraOrientationCoordinator.m */; };
+		B00000000000000000000007 /* RLVCaptureController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000007 /* RLVCaptureController.m */; };
+		B00000000000000000000008 /* RLVDeviceCapabilities.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000008 /* RLVDeviceCapabilities.m */; };
+		B00000000000000000000009 /* RLVAsset.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000009 /* RLVAsset.m */; };
+		B0000000000000000000000A /* RLVManifest.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000A /* RLVManifest.m */; };
+		B0000000000000000000000B /* RLVAssetStore.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000B /* RLVAssetStore.m */; };
+		B0000000000000000000000C /* RLVShutterButton.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000C /* RLVShutterButton.m */; };
+		B0000000000000000000000D /* RLVBaseCameraViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000D /* RLVBaseCameraViewController.m */; };
+		B0000000000000000000000E /* RLVLegacyCameraViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000E /* RLVLegacyCameraViewController.m */; };
+		B0000000000000000000000F /* RLVClassicCameraViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000F /* RLVClassicCameraViewController.m */; };
+		B00000000000000000000010 /* RLVLibraryViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000010 /* RLVLibraryViewController.m */; };
+		B00000000000000000000011 /* RLVAssetDetailViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000011 /* RLVAssetDetailViewController.m */; };
+		B00000000000000000000012 /* RLVHTTPResponse.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000012 /* RLVHTTPResponse.m */; };
+		B00000000000000000000013 /* RLVTransferRouter.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000013 /* RLVTransferRouter.m */; };
+		B00000000000000000000014 /* RLVTransferService.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000014 /* RLVTransferService.m */; };
+		B00000000000000000000015 /* RLVTransferViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000015 /* RLVTransferViewController.m */; };
+		B00000000000000000000016 /* RLVLayout.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000016 /* RLVLayout.m */; };
+		B10000000000000000000001 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* UIKit.framework */; };
+		B10000000000000000000002 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* Foundation.framework */; };
+		B10000000000000000000003 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000003 /* AVFoundation.framework */; };
+		B10000000000000000000004 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000004 /* QuartzCore.framework */; };
+		B10000000000000000000005 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* ImageIO.framework */; };
+		B10000000000000000000006 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000006 /* CoreGraphics.framework */; };
+		B10000000000000000000007 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000007 /* CoreMedia.framework */; };
+		B30000000000000000000001 /* RetroLiveClassicIcon-60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000001 /* RetroLiveClassicIcon-60@2x.png */; };
+		B30000000000000000000002 /* RetroLiveClassicIcon-60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000002 /* RetroLiveClassicIcon-60@3x.png */; };
+		B30000000000000000000003 /* RetroLiveClassicIcon-40@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000003 /* RetroLiveClassicIcon-40@2x.png */; };
+		B30000000000000000000004 /* RetroLiveClassicIcon-40@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000004 /* RetroLiveClassicIcon-40@3x.png */; };
+		B30000000000000000000005 /* RetroLiveClassicIcon-Small@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000005 /* RetroLiveClassicIcon-Small@2x.png */; };
+		B30000000000000000000006 /* RetroLiveClassicIcon-Small@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000006 /* RetroLiveClassicIcon-Small@3x.png */; };
+		C00000000000000000000001 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 400000000000000000000016 /* Localizable.strings */; };
+		C00000000000000000000002 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 400000000000000000000017 /* InfoPlist.strings */; };
+		C00000000000000000000003 /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000001 /* Default-568h@2x.png */; };
+		D00000000000000000000001 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 400000000000000000000016 /* Localizable.strings */; };
+		D00000000000000000000002 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 400000000000000000000018 /* InfoPlist.strings */; };
+		D00000000000000000000003 /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000002 /* Default-568h@2x.png */; };
+		E70000000000000000000001 /* InterfaceIcons in Resources */ = {isa = PBXBuildFile; fileRef = F70000000000000000000001 /* InterfaceIcons */; };
+		E70000000000000000000002 /* InterfaceIcons in Resources */ = {isa = PBXBuildFile; fileRef = F70000000000000000000001 /* InterfaceIcons */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		F00000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		F00000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVAppDelegate.m; sourceTree = "<group>"; };
-		F00000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVAssetManifest.m; sourceTree = "<group>"; };
-		F00000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVManifestParser.m; sourceTree = "<group>"; };
-		F00000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVCaptureEvent.m; sourceTree = "<group>"; };
-		F00000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVCameraOrientationCoordinator.m; sourceTree = "<group>"; };
-		F00000000000000000000007 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVCaptureController.m; sourceTree = "<group>"; };
-		F00000000000000000000008 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVDeviceCapabilities.m; sourceTree = "<group>"; };
-		F00000000000000000000009 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVAsset.m; sourceTree = "<group>"; };
-		F0000000000000000000000A = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVManifest.m; sourceTree = "<group>"; };
-		F0000000000000000000000B = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVAssetStore.m; sourceTree = "<group>"; };
-		F0000000000000000000000C = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVShutterButton.m; sourceTree = "<group>"; };
-		F0000000000000000000000D = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVBaseCameraViewController.m; sourceTree = "<group>"; };
-		F0000000000000000000000E = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVLegacyCameraViewController.m; sourceTree = "<group>"; };
-		F0000000000000000000000F = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVClassicCameraViewController.m; sourceTree = "<group>"; };
-		F00000000000000000000010 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVLibraryViewController.m; sourceTree = "<group>"; };
-		F00000000000000000000011 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVAssetDetailViewController.m; sourceTree = "<group>"; };
-		F00000000000000000000012 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVHTTPResponse.m; sourceTree = "<group>"; };
-		F00000000000000000000013 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVTransferRouter.m; sourceTree = "<group>"; };
-		F00000000000000000000014 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVTransferService.m; sourceTree = "<group>"; };
-		F00000000000000000000015 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVTransferViewController.m; sourceTree = "<group>"; };
-		F00000000000000000000016 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVLayout.m; sourceTree = "<group>"; };
-		F00000000000000000000020 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		F00000000000000000000021 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Classic-Info.plist; sourceTree = "<group>"; };
-		F20000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVAppDelegate.h; sourceTree = "<group>"; };
-		F20000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVAssetManifest.h; sourceTree = "<group>"; };
-		F20000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVManifestParser.h; sourceTree = "<group>"; };
-		F20000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVCaptureEvent.h; sourceTree = "<group>"; };
-		F20000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVCameraOrientationCoordinator.h; sourceTree = "<group>"; };
-		F20000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVCaptureController.h; sourceTree = "<group>"; };
-		F20000000000000000000007 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVDeviceCapabilities.h; sourceTree = "<group>"; };
-		F20000000000000000000008 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVAsset.h; sourceTree = "<group>"; };
-		F20000000000000000000009 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVManifest.h; sourceTree = "<group>"; };
-		F2000000000000000000000A = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVAssetStore.h; sourceTree = "<group>"; };
-		F2000000000000000000000B = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVShutterButton.h; sourceTree = "<group>"; };
-		F2000000000000000000000C = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVBaseCameraViewController.h; sourceTree = "<group>"; };
-		F2000000000000000000000D = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVLegacyCameraViewController.h; sourceTree = "<group>"; };
-		F2000000000000000000000E = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVClassicCameraViewController.h; sourceTree = "<group>"; };
-		F2000000000000000000000F = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVLibraryViewController.h; sourceTree = "<group>"; };
-		F20000000000000000000010 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVAssetDetailViewController.h; sourceTree = "<group>"; };
-		F20000000000000000000011 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVHTTPResponse.h; sourceTree = "<group>"; };
-		F20000000000000000000012 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVTransferRouter.h; sourceTree = "<group>"; };
-		F20000000000000000000013 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVTransferService.h; sourceTree = "<group>"; };
-		F20000000000000000000014 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVTransferViewController.h; sourceTree = "<group>"; };
-		F20000000000000000000015 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVLayout.h; sourceTree = "<group>"; };
-		F00000000000000000000030 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RetroLiveCamera.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		F00000000000000000000031 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RetroLiveClassic.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		F10000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
-		F10000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
-		F10000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
-		F10000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
-		F10000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = System/Library/Frameworks/ImageIO.framework; sourceTree = SDKROOT; };
-		F10000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
-		F10000000000000000000007 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
-		F30000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = image.png; path = RetroLiveLegacyIcon.png; sourceTree = "<group>"; };
-		F30000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveLegacyIcon@2x.png"; sourceTree = "<group>"; };
-		F30000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveLegacyIcon-Small.png"; sourceTree = "<group>"; };
-		F30000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveLegacyIcon-Small@2x.png"; sourceTree = "<group>"; };
-		F30000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveLegacyIcon-Spotlight.png"; sourceTree = "<group>"; };
-		F30000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveLegacyIcon-Spotlight@2x.png"; sourceTree = "<group>"; };
-		F40000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveClassicIcon-60@2x.png"; sourceTree = "<group>"; };
-		F40000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveClassicIcon-60@3x.png"; sourceTree = "<group>"; };
-		F40000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveClassicIcon-40@2x.png"; sourceTree = "<group>"; };
-		F40000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveClassicIcon-40@3x.png"; sourceTree = "<group>"; };
-		F40000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveClassicIcon-Small@2x.png"; sourceTree = "<group>"; };
-		F40000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveClassicIcon-Small@3x.png"; sourceTree = "<group>"; };
-		F50000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
-		F50000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
-		F50000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
-		F50000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Resources/LegacyInfoPlist/en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		F50000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "Resources/LegacyInfoPlist/zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
-		F50000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "Resources/LegacyInfoPlist/zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
-		F50000000000000000000007 = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Resources/ClassicInfoPlist/en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		F50000000000000000000008 = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "Resources/ClassicInfoPlist/zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
-		F50000000000000000000009 = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "Resources/ClassicInfoPlist/zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
-		F60000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
-		F60000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
+		F00000000000000000000001 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		F00000000000000000000002 /* RLVAppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVAppDelegate.m; sourceTree = "<group>"; };
+		F00000000000000000000003 /* RLVAssetManifest.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVAssetManifest.m; sourceTree = "<group>"; };
+		F00000000000000000000004 /* RLVManifestParser.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVManifestParser.m; sourceTree = "<group>"; };
+		F00000000000000000000005 /* RLVCaptureEvent.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVCaptureEvent.m; sourceTree = "<group>"; };
+		F00000000000000000000006 /* RLVCameraOrientationCoordinator.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVCameraOrientationCoordinator.m; sourceTree = "<group>"; };
+		F00000000000000000000007 /* RLVCaptureController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVCaptureController.m; sourceTree = "<group>"; };
+		F00000000000000000000008 /* RLVDeviceCapabilities.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVDeviceCapabilities.m; sourceTree = "<group>"; };
+		F00000000000000000000009 /* RLVAsset.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVAsset.m; sourceTree = "<group>"; };
+		F0000000000000000000000A /* RLVManifest.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVManifest.m; sourceTree = "<group>"; };
+		F0000000000000000000000B /* RLVAssetStore.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVAssetStore.m; sourceTree = "<group>"; };
+		F0000000000000000000000C /* RLVShutterButton.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVShutterButton.m; sourceTree = "<group>"; };
+		F0000000000000000000000D /* RLVBaseCameraViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVBaseCameraViewController.m; sourceTree = "<group>"; };
+		F0000000000000000000000E /* RLVLegacyCameraViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVLegacyCameraViewController.m; sourceTree = "<group>"; };
+		F0000000000000000000000F /* RLVClassicCameraViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVClassicCameraViewController.m; sourceTree = "<group>"; };
+		F00000000000000000000010 /* RLVLibraryViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVLibraryViewController.m; sourceTree = "<group>"; };
+		F00000000000000000000011 /* RLVAssetDetailViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVAssetDetailViewController.m; sourceTree = "<group>"; };
+		F00000000000000000000012 /* RLVHTTPResponse.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVHTTPResponse.m; sourceTree = "<group>"; };
+		F00000000000000000000013 /* RLVTransferRouter.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVTransferRouter.m; sourceTree = "<group>"; };
+		F00000000000000000000014 /* RLVTransferService.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVTransferService.m; sourceTree = "<group>"; };
+		F00000000000000000000015 /* RLVTransferViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVTransferViewController.m; sourceTree = "<group>"; };
+		F00000000000000000000016 /* RLVLayout.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVLayout.m; sourceTree = "<group>"; };
+		F00000000000000000000020 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F00000000000000000000021 /* Classic-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Classic-Info.plist"; sourceTree = "<group>"; };
+		F00000000000000000000030 /* RetroLiveCamera.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RetroLiveCamera.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F00000000000000000000031 /* RetroLiveClassic.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RetroLiveClassic.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F10000000000000000000001 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		F10000000000000000000002 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		F10000000000000000000003 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		F10000000000000000000004 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		F10000000000000000000005 /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = System/Library/Frameworks/ImageIO.framework; sourceTree = SDKROOT; };
+		F10000000000000000000006 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		F10000000000000000000007 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
+		F20000000000000000000001 /* RLVAppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVAppDelegate.h; sourceTree = "<group>"; };
+		F20000000000000000000002 /* RLVAssetManifest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVAssetManifest.h; sourceTree = "<group>"; };
+		F20000000000000000000003 /* RLVManifestParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVManifestParser.h; sourceTree = "<group>"; };
+		F20000000000000000000004 /* RLVCaptureEvent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVCaptureEvent.h; sourceTree = "<group>"; };
+		F20000000000000000000005 /* RLVCameraOrientationCoordinator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVCameraOrientationCoordinator.h; sourceTree = "<group>"; };
+		F20000000000000000000006 /* RLVCaptureController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVCaptureController.h; sourceTree = "<group>"; };
+		F20000000000000000000007 /* RLVDeviceCapabilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVDeviceCapabilities.h; sourceTree = "<group>"; };
+		F20000000000000000000008 /* RLVAsset.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVAsset.h; sourceTree = "<group>"; };
+		F20000000000000000000009 /* RLVManifest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVManifest.h; sourceTree = "<group>"; };
+		F2000000000000000000000A /* RLVAssetStore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVAssetStore.h; sourceTree = "<group>"; };
+		F2000000000000000000000B /* RLVShutterButton.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVShutterButton.h; sourceTree = "<group>"; };
+		F2000000000000000000000C /* RLVBaseCameraViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVBaseCameraViewController.h; sourceTree = "<group>"; };
+		F2000000000000000000000D /* RLVLegacyCameraViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVLegacyCameraViewController.h; sourceTree = "<group>"; };
+		F2000000000000000000000E /* RLVClassicCameraViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVClassicCameraViewController.h; sourceTree = "<group>"; };
+		F2000000000000000000000F /* RLVLibraryViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVLibraryViewController.h; sourceTree = "<group>"; };
+		F20000000000000000000010 /* RLVAssetDetailViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVAssetDetailViewController.h; sourceTree = "<group>"; };
+		F20000000000000000000011 /* RLVHTTPResponse.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVHTTPResponse.h; sourceTree = "<group>"; };
+		F20000000000000000000012 /* RLVTransferRouter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVTransferRouter.h; sourceTree = "<group>"; };
+		F20000000000000000000013 /* RLVTransferService.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVTransferService.h; sourceTree = "<group>"; };
+		F20000000000000000000014 /* RLVTransferViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVTransferViewController.h; sourceTree = "<group>"; };
+		F20000000000000000000015 /* RLVLayout.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVLayout.h; sourceTree = "<group>"; };
+		F30000000000000000000001 /* RetroLiveLegacyIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RetroLiveLegacyIcon.png; sourceTree = "<group>"; };
+		F30000000000000000000002 /* RetroLiveLegacyIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveLegacyIcon@2x.png"; sourceTree = "<group>"; };
+		F30000000000000000000003 /* RetroLiveLegacyIcon-Small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveLegacyIcon-Small.png"; sourceTree = "<group>"; };
+		F30000000000000000000004 /* RetroLiveLegacyIcon-Small@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveLegacyIcon-Small@2x.png"; sourceTree = "<group>"; };
+		F30000000000000000000005 /* RetroLiveLegacyIcon-Spotlight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveLegacyIcon-Spotlight.png"; sourceTree = "<group>"; };
+		F30000000000000000000006 /* RetroLiveLegacyIcon-Spotlight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveLegacyIcon-Spotlight@2x.png"; sourceTree = "<group>"; };
+		F40000000000000000000001 /* RetroLiveClassicIcon-60@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveClassicIcon-60@2x.png"; sourceTree = "<group>"; };
+		F40000000000000000000002 /* RetroLiveClassicIcon-60@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveClassicIcon-60@3x.png"; sourceTree = "<group>"; };
+		F40000000000000000000003 /* RetroLiveClassicIcon-40@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveClassicIcon-40@2x.png"; sourceTree = "<group>"; };
+		F40000000000000000000004 /* RetroLiveClassicIcon-40@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveClassicIcon-40@3x.png"; sourceTree = "<group>"; };
+		F40000000000000000000005 /* RetroLiveClassicIcon-Small@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveClassicIcon-Small@2x.png"; sourceTree = "<group>"; };
+		F40000000000000000000006 /* RetroLiveClassicIcon-Small@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveClassicIcon-Small@3x.png"; sourceTree = "<group>"; };
+		F50000000000000000000001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		F50000000000000000000002 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		F50000000000000000000003 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		F50000000000000000000004 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Resources/LegacyInfoPlist/en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		F50000000000000000000005 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "Resources/LegacyInfoPlist/zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		F50000000000000000000006 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "Resources/LegacyInfoPlist/zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		F50000000000000000000007 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Resources/ClassicInfoPlist/en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		F50000000000000000000008 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "Resources/ClassicInfoPlist/zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		F50000000000000000000009 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "Resources/ClassicInfoPlist/zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		F60000000000000000000001 /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
+		F60000000000000000000002 /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
+		F70000000000000000000001 /* InterfaceIcons */ = {isa = PBXFileReference; lastKnownFileType = folder; path = InterfaceIcons; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		300000000000000000000001 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A10000000000000000000007); runOnlyForDeploymentPostprocessing = 0; };
-		300000000000000000000002 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000001, B10000000000000000000002, B10000000000000000000003, B10000000000000000000004, B10000000000000000000005, B10000000000000000000006, B10000000000000000000007); runOnlyForDeploymentPostprocessing = 0; };
+		300000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000001 /* UIKit.framework in Frameworks */,
+				A10000000000000000000002 /* Foundation.framework in Frameworks */,
+				A10000000000000000000003 /* AVFoundation.framework in Frameworks */,
+				A10000000000000000000004 /* QuartzCore.framework in Frameworks */,
+				A10000000000000000000005 /* ImageIO.framework in Frameworks */,
+				A10000000000000000000006 /* CoreGraphics.framework in Frameworks */,
+				A10000000000000000000007 /* CoreMedia.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		300000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000001 /* UIKit.framework in Frameworks */,
+				B10000000000000000000002 /* Foundation.framework in Frameworks */,
+				B10000000000000000000003 /* AVFoundation.framework in Frameworks */,
+				B10000000000000000000004 /* QuartzCore.framework in Frameworks */,
+				B10000000000000000000005 /* ImageIO.framework in Frameworks */,
+				B10000000000000000000006 /* CoreGraphics.framework in Frameworks */,
+				B10000000000000000000007 /* CoreMedia.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		400000000000000000000001 = {isa = PBXGroup; children = (400000000000000000000002, 400000000000000000000003, 400000000000000000000004); sourceTree = "<group>"; };
-		400000000000000000000002 = {isa = PBXGroup; path = RetroLiveCamera; sourceTree = "<group>"; children = (F00000000000000000000001, 400000000000000000000005, 400000000000000000000006, 400000000000000000000007, 40000000000000000000000C, 40000000000000000000000F, 400000000000000000000011, 400000000000000000000013, 400000000000000000000016, 400000000000000000000017, 400000000000000000000018); };
-		400000000000000000000003 = {isa = PBXGroup; name = Frameworks; sourceTree = "<group>"; children = (F10000000000000000000001, F10000000000000000000002, F10000000000000000000003, F10000000000000000000004, F10000000000000000000005, F10000000000000000000006, F10000000000000000000007); };
-		400000000000000000000004 = {isa = PBXGroup; name = Products; sourceTree = "<group>"; children = (F00000000000000000000030, F00000000000000000000031); };
-		400000000000000000000005 = {isa = PBXGroup; path = Application; sourceTree = "<group>"; children = (F20000000000000000000001, F00000000000000000000002); };
-		400000000000000000000006 = {isa = PBXGroup; name = Protocol; path = Assets; sourceTree = "<group>"; children = (F20000000000000000000002, F00000000000000000000003, F20000000000000000000003, F00000000000000000000004); };
-		400000000000000000000007 = {isa = PBXGroup; path = Shared; sourceTree = "<group>"; children = (400000000000000000000008, 400000000000000000000009, 40000000000000000000000A, 40000000000000000000000B, 400000000000000000000012); };
-		400000000000000000000008 = {isa = PBXGroup; path = Capture; sourceTree = "<group>"; children = (F20000000000000000000006, F00000000000000000000007, F20000000000000000000004, F00000000000000000000005, F20000000000000000000005, F00000000000000000000006); };
-		400000000000000000000009 = {isa = PBXGroup; path = Asset; sourceTree = "<group>"; children = (F20000000000000000000008, F00000000000000000000009, F2000000000000000000000A, F0000000000000000000000B, F20000000000000000000009, F0000000000000000000000A); };
-		40000000000000000000000A = {isa = PBXGroup; path = Device; sourceTree = "<group>"; children = (F20000000000000000000007, F00000000000000000000008); };
-		40000000000000000000000B = {isa = PBXGroup; path = Utilities; sourceTree = "<group>"; children = (F2000000000000000000000C, F0000000000000000000000D, F2000000000000000000000B, F0000000000000000000000C, F20000000000000000000015, F00000000000000000000016); };
-		40000000000000000000000C = {isa = PBXGroup; path = Legacy; sourceTree = "<group>"; children = (40000000000000000000000D, 40000000000000000000000E); };
-		40000000000000000000000D = {isa = PBXGroup; path = Camera; sourceTree = "<group>"; children = (F2000000000000000000000D, F0000000000000000000000E); };
-		40000000000000000000000E = {isa = PBXGroup; path = Library; sourceTree = "<group>"; children = (F20000000000000000000010, F00000000000000000000011, F2000000000000000000000F, F00000000000000000000010); };
-		40000000000000000000000F = {isa = PBXGroup; path = Classic; sourceTree = "<group>"; children = (400000000000000000000010); };
-		400000000000000000000010 = {isa = PBXGroup; path = Camera; sourceTree = "<group>"; children = (F2000000000000000000000E, F0000000000000000000000F); };
-		400000000000000000000011 = {isa = PBXGroup; name = Configuration; sourceTree = "<group>"; children = (F00000000000000000000020, F00000000000000000000021); };
-		400000000000000000000012 = {isa = PBXGroup; path = Transfer; sourceTree = "<group>"; children = (F20000000000000000000011, F00000000000000000000012, F20000000000000000000012, F00000000000000000000013, F20000000000000000000013, F00000000000000000000014, F20000000000000000000014, F00000000000000000000015); };
-		400000000000000000000013 = {isa = PBXGroup; path = Resources; sourceTree = "<group>"; children = (400000000000000000000014, 400000000000000000000015, 400000000000000000000019, 40000000000000000000001A); };
-		400000000000000000000014 = {isa = PBXGroup; path = LegacyAppIcons; sourceTree = "<group>"; children = (F30000000000000000000001, F30000000000000000000002, F30000000000000000000003, F30000000000000000000004, F30000000000000000000005, F30000000000000000000006); };
-		400000000000000000000015 = {isa = PBXGroup; path = ClassicAppIcons; sourceTree = "<group>"; children = (F40000000000000000000001, F40000000000000000000002, F40000000000000000000003, F40000000000000000000004, F40000000000000000000005, F40000000000000000000006); };
-		400000000000000000000019 = {isa = PBXGroup; path = LegacyLaunchImages; sourceTree = "<group>"; children = (F60000000000000000000001); };
-		40000000000000000000001A = {isa = PBXGroup; path = ClassicLaunchImages; sourceTree = "<group>"; children = (F60000000000000000000002); };
+		400000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				400000000000000000000002 /* RetroLiveCamera */,
+				400000000000000000000003 /* Frameworks */,
+				400000000000000000000004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		400000000000000000000002 /* RetroLiveCamera */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000001 /* main.m */,
+				400000000000000000000005 /* Application */,
+				400000000000000000000006 /* Protocol */,
+				400000000000000000000007 /* Shared */,
+				40000000000000000000000C /* Legacy */,
+				40000000000000000000000F /* Classic */,
+				400000000000000000000011 /* Configuration */,
+				400000000000000000000013 /* Resources */,
+				400000000000000000000016 /* Localizable.strings */,
+				400000000000000000000017 /* InfoPlist.strings */,
+				400000000000000000000018 /* InfoPlist.strings */,
+			);
+			path = RetroLiveCamera;
+			sourceTree = "<group>";
+		};
+		400000000000000000000003 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				F10000000000000000000001 /* UIKit.framework */,
+				F10000000000000000000002 /* Foundation.framework */,
+				F10000000000000000000003 /* AVFoundation.framework */,
+				F10000000000000000000004 /* QuartzCore.framework */,
+				F10000000000000000000005 /* ImageIO.framework */,
+				F10000000000000000000006 /* CoreGraphics.framework */,
+				F10000000000000000000007 /* CoreMedia.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		400000000000000000000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000030 /* RetroLiveCamera.app */,
+				F00000000000000000000031 /* RetroLiveClassic.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		400000000000000000000005 /* Application */ = {
+			isa = PBXGroup;
+			children = (
+				F20000000000000000000001 /* RLVAppDelegate.h */,
+				F00000000000000000000002 /* RLVAppDelegate.m */,
+			);
+			path = Application;
+			sourceTree = "<group>";
+		};
+		400000000000000000000006 /* Protocol */ = {
+			isa = PBXGroup;
+			children = (
+				F20000000000000000000002 /* RLVAssetManifest.h */,
+				F00000000000000000000003 /* RLVAssetManifest.m */,
+				F20000000000000000000003 /* RLVManifestParser.h */,
+				F00000000000000000000004 /* RLVManifestParser.m */,
+			);
+			name = Protocol;
+			path = Assets;
+			sourceTree = "<group>";
+		};
+		400000000000000000000007 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				400000000000000000000008 /* Capture */,
+				400000000000000000000009 /* Asset */,
+				40000000000000000000000A /* Device */,
+				40000000000000000000000B /* Utilities */,
+				400000000000000000000012 /* Transfer */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		400000000000000000000008 /* Capture */ = {
+			isa = PBXGroup;
+			children = (
+				F20000000000000000000006 /* RLVCaptureController.h */,
+				F00000000000000000000007 /* RLVCaptureController.m */,
+				F20000000000000000000004 /* RLVCaptureEvent.h */,
+				F00000000000000000000005 /* RLVCaptureEvent.m */,
+				F20000000000000000000005 /* RLVCameraOrientationCoordinator.h */,
+				F00000000000000000000006 /* RLVCameraOrientationCoordinator.m */,
+			);
+			path = Capture;
+			sourceTree = "<group>";
+		};
+		400000000000000000000009 /* Asset */ = {
+			isa = PBXGroup;
+			children = (
+				F20000000000000000000008 /* RLVAsset.h */,
+				F00000000000000000000009 /* RLVAsset.m */,
+				F2000000000000000000000A /* RLVAssetStore.h */,
+				F0000000000000000000000B /* RLVAssetStore.m */,
+				F20000000000000000000009 /* RLVManifest.h */,
+				F0000000000000000000000A /* RLVManifest.m */,
+			);
+			path = Asset;
+			sourceTree = "<group>";
+		};
+		40000000000000000000000A /* Device */ = {
+			isa = PBXGroup;
+			children = (
+				F20000000000000000000007 /* RLVDeviceCapabilities.h */,
+				F00000000000000000000008 /* RLVDeviceCapabilities.m */,
+			);
+			path = Device;
+			sourceTree = "<group>";
+		};
+		40000000000000000000000B /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				F2000000000000000000000C /* RLVBaseCameraViewController.h */,
+				F0000000000000000000000D /* RLVBaseCameraViewController.m */,
+				F2000000000000000000000B /* RLVShutterButton.h */,
+				F0000000000000000000000C /* RLVShutterButton.m */,
+				F20000000000000000000015 /* RLVLayout.h */,
+				F00000000000000000000016 /* RLVLayout.m */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		40000000000000000000000C /* Legacy */ = {
+			isa = PBXGroup;
+			children = (
+				40000000000000000000000D /* Camera */,
+				40000000000000000000000E /* Library */,
+			);
+			path = Legacy;
+			sourceTree = "<group>";
+		};
+		40000000000000000000000D /* Camera */ = {
+			isa = PBXGroup;
+			children = (
+				F2000000000000000000000D /* RLVLegacyCameraViewController.h */,
+				F0000000000000000000000E /* RLVLegacyCameraViewController.m */,
+			);
+			path = Camera;
+			sourceTree = "<group>";
+		};
+		40000000000000000000000E /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				F20000000000000000000010 /* RLVAssetDetailViewController.h */,
+				F00000000000000000000011 /* RLVAssetDetailViewController.m */,
+				F2000000000000000000000F /* RLVLibraryViewController.h */,
+				F00000000000000000000010 /* RLVLibraryViewController.m */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
+		40000000000000000000000F /* Classic */ = {
+			isa = PBXGroup;
+			children = (
+				400000000000000000000010 /* Camera */,
+			);
+			path = Classic;
+			sourceTree = "<group>";
+		};
+		400000000000000000000010 /* Camera */ = {
+			isa = PBXGroup;
+			children = (
+				F2000000000000000000000E /* RLVClassicCameraViewController.h */,
+				F0000000000000000000000F /* RLVClassicCameraViewController.m */,
+			);
+			path = Camera;
+			sourceTree = "<group>";
+		};
+		400000000000000000000011 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000020 /* Info.plist */,
+				F00000000000000000000021 /* Classic-Info.plist */,
+			);
+			name = Configuration;
+			sourceTree = "<group>";
+		};
+		400000000000000000000012 /* Transfer */ = {
+			isa = PBXGroup;
+			children = (
+				F20000000000000000000011 /* RLVHTTPResponse.h */,
+				F00000000000000000000012 /* RLVHTTPResponse.m */,
+				F20000000000000000000012 /* RLVTransferRouter.h */,
+				F00000000000000000000013 /* RLVTransferRouter.m */,
+				F20000000000000000000013 /* RLVTransferService.h */,
+				F00000000000000000000014 /* RLVTransferService.m */,
+				F20000000000000000000014 /* RLVTransferViewController.h */,
+				F00000000000000000000015 /* RLVTransferViewController.m */,
+			);
+			path = Transfer;
+			sourceTree = "<group>";
+		};
+		400000000000000000000013 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F70000000000000000000001 /* InterfaceIcons */,
+				400000000000000000000014 /* LegacyAppIcons */,
+				400000000000000000000015 /* ClassicAppIcons */,
+				400000000000000000000019 /* LegacyLaunchImages */,
+				40000000000000000000001A /* ClassicLaunchImages */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		400000000000000000000014 /* LegacyAppIcons */ = {
+			isa = PBXGroup;
+			children = (
+				F30000000000000000000001 /* RetroLiveLegacyIcon.png */,
+				F30000000000000000000002 /* RetroLiveLegacyIcon@2x.png */,
+				F30000000000000000000003 /* RetroLiveLegacyIcon-Small.png */,
+				F30000000000000000000004 /* RetroLiveLegacyIcon-Small@2x.png */,
+				F30000000000000000000005 /* RetroLiveLegacyIcon-Spotlight.png */,
+				F30000000000000000000006 /* RetroLiveLegacyIcon-Spotlight@2x.png */,
+			);
+			path = LegacyAppIcons;
+			sourceTree = "<group>";
+		};
+		400000000000000000000015 /* ClassicAppIcons */ = {
+			isa = PBXGroup;
+			children = (
+				F40000000000000000000001 /* RetroLiveClassicIcon-60@2x.png */,
+				F40000000000000000000002 /* RetroLiveClassicIcon-60@3x.png */,
+				F40000000000000000000003 /* RetroLiveClassicIcon-40@2x.png */,
+				F40000000000000000000004 /* RetroLiveClassicIcon-40@3x.png */,
+				F40000000000000000000005 /* RetroLiveClassicIcon-Small@2x.png */,
+				F40000000000000000000006 /* RetroLiveClassicIcon-Small@3x.png */,
+			);
+			path = ClassicAppIcons;
+			sourceTree = "<group>";
+		};
+		400000000000000000000019 /* LegacyLaunchImages */ = {
+			isa = PBXGroup;
+			children = (
+				F60000000000000000000001 /* Default-568h@2x.png */,
+			);
+			path = LegacyLaunchImages;
+			sourceTree = "<group>";
+		};
+		40000000000000000000001A /* ClassicLaunchImages */ = {
+			isa = PBXGroup;
+			children = (
+				F60000000000000000000002 /* Default-568h@2x.png */,
+			);
+			path = ClassicLaunchImages;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
-/* Begin PBXVariantGroup section */
-		400000000000000000000016 = {isa = PBXVariantGroup; children = (F50000000000000000000001, F50000000000000000000002, F50000000000000000000003); name = Localizable.strings; sourceTree = "<group>"; };
-		400000000000000000000017 = {isa = PBXVariantGroup; children = (F50000000000000000000004, F50000000000000000000005, F50000000000000000000006); name = InfoPlist.strings; sourceTree = "<group>"; };
-		400000000000000000000018 = {isa = PBXVariantGroup; children = (F50000000000000000000007, F50000000000000000000008, F50000000000000000000009); name = InfoPlist.strings; sourceTree = "<group>"; };
-/* End PBXVariantGroup section */
-
 /* Begin PBXNativeTarget section */
-		500000000000000000000001 = {isa = PBXNativeTarget; buildConfigurationList = 900000000000000000000002; buildPhases = (700000000000000000000001, 300000000000000000000001, 710000000000000000000001); buildRules = (); dependencies = (); name = RetroLiveCamera; productName = RetroLiveCamera; productReference = F00000000000000000000030; productType = "com.apple.product-type.application"; };
-		500000000000000000000002 = {isa = PBXNativeTarget; buildConfigurationList = 900000000000000000000003; buildPhases = (700000000000000000000002, 300000000000000000000002, 710000000000000000000002); buildRules = (); dependencies = (); name = RetroLiveClassic; productName = RetroLiveClassic; productReference = F00000000000000000000031; productType = "com.apple.product-type.application"; };
+		500000000000000000000001 /* RetroLiveCamera */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 900000000000000000000002 /* Build configuration list for PBXNativeTarget "RetroLiveCamera" */;
+			buildPhases = (
+				700000000000000000000001 /* Sources */,
+				300000000000000000000001 /* Frameworks */,
+				710000000000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RetroLiveCamera;
+			productName = RetroLiveCamera;
+			productReference = F00000000000000000000030 /* RetroLiveCamera.app */;
+			productType = "com.apple.product-type.application";
+		};
+		500000000000000000000002 /* RetroLiveClassic */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 900000000000000000000003 /* Build configuration list for PBXNativeTarget "RetroLiveClassic" */;
+			buildPhases = (
+				700000000000000000000002 /* Sources */,
+				300000000000000000000002 /* Frameworks */,
+				710000000000000000000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RetroLiveClassic;
+			productName = RetroLiveClassic;
+			productReference = F00000000000000000000031 /* RetroLiveClassic.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		600000000000000000000001 = {isa = PBXProject; attributes = {LastUpgradeCheck = 0500; ORGANIZATIONNAME = RetroLive; TargetAttributes = {500000000000000000000001 = {CreatedOnToolsVersion = 4.6;}; 500000000000000000000002 = {CreatedOnToolsVersion = 6.0;};};}; buildConfigurationList = 900000000000000000000001; compatibilityVersion = "Xcode 3.2"; developmentRegion = English; hasScannedForEncodings = 0; knownRegions = (en, "zh-Hans", "zh-Hant", Base); mainGroup = 400000000000000000000001; productRefGroup = 400000000000000000000004; projectDirPath = ""; projectRoot = ""; targets = (500000000000000000000001, 500000000000000000000002); };
+		600000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0500;
+				ORGANIZATIONNAME = RetroLive;
+				TargetAttributes = {
+					500000000000000000000001 = {
+						CreatedOnToolsVersion = 4.6;
+					};
+					500000000000000000000002 = {
+						CreatedOnToolsVersion = 6.0;
+					};
+				};
+			};
+			buildConfigurationList = 900000000000000000000001 /* Build configuration list for PBXProject "RetroLiveCamera" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				English,
+				en,
+				"zh-Hans",
+				"zh-Hant",
+				Base,
+			);
+			mainGroup = 400000000000000000000001;
+			productRefGroup = 400000000000000000000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				500000000000000000000001 /* RetroLiveCamera */,
+				500000000000000000000002 /* RetroLiveClassic */,
+			);
+		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		710000000000000000000001 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A30000000000000000000001, A30000000000000000000002, A30000000000000000000003, A30000000000000000000004, A30000000000000000000005, A30000000000000000000006, C00000000000000000000001, C00000000000000000000002, C00000000000000000000003); runOnlyForDeploymentPostprocessing = 0; };
-		710000000000000000000002 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (B30000000000000000000001, B30000000000000000000002, B30000000000000000000003, B30000000000000000000004, B30000000000000000000005, B30000000000000000000006, D00000000000000000000001, D00000000000000000000002, D00000000000000000000003); runOnlyForDeploymentPostprocessing = 0; };
+		710000000000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A30000000000000000000001 /* RetroLiveLegacyIcon.png in Resources */,
+				A30000000000000000000002 /* RetroLiveLegacyIcon@2x.png in Resources */,
+				A30000000000000000000003 /* RetroLiveLegacyIcon-Small.png in Resources */,
+				A30000000000000000000004 /* RetroLiveLegacyIcon-Small@2x.png in Resources */,
+				A30000000000000000000005 /* RetroLiveLegacyIcon-Spotlight.png in Resources */,
+				A30000000000000000000006 /* RetroLiveLegacyIcon-Spotlight@2x.png in Resources */,
+				C00000000000000000000001 /* Localizable.strings in Resources */,
+				C00000000000000000000002 /* InfoPlist.strings in Resources */,
+				C00000000000000000000003 /* Default-568h@2x.png in Resources */,
+				E70000000000000000000001 /* InterfaceIcons in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		710000000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B30000000000000000000001 /* RetroLiveClassicIcon-60@2x.png in Resources */,
+				B30000000000000000000002 /* RetroLiveClassicIcon-60@3x.png in Resources */,
+				B30000000000000000000003 /* RetroLiveClassicIcon-40@2x.png in Resources */,
+				B30000000000000000000004 /* RetroLiveClassicIcon-40@3x.png in Resources */,
+				B30000000000000000000005 /* RetroLiveClassicIcon-Small@2x.png in Resources */,
+				B30000000000000000000006 /* RetroLiveClassicIcon-Small@3x.png in Resources */,
+				D00000000000000000000001 /* Localizable.strings in Resources */,
+				D00000000000000000000002 /* InfoPlist.strings in Resources */,
+				D00000000000000000000003 /* Default-568h@2x.png in Resources */,
+				E70000000000000000000002 /* InterfaceIcons in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		700000000000000000000001 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000001, A00000000000000000000002, A00000000000000000000003, A00000000000000000000004, A00000000000000000000005, A00000000000000000000006, A00000000000000000000007, A00000000000000000000008, A00000000000000000000009, A0000000000000000000000A, A0000000000000000000000B, A0000000000000000000000C, A0000000000000000000000D, A0000000000000000000000E, A0000000000000000000000F, A00000000000000000000010, A00000000000000000000011, A00000000000000000000012, A00000000000000000000013, A00000000000000000000014, A00000000000000000000015, A00000000000000000000016); runOnlyForDeploymentPostprocessing = 0; };
-		700000000000000000000002 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B00000000000000000000001, B00000000000000000000002, B00000000000000000000003, B00000000000000000000004, B00000000000000000000005, B00000000000000000000006, B00000000000000000000007, B00000000000000000000008, B00000000000000000000009, B0000000000000000000000A, B0000000000000000000000B, B0000000000000000000000C, B0000000000000000000000D, B0000000000000000000000E, B0000000000000000000000F, B00000000000000000000010, B00000000000000000000011, B00000000000000000000012, B00000000000000000000013, B00000000000000000000014, B00000000000000000000015, B00000000000000000000016); runOnlyForDeploymentPostprocessing = 0; };
+		700000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000001 /* main.m in Sources */,
+				A00000000000000000000002 /* RLVAppDelegate.m in Sources */,
+				A00000000000000000000003 /* RLVAssetManifest.m in Sources */,
+				A00000000000000000000004 /* RLVManifestParser.m in Sources */,
+				A00000000000000000000005 /* RLVCaptureEvent.m in Sources */,
+				A00000000000000000000006 /* RLVCameraOrientationCoordinator.m in Sources */,
+				A00000000000000000000007 /* RLVCaptureController.m in Sources */,
+				A00000000000000000000008 /* RLVDeviceCapabilities.m in Sources */,
+				A00000000000000000000009 /* RLVAsset.m in Sources */,
+				A0000000000000000000000A /* RLVManifest.m in Sources */,
+				A0000000000000000000000B /* RLVAssetStore.m in Sources */,
+				A0000000000000000000000C /* RLVShutterButton.m in Sources */,
+				A0000000000000000000000D /* RLVBaseCameraViewController.m in Sources */,
+				A0000000000000000000000E /* RLVLegacyCameraViewController.m in Sources */,
+				A0000000000000000000000F /* RLVClassicCameraViewController.m in Sources */,
+				A00000000000000000000010 /* RLVLibraryViewController.m in Sources */,
+				A00000000000000000000011 /* RLVAssetDetailViewController.m in Sources */,
+				A00000000000000000000012 /* RLVHTTPResponse.m in Sources */,
+				A00000000000000000000013 /* RLVTransferRouter.m in Sources */,
+				A00000000000000000000014 /* RLVTransferService.m in Sources */,
+				A00000000000000000000015 /* RLVTransferViewController.m in Sources */,
+				A00000000000000000000016 /* RLVLayout.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		700000000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B00000000000000000000001 /* main.m in Sources */,
+				B00000000000000000000002 /* RLVAppDelegate.m in Sources */,
+				B00000000000000000000003 /* RLVAssetManifest.m in Sources */,
+				B00000000000000000000004 /* RLVManifestParser.m in Sources */,
+				B00000000000000000000005 /* RLVCaptureEvent.m in Sources */,
+				B00000000000000000000006 /* RLVCameraOrientationCoordinator.m in Sources */,
+				B00000000000000000000007 /* RLVCaptureController.m in Sources */,
+				B00000000000000000000008 /* RLVDeviceCapabilities.m in Sources */,
+				B00000000000000000000009 /* RLVAsset.m in Sources */,
+				B0000000000000000000000A /* RLVManifest.m in Sources */,
+				B0000000000000000000000B /* RLVAssetStore.m in Sources */,
+				B0000000000000000000000C /* RLVShutterButton.m in Sources */,
+				B0000000000000000000000D /* RLVBaseCameraViewController.m in Sources */,
+				B0000000000000000000000E /* RLVLegacyCameraViewController.m in Sources */,
+				B0000000000000000000000F /* RLVClassicCameraViewController.m in Sources */,
+				B00000000000000000000010 /* RLVLibraryViewController.m in Sources */,
+				B00000000000000000000011 /* RLVAssetDetailViewController.m in Sources */,
+				B00000000000000000000012 /* RLVHTTPResponse.m in Sources */,
+				B00000000000000000000013 /* RLVTransferRouter.m in Sources */,
+				B00000000000000000000014 /* RLVTransferService.m in Sources */,
+				B00000000000000000000015 /* RLVTransferViewController.m in Sources */,
+				B00000000000000000000016 /* RLVLayout.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXVariantGroup section */
+		400000000000000000000016 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				F50000000000000000000001 /* en */,
+				F50000000000000000000002 /* zh-Hans */,
+				F50000000000000000000003 /* zh-Hant */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		400000000000000000000017 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				F50000000000000000000004 /* en */,
+				F50000000000000000000005 /* zh-Hans */,
+				F50000000000000000000006 /* zh-Hant */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		400000000000000000000018 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				F50000000000000000000007 /* en */,
+				F50000000000000000000008 /* zh-Hans */,
+				F50000000000000000000009 /* zh-Hant */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
 /* Begin XCBuildConfiguration section */
-		800000000000000000000001 = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = NO; CLANG_ENABLE_OBJC_ARC = YES; COPY_PHASE_STRIP = NO; GCC_C_LANGUAGE_STANDARD = gnu99; GCC_OPTIMIZATION_LEVEL = 0; GCC_PREPROCESSOR_DEFINITIONS = ("DEBUG=1", "$(inherited)"); IPHONEOS_DEPLOYMENT_TARGET = 6.0; SDKROOT = iphoneos; }; name = Debug; };
-		800000000000000000000002 = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = NO; CLANG_ENABLE_OBJC_ARC = YES; COPY_PHASE_STRIP = YES; GCC_C_LANGUAGE_STANDARD = gnu99; IPHONEOS_DEPLOYMENT_TARGET = 6.0; SDKROOT = iphoneos; VALIDATE_PRODUCT = YES; }; name = Release; };
-		800000000000000000000003 = {isa = XCBuildConfiguration; buildSettings = {ARCHS = armv7; CODE_SIGNING_ALLOWED = NO; GCC_PREPROCESSOR_DEFINITIONS = ("RLV_CLASSIC=0", "$(inherited)"); HEADER_SEARCH_PATHS = ("$(SRCROOT)/RetroLiveCamera/Application", "$(SRCROOT)/RetroLiveCamera/Assets", "$(SRCROOT)/RetroLiveCamera/Shared/Capture", "$(SRCROOT)/RetroLiveCamera/Shared/Asset", "$(SRCROOT)/RetroLiveCamera/Shared/Device", "$(SRCROOT)/RetroLiveCamera/Shared/Utilities", "$(SRCROOT)/RetroLiveCamera/Shared/Transfer", "$(SRCROOT)/RetroLiveCamera/Legacy/Camera", "$(SRCROOT)/RetroLiveCamera/Legacy/Library", "$(SRCROOT)/RetroLiveCamera/Classic/Camera"); INFOPLIST_FILE = RetroLiveCamera/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 6.0; PRODUCT_BUNDLE_IDENTIFIER = com.retrolive.camera.legacy; PRODUCT_NAME = RetroLiveCamera; TARGETED_DEVICE_FAMILY = 1; VALID_ARCHS = armv7; }; name = Debug; };
-		800000000000000000000004 = {isa = XCBuildConfiguration; buildSettings = {ARCHS = armv7; GCC_PREPROCESSOR_DEFINITIONS = ("RLV_CLASSIC=0", "$(inherited)"); HEADER_SEARCH_PATHS = ("$(SRCROOT)/RetroLiveCamera/Application", "$(SRCROOT)/RetroLiveCamera/Assets", "$(SRCROOT)/RetroLiveCamera/Shared/Capture", "$(SRCROOT)/RetroLiveCamera/Shared/Asset", "$(SRCROOT)/RetroLiveCamera/Shared/Device", "$(SRCROOT)/RetroLiveCamera/Shared/Utilities", "$(SRCROOT)/RetroLiveCamera/Shared/Transfer", "$(SRCROOT)/RetroLiveCamera/Legacy/Camera", "$(SRCROOT)/RetroLiveCamera/Legacy/Library", "$(SRCROOT)/RetroLiveCamera/Classic/Camera"); INFOPLIST_FILE = RetroLiveCamera/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 6.0; PRODUCT_BUNDLE_IDENTIFIER = com.retrolive.camera.legacy; PRODUCT_NAME = RetroLiveCamera; TARGETED_DEVICE_FAMILY = 1; VALID_ARCHS = armv7; }; name = Release; };
-		800000000000000000000005 = {isa = XCBuildConfiguration; buildSettings = {ARCHS = (armv7, arm64); CODE_SIGNING_ALLOWED = NO; GCC_PREPROCESSOR_DEFINITIONS = ("RLV_CLASSIC=1", "$(inherited)"); HEADER_SEARCH_PATHS = ("$(SRCROOT)/RetroLiveCamera/Application", "$(SRCROOT)/RetroLiveCamera/Assets", "$(SRCROOT)/RetroLiveCamera/Shared/Capture", "$(SRCROOT)/RetroLiveCamera/Shared/Asset", "$(SRCROOT)/RetroLiveCamera/Shared/Device", "$(SRCROOT)/RetroLiveCamera/Shared/Utilities", "$(SRCROOT)/RetroLiveCamera/Shared/Transfer", "$(SRCROOT)/RetroLiveCamera/Legacy/Camera", "$(SRCROOT)/RetroLiveCamera/Legacy/Library", "$(SRCROOT)/RetroLiveCamera/Classic/Camera"); INFOPLIST_FILE = RetroLiveCamera/Classic-Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 8.0; PRODUCT_BUNDLE_IDENTIFIER = com.retrolive.camera.classic; PRODUCT_NAME = RetroLiveClassic; TARGETED_DEVICE_FAMILY = 1; VALID_ARCHS = (armv7, arm64); }; name = Debug; };
-		800000000000000000000006 = {isa = XCBuildConfiguration; buildSettings = {ARCHS = (armv7, arm64); GCC_PREPROCESSOR_DEFINITIONS = ("RLV_CLASSIC=1", "$(inherited)"); HEADER_SEARCH_PATHS = ("$(SRCROOT)/RetroLiveCamera/Application", "$(SRCROOT)/RetroLiveCamera/Assets", "$(SRCROOT)/RetroLiveCamera/Shared/Capture", "$(SRCROOT)/RetroLiveCamera/Shared/Asset", "$(SRCROOT)/RetroLiveCamera/Shared/Device", "$(SRCROOT)/RetroLiveCamera/Shared/Utilities", "$(SRCROOT)/RetroLiveCamera/Shared/Transfer", "$(SRCROOT)/RetroLiveCamera/Legacy/Camera", "$(SRCROOT)/RetroLiveCamera/Legacy/Library", "$(SRCROOT)/RetroLiveCamera/Classic/Camera"); INFOPLIST_FILE = RetroLiveCamera/Classic-Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 8.0; PRODUCT_BUNDLE_IDENTIFIER = com.retrolive.camera.classic; PRODUCT_NAME = RetroLiveClassic; TARGETED_DEVICE_FAMILY = 1; VALID_ARCHS = (armv7, arm64); }; name = Release; };
+		800000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		800000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		800000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = armv7;
+				CODE_SIGNING_ALLOWED = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"RLV_CLASSIC=0",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/RetroLiveCamera/Application",
+					"$(SRCROOT)/RetroLiveCamera/Assets",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Capture",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Asset",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Device",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Utilities",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
+					"$(SRCROOT)/RetroLiveCamera/Legacy/Camera",
+					"$(SRCROOT)/RetroLiveCamera/Legacy/Library",
+					"$(SRCROOT)/RetroLiveCamera/Classic/Camera",
+				);
+				INFOPLIST_FILE = RetroLiveCamera/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.retrolive.camera.legacy;
+				PRODUCT_NAME = RetroLiveCamera;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALID_ARCHS = armv7;
+			};
+			name = Debug;
+		};
+		800000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = armv7;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"RLV_CLASSIC=0",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/RetroLiveCamera/Application",
+					"$(SRCROOT)/RetroLiveCamera/Assets",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Capture",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Asset",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Device",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Utilities",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
+					"$(SRCROOT)/RetroLiveCamera/Legacy/Camera",
+					"$(SRCROOT)/RetroLiveCamera/Legacy/Library",
+					"$(SRCROOT)/RetroLiveCamera/Classic/Camera",
+				);
+				INFOPLIST_FILE = RetroLiveCamera/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.retrolive.camera.legacy;
+				PRODUCT_NAME = RetroLiveCamera;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALID_ARCHS = armv7;
+			};
+			name = Release;
+		};
+		800000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					armv7,
+					arm64,
+				);
+				CODE_SIGNING_ALLOWED = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"RLV_CLASSIC=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/RetroLiveCamera/Application",
+					"$(SRCROOT)/RetroLiveCamera/Assets",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Capture",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Asset",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Device",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Utilities",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
+					"$(SRCROOT)/RetroLiveCamera/Legacy/Camera",
+					"$(SRCROOT)/RetroLiveCamera/Legacy/Library",
+					"$(SRCROOT)/RetroLiveCamera/Classic/Camera",
+				);
+				INFOPLIST_FILE = "RetroLiveCamera/Classic-Info.plist";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.retrolive.camera.classic;
+				PRODUCT_NAME = RetroLiveClassic;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALID_ARCHS = "armv7 arm64";
+			};
+			name = Debug;
+		};
+		800000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					armv7,
+					arm64,
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"RLV_CLASSIC=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/RetroLiveCamera/Application",
+					"$(SRCROOT)/RetroLiveCamera/Assets",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Capture",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Asset",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Device",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Utilities",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
+					"$(SRCROOT)/RetroLiveCamera/Legacy/Camera",
+					"$(SRCROOT)/RetroLiveCamera/Legacy/Library",
+					"$(SRCROOT)/RetroLiveCamera/Classic/Camera",
+				);
+				INFOPLIST_FILE = "RetroLiveCamera/Classic-Info.plist";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.retrolive.camera.classic;
+				PRODUCT_NAME = RetroLiveClassic;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALID_ARCHS = "armv7 arm64";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		900000000000000000000001 = {isa = XCConfigurationList; buildConfigurations = (800000000000000000000001, 800000000000000000000002); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		900000000000000000000002 = {isa = XCConfigurationList; buildConfigurations = (800000000000000000000003, 800000000000000000000004); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		900000000000000000000003 = {isa = XCConfigurationList; buildConfigurations = (800000000000000000000005, 800000000000000000000006); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		900000000000000000000001 /* Build configuration list for PBXProject "RetroLiveCamera" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				800000000000000000000001 /* Debug */,
+				800000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		900000000000000000000002 /* Build configuration list for PBXNativeTarget "RetroLiveCamera" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				800000000000000000000003 /* Debug */,
+				800000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		900000000000000000000003 /* Build configuration list for PBXNativeTarget "RetroLiveClassic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				800000000000000000000005 /* Debug */,
+				800000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 600000000000000000000001;
+	rootObject = 600000000000000000000001 /* Project object */;
 }

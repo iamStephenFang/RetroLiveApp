@@ -4,6 +4,7 @@
 #import "RLVLibraryViewController.h"
 #import "RLVLayout.h"
 #import "RLVShutterButton.h"
+#import <ImageIO/ImageIO.h>
 #import <QuartzCore/QuartzCore.h>
 
 @interface RLVBaseCameraViewController ()
@@ -11,6 +12,9 @@
 @property (nonatomic, strong) RLVCameraOrientationCoordinator *orientationCoordinator;
 @property (nonatomic, strong, readwrite) RLVDeviceCapabilities *capabilities;
 @property (nonatomic, strong) UIView *shutterOverlay;
+@property (nonatomic, assign, getter=isViewVisible) BOOL viewVisible;
+@property (nonatomic, copy) NSString *thumbnailRequestAssetId;
+- (void)attachPreviewLayerIfNeeded;
 @end
 
 @implementation RLVBaseCameraViewController
@@ -32,11 +36,11 @@
     [self.previewView addSubview:self.shutterOverlay];
     RLVPinViewToEdges(self.shutterOverlay, self.previewView);
 
-    __block RLVBaseCameraViewController *controller = self;
+    __weak RLVBaseCameraViewController *controller = self;
     [self.captureController prepareWithCompletion:^(NSError *error) {
-        if (!error) {
-            [controller.previewView.layer insertSublayer:controller.captureController.previewLayer atIndex:0];
-            [controller.view setNeedsLayout];
+        if (!error && controller.isViewVisible &&
+            [[UIApplication sharedApplication] applicationState] == UIApplicationStateActive) {
+            [controller attachPreviewLayerIfNeeded];
             [controller.captureController startRunning];
         }
     }];
@@ -46,19 +50,24 @@
 - (void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
+    self.viewVisible = YES;
     [self.navigationController setNavigationBarHidden:YES animated:NO];
     [self.orientationCoordinator start];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationWillResignActive:)
                                                  name:UIApplicationWillResignActiveNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidBecomeActive:)
                                                  name:UIApplicationDidBecomeActiveNotification object:nil];
-    [self.captureController startRunning];
+    [self attachPreviewLayerIfNeeded];
+    if ([[UIApplication sharedApplication] applicationState] == UIApplicationStateActive) {
+        [self.captureController startRunning];
+    }
     [self updateThumbnail];
 }
 
 - (void)viewWillDisappear:(BOOL)animated
 {
     [super viewWillDisappear:animated];
+    self.viewVisible = NO;
     [self.orientationCoordinator stop];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillResignActiveNotification object:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
@@ -74,13 +83,26 @@
 - (void)applicationDidBecomeActive:(NSNotification *)notification
 {
     (void)notification;
-    [self.captureController resumeAfterInterruption];
+    if (!self.isViewVisible) return;
+    if (self.captureController.state == RLVCaptureStateInterrupted) {
+        [self.captureController resumeAfterInterruption];
+    } else {
+        [self.captureController startRunning];
+    }
 }
 
 - (void)viewDidLayoutSubviews
 {
     [super viewDidLayoutSubviews];
     self.captureController.previewLayer.frame = self.previewView.bounds;
+}
+
+- (void)attachPreviewLayerIfNeeded
+{
+    AVCaptureVideoPreviewLayer *previewLayer = self.captureController.previewLayer;
+    if (!previewLayer || previewLayer.superlayer == self.previewView.layer) return;
+    [self.previewView.layer insertSublayer:previewLayer atIndex:0];
+    [self.view setNeedsLayout];
 }
 
 - (BOOL)shouldAutorotate
@@ -99,8 +121,13 @@
     [self.thumbnailButton addTarget:self action:@selector(thumbnailPressed:) forControlEvents:UIControlEventTouchUpInside];
     [self.cameraSwitchButton addTarget:self action:@selector(cameraSwitchPressed:) forControlEvents:UIControlEventTouchUpInside];
     [self.flashButton addTarget:self action:@selector(flashPressed:) forControlEvents:UIControlEventTouchUpInside];
+    [self.cameraSwitchButton setTitle:nil forState:UIControlStateNormal];
+    [self.cameraSwitchButton setImage:[UIImage imageNamed:@"InterfaceIcons/RLVSwitchCamera"]
+                             forState:UIControlStateNormal];
+    self.cameraSwitchButton.accessibilityLabel = NSLocalizedString(@"camera.switch", nil);
     self.cameraSwitchButton.hidden = !self.capabilities.supportsFrontCamera;
     self.flashButton.hidden = !self.capabilities.supportsFlash;
+    [self updateFlashButton];
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(previewTapped:)];
     [self.previewView addGestureRecognizer:tap];
 }
@@ -132,18 +159,31 @@
     if (self.captureController.flashMode == AVCaptureFlashModeAuto) next = AVCaptureFlashModeOn;
     else if (self.captureController.flashMode == AVCaptureFlashModeOn) next = AVCaptureFlashModeOff;
     [self.captureController setFlashMode:next];
-    NSString *title = next == AVCaptureFlashModeAuto ? NSLocalizedString(@"camera.flash.auto", nil) :
-        (next == AVCaptureFlashModeOn ? NSLocalizedString(@"camera.flash.on", nil) : NSLocalizedString(@"camera.flash.off", nil));
-    [self.flashButton setTitle:title forState:UIControlStateNormal];
+    [self updateFlashButton];
 }
 
 - (void)captureController:(RLVCaptureController *)controller didChangeCameraPosition:(AVCaptureDevicePosition)position
 {
     (void)controller;
     self.flashButton.hidden = position != AVCaptureDevicePositionBack || !self.capabilities.supportsFlash;
-    NSString *title = controller.flashMode == AVCaptureFlashModeAuto ? NSLocalizedString(@"camera.flash.auto", nil) :
-        (controller.flashMode == AVCaptureFlashModeOn ? NSLocalizedString(@"camera.flash.on", nil) : NSLocalizedString(@"camera.flash.off", nil));
-    [self.flashButton setTitle:title forState:UIControlStateNormal];
+    [self updateFlashButton];
+}
+
+- (void)updateFlashButton
+{
+    AVCaptureFlashMode mode = self.captureController.flashMode;
+    NSString *imageName = @"InterfaceIcons/RLVFlashAuto";
+    NSString *label = NSLocalizedString(@"camera.flash.auto", nil);
+    if (mode == AVCaptureFlashModeOn) {
+        imageName = @"InterfaceIcons/RLVFlashOn";
+        label = NSLocalizedString(@"camera.flash.on", nil);
+    } else if (mode == AVCaptureFlashModeOff) {
+        imageName = @"InterfaceIcons/RLVFlashOff";
+        label = NSLocalizedString(@"camera.flash.off", nil);
+    }
+    [self.flashButton setTitle:nil forState:UIControlStateNormal];
+    [self.flashButton setImage:[UIImage imageNamed:imageName] forState:UIControlStateNormal];
+    self.flashButton.accessibilityLabel = label;
 }
 
 - (void)previewTapped:(UITapGestureRecognizer *)recognizer
@@ -195,13 +235,44 @@
 
 - (void)updateThumbnail
 {
-    NSArray *assets = [[RLVAssetStore sharedStore] loadAssets:NULL];
-    RLVAsset *asset = [assets count] > 0 ? [assets objectAtIndex:0] : nil;
-    UIImage *image = asset ? [UIImage imageWithContentsOfFile:[asset.photoURL path]] : nil;
-    [self.thumbnailButton setImage:image forState:UIControlStateNormal];
-    self.thumbnailButton.layer.contentsGravity = kCAGravityResizeAspectFill;
-    self.thumbnailButton.clipsToBounds = YES;
-    self.thumbnailButton.enabled = asset != nil;
+    __weak RLVBaseCameraViewController *controller = self;
+    [[RLVAssetStore sharedStore] loadAssetsWithCompletion:^(NSArray *assets, NSError *error) {
+        (void)error;
+        RLVAsset *asset = [assets count] > 0 ? [assets objectAtIndex:0] : nil;
+        controller.thumbnailRequestAssetId = asset.assetId;
+        if (!asset) {
+            [controller.thumbnailButton setImage:nil forState:UIControlStateNormal];
+            controller.thumbnailButton.enabled = NO;
+            return;
+        }
+        NSString *assetId = [asset.assetId copy];
+        NSURL *photoURL = asset.photoURL;
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            UIImage *image = [controller thumbnailAtURL:photoURL maximumSize:120.0];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (![controller.thumbnailRequestAssetId isEqualToString:assetId]) return;
+                [controller.thumbnailButton setImage:image forState:UIControlStateNormal];
+                controller.thumbnailButton.layer.contentsGravity = kCAGravityResizeAspectFill;
+                controller.thumbnailButton.clipsToBounds = YES;
+                controller.thumbnailButton.enabled = image != nil;
+            });
+        });
+    }];
+}
+
+- (UIImage *)thumbnailAtURL:(NSURL *)url maximumSize:(CGFloat)size
+{
+    CGImageSourceRef source = CGImageSourceCreateWithURL((__bridge CFURLRef)url, NULL);
+    if (!source) return nil;
+    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:
+        (id)kCFBooleanTrue, (id)kCGImageSourceCreateThumbnailFromImageAlways,
+        [NSNumber numberWithFloat:size], (id)kCGImageSourceThumbnailMaxPixelSize,
+        (id)kCFBooleanTrue, (id)kCGImageSourceCreateThumbnailWithTransform, nil];
+    CGImageRef imageRef = CGImageSourceCreateThumbnailAtIndex(source, 0, (__bridge CFDictionaryRef)options);
+    UIImage *image = imageRef ? [UIImage imageWithCGImage:imageRef] : nil;
+    if (imageRef) CGImageRelease(imageRef);
+    CFRelease(source);
+    return image;
 }
 
 - (void)showError:(NSError *)error
@@ -225,5 +296,7 @@
 @synthesize captureController = _captureController;
 @synthesize orientationCoordinator = _orientationCoordinator;
 @synthesize shutterOverlay = _shutterOverlay;
+@synthesize viewVisible = _viewVisible;
+@synthesize thumbnailRequestAssetId = _thumbnailRequestAssetId;
 
 @end

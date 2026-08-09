@@ -21,9 +21,9 @@
     self.bottomChromeView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.88];
     [root addSubview:self.bottomChromeView];
 
-    self.flashButton = [self flatButtonWithTitle:NSLocalizedString(@"camera.flash.auto", nil) font:[UIFont systemFontOfSize:12.0]];
+    self.flashButton = [self flatButtonWithTitle:nil font:[UIFont systemFontOfSize:12.0]];
     [self.topChromeView addSubview:self.flashButton];
-    self.cameraSwitchButton = [self flatButtonWithTitle:@"↻" font:[UIFont systemFontOfSize:25.0]];
+    self.cameraSwitchButton = [self flatButtonWithTitle:nil font:[UIFont systemFontOfSize:25.0]];
     self.cameraSwitchButton.accessibilityLabel = NSLocalizedString(@"camera.switch", nil);
     [self.topChromeView addSubview:self.cameraSwitchButton];
 
@@ -51,7 +51,7 @@
           @"H:|[bottom]|", @"V:[bottom(128)]|"]);
     RLVAddVisualConstraints(self.topChromeView,
         @{@"flash": self.flashButton, @"switch": self.cameraSwitchButton},
-        @[@"H:|-4-[flash(80)]", @"H:[switch(54)]-4-|", @"V:|[flash]|", @"V:|[switch]|"]);
+        @[@"H:|-4-[flash(54)]", @"H:[switch(54)]-4-|", @"V:|[flash]|", @"V:|[switch]|"]);
     RLVAddVisualConstraints(self.bottomChromeView,
         @{@"mode": mode, @"shutter": self.shutterButton, @"thumbnail": self.thumbnailButton},
         @[@"H:|[mode]|", @"V:|-5-[mode(20)]", @"H:[shutter(78)]", @"V:[shutter(78)]-10-|",
