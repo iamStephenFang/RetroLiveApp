@@ -7,6 +7,25 @@
     <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>CFBundleIconFiles</key>
+    <array>
+        <string>RetroLiveClassicIcon-60</string>
+        <string>RetroLiveClassicIcon-40</string>
+        <string>RetroLiveClassicIcon-Small</string>
+    </array>
+    <key>CFBundleIcons</key>
+    <dict>
+        <key>CFBundlePrimaryIcon</key>
+        <dict>
+            <key>CFBundleIconFiles</key>
+            <array>
+                <string>RetroLiveClassicIcon-60</string>
+                <string>RetroLiveClassicIcon-40</string>
+                <string>RetroLiveClassicIcon-Small</string>
+            </array>
+            <key>UIPrerenderedIcon</key><true/>
+        </dict>
+    </dict>
     <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>1.0</string>
@@ -18,6 +37,7 @@
     <key>NSBonjourServices</key>
     <array><string>_retrolive._tcp</string></array>
     <key>UIStatusBarHidden</key><true/>
+    <key>UIPrerenderedIcon</key><true/>
     <key>UIViewControllerBasedStatusBarAppearance</key><false/>
     <key>UISupportedInterfaceOrientations</key>
     <array><string>UIInterfaceOrientationPortrait</string></array>
