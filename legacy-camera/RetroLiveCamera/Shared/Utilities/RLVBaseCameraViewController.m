@@ -2,7 +2,7 @@
 #import "RLVAssetDetailViewController.h"
 #import "RLVAssetStore.h"
 #import "RLVDeviceCapabilities.h"
-#import "RLVLibraryViewController.h"
+#import "RLVLibraryTabBarController.h"
 #import "RLVLayout.h"
 #import "RLVShutterButton.h"
 #import <ImageIO/ImageIO.h>
@@ -279,11 +279,9 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
         if (!controller) return;
         controller.thumbnailButton.enabled = [assets count] > 0;
         if ([assets count] == 0 || controller.navigationController.topViewController != controller) return;
-        RLVLibraryViewController *library = [[RLVLibraryViewController alloc] init];
-        RLVAssetDetailViewController *detail = [[RLVAssetDetailViewController alloc]
-            initWithAssets:assets selectedIndex:0];
-        [controller.navigationController setViewControllers:
-            [NSArray arrayWithObjects:controller, library, detail, nil] animated:YES];
+        RLVLibraryTabBarController *library = [[RLVLibraryTabBarController alloc] init];
+        library.modalPresentationStyle = UIModalPresentationFullScreen;
+        [controller presentViewController:library animated:YES completion:nil];
     }];
 }
 

@@ -2,11 +2,11 @@
 #import "RLVAssetDetailViewController.h"
 #import "RLVAssetStore.h"
 #import "RLVLayout.h"
-#import "RLVTransferViewController.h"
 #import <ImageIO/ImageIO.h>
 
 @interface RLVAssetCell : UICollectionViewCell
 @property (nonatomic, strong) UIImageView *imageView;
+@property (nonatomic, strong) UILabel *selectionIndicator;
 @end
 
 @implementation RLVAssetCell
@@ -19,20 +19,52 @@
         _imageView.clipsToBounds = YES;
         [self.contentView addSubview:_imageView];
         RLVPinViewToEdges(_imageView, self.contentView);
+
+        _selectionIndicator = [[UILabel alloc] initWithFrame:CGRectZero];
+        _selectionIndicator.backgroundColor = [UIColor colorWithRed:0.08 green:0.48 blue:0.96 alpha:1.0];
+        _selectionIndicator.text = @"\u2713";
+        _selectionIndicator.textColor = [UIColor whiteColor];
+        _selectionIndicator.textAlignment = NSTextAlignmentCenter;
+        _selectionIndicator.font = [UIFont boldSystemFontOfSize:16.0];
+        _selectionIndicator.layer.cornerRadius = 12.0;
+        _selectionIndicator.layer.borderWidth = 1.5;
+        _selectionIndicator.layer.borderColor = [UIColor whiteColor].CGColor;
+        _selectionIndicator.clipsToBounds = YES;
+        _selectionIndicator.hidden = YES;
+        [self.contentView addSubview:_selectionIndicator];
+        RLVPrepareViewsForAutoLayout(@[_selectionIndicator]);
+        RLVAddVisualConstraints(self.contentView, @{ @"selection": _selectionIndicator },
+            @[@"H:[selection(24)]-6-|", @"V:|-6-[selection(24)]"]);
     }
     return self;
 }
-- (void)prepareForReuse { [super prepareForReuse]; self.imageView.image = nil; }
+- (void)setSelected:(BOOL)selected
+{
+    [super setSelected:selected];
+    self.selectionIndicator.hidden = !selected;
+}
+- (void)prepareForReuse
+{
+    [super prepareForReuse];
+    self.imageView.image = nil;
+    self.selectionIndicator.hidden = !self.selected;
+}
 @synthesize imageView = _imageView;
+@synthesize selectionIndicator = _selectionIndicator;
 @end
 
-@interface RLVLibraryViewController ()
+@interface RLVLibraryViewController () <UIAlertViewDelegate>
 @property (nonatomic, strong) NSArray *assets;
 @property (nonatomic, strong) NSCache *thumbnailCache;
 @property (nonatomic, strong) NSOperationQueue *thumbnailQueue;
 @property (nonatomic, assign) NSUInteger reloadGeneration;
 @property (nonatomic, copy) RLVLibrarySelectionHandler selectionHandler;
+@property (nonatomic, assign, getter=isSelectingAssets) BOOL selectingAssets;
+@property (nonatomic, strong) UIBarButtonItem *shareButton;
+@property (nonatomic, strong) UIBarButtonItem *deleteButton;
 @end
+
+static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
 
 @implementation RLVLibraryViewController
 
@@ -69,18 +101,39 @@
     self.thumbnailQueue.maxConcurrentOperationCount = 2;
     self.collectionView.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1];
     [self.collectionView registerClass:[RLVAssetCell class] forCellWithReuseIdentifier:@"AssetCell"];
-    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
-        initWithImage:[UIImage imageNamed:@"InterfaceIcons/RLVTransfer"]
-        style:UIBarButtonItemStylePlain target:self action:@selector(showTransfer:)];
-    self.navigationItem.rightBarButtonItem.accessibilityLabel = NSLocalizedString(@"transfer.title", nil);
+    if (!self.selectionHandler) {
+        self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
+            initWithTitle:NSLocalizedString(@"library.select", nil) style:UIBarButtonItemStylePlain
+            target:self action:@selector(toggleAssetSelection:)];
+        self.shareButton = [[UIBarButtonItem alloc]
+            initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(shareSelectedAssets:)];
+        self.shareButton.accessibilityLabel = NSLocalizedString(@"asset.share", nil);
+        self.deleteButton = [[UIBarButtonItem alloc]
+            initWithBarButtonSystemItem:UIBarButtonSystemItemTrash target:self action:@selector(confirmDeleteSelectedAssets:)];
+        self.deleteButton.accessibilityLabel = NSLocalizedString(@"asset.delete", nil);
+        UIBarButtonItem *space = [[UIBarButtonItem alloc]
+            initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
+        self.toolbarItems = @[self.shareButton, space, self.deleteButton];
+        [self updateSelectionActions];
+    }
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(assetStoreDidChange:)
                                                  name:RLVAssetStoreDidChangeNotification object:nil];
 }
 
-- (void)showTransfer:(id)sender
+- (void)toggleAssetSelection:(id)sender
 {
     (void)sender;
-    [self.navigationController pushViewController:[[RLVTransferViewController alloc] init] animated:YES];
+    self.selectingAssets = !self.isSelectingAssets;
+    self.collectionView.allowsMultipleSelection = self.isSelectingAssets;
+    self.navigationItem.rightBarButtonItem.title = self.isSelectingAssets
+        ? NSLocalizedString(@"common.cancel", nil) : NSLocalizedString(@"library.select", nil);
+    if (!self.isSelectingAssets) {
+        for (NSIndexPath *indexPath in [self.collectionView indexPathsForSelectedItems]) {
+            [self.collectionView deselectItemAtIndexPath:indexPath animated:NO];
+        }
+    }
+    [self.navigationController setToolbarHidden:!self.isSelectingAssets animated:YES];
+    [self updateSelectionActions];
 }
 
 - (void)viewWillAppear:(BOOL)animated
@@ -89,7 +142,16 @@
     if (self.navigationController.navigationBarHidden) {
         [self.navigationController setNavigationBarHidden:NO animated:animated];
     }
+    [self.navigationController setToolbarHidden:!self.isSelectingAssets animated:NO];
     [self reloadAssets];
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    if ([self.navigationController.viewControllers indexOfObject:self] == NSNotFound) {
+        [self.navigationController setToolbarHidden:YES animated:NO];
+    }
 }
 
 - (void)viewDidLayoutSubviews
@@ -109,6 +171,8 @@
         if (!controller || generation != controller.reloadGeneration) return;
         controller.assets = assets ?: [NSArray array];
         [controller.collectionView reloadData];
+        controller.navigationItem.rightBarButtonItem.enabled = [controller.assets count] > 0;
+        [controller updateSelectionActions];
     }];
 }
 
@@ -162,7 +226,11 @@
 
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
 {
-    (void)collectionView;
+    if (self.isSelectingAssets) {
+        [self updateSelectionActions];
+        return;
+    }
+    [collectionView deselectItemAtIndexPath:indexPath animated:NO];
     if (self.selectionHandler) {
         self.selectionHandler(self.assets, indexPath.item);
         [self.navigationController popViewControllerAnimated:YES];
@@ -171,6 +239,79 @@
     RLVAssetDetailViewController *detail = [[RLVAssetDetailViewController alloc]
         initWithAssets:self.assets selectedIndex:indexPath.item];
     [self.navigationController pushViewController:detail animated:YES];
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didDeselectItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    (void)collectionView;
+    (void)indexPath;
+    if (self.isSelectingAssets) [self updateSelectionActions];
+}
+
+- (NSArray *)selectedAssets
+{
+    NSArray *indexPaths = [[self.collectionView indexPathsForSelectedItems]
+        sortedArrayUsingSelector:@selector(compare:)];
+    NSMutableArray *selectedAssets = [NSMutableArray arrayWithCapacity:[indexPaths count]];
+    for (NSIndexPath *indexPath in indexPaths) {
+        if (indexPath.item < [self.assets count]) [selectedAssets addObject:[self.assets objectAtIndex:indexPath.item]];
+    }
+    return selectedAssets;
+}
+
+- (void)updateSelectionActions
+{
+    NSUInteger count = [[self selectedAssets] count];
+    self.shareButton.enabled = count > 0;
+    self.deleteButton.enabled = count > 0;
+    self.title = self.isSelectingAssets
+        ? [NSString stringWithFormat:NSLocalizedString(@"library.selected_count", nil), (unsigned long)count]
+        : NSLocalizedString(@"library.title", nil);
+}
+
+- (void)shareSelectedAssets:(id)sender
+{
+    (void)sender;
+    NSMutableArray *items = [NSMutableArray array];
+    for (RLVAsset *asset in [self selectedAssets]) {
+        if (asset.photoURL) [items addObject:asset.photoURL];
+    }
+    if ([items count] == 0) return;
+    UIActivityViewController *activity = [[UIActivityViewController alloc]
+        initWithActivityItems:items applicationActivities:nil];
+    [self presentViewController:activity animated:YES completion:nil];
+}
+
+- (void)confirmDeleteSelectedAssets:(id)sender
+{
+    (void)sender;
+    NSUInteger count = [[self selectedAssets] count];
+    if (count == 0) return;
+    UIAlertView *alert = [[UIAlertView alloc]
+        initWithTitle:NSLocalizedString(@"library.delete.title", nil)
+        message:[NSString stringWithFormat:NSLocalizedString(@"library.delete.message", nil), (unsigned long)count]
+        delegate:self cancelButtonTitle:NSLocalizedString(@"common.cancel", nil)
+        otherButtonTitles:NSLocalizedString(@"asset.delete", nil), nil];
+    alert.tag = RLVBatchDeleteConfirmationAlertTag;
+    [alert show];
+}
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if (alertView.tag != RLVBatchDeleteConfirmationAlertTag || buttonIndex == alertView.cancelButtonIndex) return;
+    NSError *firstError = nil;
+    for (RLVAsset *asset in [self selectedAssets]) {
+        NSError *error = nil;
+        if (![[RLVAssetStore sharedStore] deleteAsset:asset error:&error] && !firstError) firstError = error;
+    }
+    [self toggleAssetSelection:nil];
+    [self reloadAssets];
+    if (firstError) {
+        UIAlertView *failure = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"asset.delete.failed", nil)
+            message:[firstError localizedDescription] delegate:nil cancelButtonTitle:NSLocalizedString(@"common.ok", nil)
+            otherButtonTitles:nil];
+        [failure show];
+    }
 }
 
 - (UIImage *)thumbnailAtURL:(NSURL *)url maximumSize:(CGFloat)size
@@ -198,5 +339,8 @@
 @synthesize thumbnailQueue = _thumbnailQueue;
 @synthesize reloadGeneration = _reloadGeneration;
 @synthesize selectionHandler = _selectionHandler;
+@synthesize selectingAssets = _selectingAssets;
+@synthesize shareButton = _shareButton;
+@synthesize deleteButton = _deleteButton;
 
 @end

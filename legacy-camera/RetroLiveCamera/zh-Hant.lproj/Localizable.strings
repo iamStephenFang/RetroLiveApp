@@ -22,6 +22,10 @@
 "library.grid" = "相片";
 "library.title" = "圖庫";
 "library.all_photos" = "所有相片";
+"library.select" = "選取";
+"library.selected_count" = "已選取 %lu 張";
+"library.delete.title" = "刪除所選相片？";
+"library.delete.message" = "所選的 %lu 張相片將從 RetroLive 中永久刪除。";
 "asset.live.effect" = "效果";
 "asset.live.effect.title" = "Live 實況效果";
 "asset.live.mode.live" = "實況";

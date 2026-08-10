@@ -22,6 +22,10 @@
 "library.grid" = "Photos";
 "library.title" = "Library";
 "library.all_photos" = "All Photos";
+"library.select" = "Select";
+"library.selected_count" = "%lu Selected";
+"library.delete.title" = "Delete Selected Photos?";
+"library.delete.message" = "%lu selected photos will be permanently removed from RetroLive.";
 "asset.live.effect" = "Effect";
 "asset.live.effect.title" = "Live Photo Effect";
 "asset.live.mode.live" = "Live";
