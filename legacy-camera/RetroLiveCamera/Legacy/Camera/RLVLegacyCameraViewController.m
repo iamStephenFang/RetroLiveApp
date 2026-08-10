@@ -52,6 +52,8 @@
 
     self.flashButton = [self chromeButtonWithTitle:nil];
     [top addSubview:self.flashButton];
+    self.livePhotoButton = [self chromeButtonWithTitle:nil];
+    [top addSubview:self.livePhotoButton];
     self.aspectRatioButton = [self chromeButtonWithTitle:@"4:3"];
     self.aspectRatioButton.titleLabel.font = [UIFont boldSystemFontOfSize:12.0];
     [top addSubview:self.aspectRatioButton];
@@ -70,23 +72,13 @@
     self.shutterButton = [[RLVLegacyShutterButton alloc] initWithFrame:CGRectZero];
     [bottom addSubview:self.shutterButton];
 
-    RLVPrepareViewsForAutoLayout(@[self.previewView, top, bottom, self.flashButton, self.aspectRatioButton,
-        self.cameraSwitchButton, self.thumbnailButton, self.shutterButton]);
-    RLVAddVisualConstraints(root, @{@"top": top, @"preview": self.previewView, @"bottom": bottom},
-        @[@"H:|[top]|", @"H:|[preview]|", @"H:|[bottom]|", @"V:|[top(44)][preview][bottom(96)]|"]);
-    RLVAddVisualConstraints(top, @{@"flash": self.flashButton, @"aspect": self.aspectRatioButton},
-        @[@"H:[flash(44)]", @"V:|[flash]|", @"H:[aspect(52)]-4-|", @"V:|[aspect]|"]);
-    RLVAlignViews(top, self.flashButton, NSLayoutAttributeCenterX, top, NSLayoutAttributeCenterX);
-    RLVAddVisualConstraints(bottom,
-        @{@"thumbnail": self.thumbnailButton, @"shutter": self.shutterButton, @"switch": self.cameraSwitchButton},
-        @[@"H:|-14-[thumbnail(48)]", @"H:[switch(48)]-14-|", @"V:[thumbnail(48)]",
-          @"H:[shutter(76)]", @"V:[shutter(76)]", @"V:[switch(48)]"]);
-    RLVAlignViews(bottom, self.thumbnailButton, NSLayoutAttributeCenterY, bottom, NSLayoutAttributeCenterY);
-    RLVAlignViews(bottom, self.shutterButton, NSLayoutAttributeCenterX, bottom, NSLayoutAttributeCenterX);
-    RLVAlignViews(bottom, self.shutterButton, NSLayoutAttributeCenterY, bottom, NSLayoutAttributeCenterY);
-    RLVAlignViews(bottom, self.cameraSwitchButton, NSLayoutAttributeCenterY, bottom, NSLayoutAttributeCenterY);
+    CGFloat screenLongEdge = MAX(CGRectGetWidth(bounds), CGRectGetHeight(bounds));
+    CGSize shutterSize = screenLongEdge <= 480.0 ? CGSizeMake(66.0, 50.0) : CGSizeMake(76.0, 76.0);
+    RLVInstallCameraLayout(root, self.previewView, top, bottom, self.flashButton, self.livePhotoButton,
+        self.aspectRatioButton, self.thumbnailButton, self.shutterButton, shutterSize,
+        self.cameraSwitchButton);
 
-    self.rotatingControls = [NSArray arrayWithObjects:self.flashButton, self.aspectRatioButton,
+    self.rotatingControls = [NSArray arrayWithObjects:self.flashButton, self.livePhotoButton, self.aspectRatioButton,
         self.cameraSwitchButton, self.thumbnailButton, nil];
     self.view = root;
 }

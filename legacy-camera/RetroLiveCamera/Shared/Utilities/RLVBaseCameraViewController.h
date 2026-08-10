@@ -13,6 +13,7 @@
 @property (nonatomic, strong) RLVShutterButton *shutterButton;
 @property (nonatomic, strong) UIButton *thumbnailButton;
 @property (nonatomic, strong) UIButton *flashButton;
+@property (nonatomic, strong) UIButton *livePhotoButton;
 @property (nonatomic, strong) UIButton *cameraSwitchButton;
 @property (nonatomic, strong) UIButton *aspectRatioButton;
 @property (nonatomic, strong) NSArray *rotatingControls;

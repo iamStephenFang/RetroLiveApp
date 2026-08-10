@@ -25,3 +25,39 @@ void RLVAlignViews(UIView *container, UIView *firstView, NSLayoutAttribute first
     [container addConstraint:[NSLayoutConstraint constraintWithItem:firstView attribute:firstAttribute
         relatedBy:NSLayoutRelationEqual toItem:secondView attribute:secondAttribute multiplier:1 constant:0]];
 }
+
+void RLVInstallCameraLayout(UIView *rootView, UIView *previewView,
+    UIView *topChromeView, UIView *bottomChromeView, UIView *flashButton, UIView *livePhotoButton,
+    UIView *aspectRatioButton, UIView *thumbnailButton, UIView *shutterButton, CGSize shutterSize,
+    UIView *cameraSwitchButton)
+{
+    RLVPrepareViewsForAutoLayout(@[previewView, topChromeView, bottomChromeView, flashButton,
+        livePhotoButton, aspectRatioButton, thumbnailButton, shutterButton, cameraSwitchButton]);
+    RLVAddVisualConstraints(rootView,
+        @{@"preview": previewView, @"top": topChromeView, @"bottom": bottomChromeView},
+        @[@"H:|[top]|", @"H:|[preview]|", @"H:|[bottom]|", @"V:|[top(44)][preview][bottom(96)]|"]);
+    RLVAddVisualConstraints(topChromeView,
+        @{@"flash": flashButton, @"live": livePhotoButton, @"aspect": aspectRatioButton},
+        @[@"H:|-4-[flash(44)]", @"V:|[flash]|", @"H:[live(52)]", @"V:|[live]|",
+          @"H:[aspect(52)]-4-|", @"V:|[aspect]|"]);
+    RLVAlignViews(topChromeView, livePhotoButton, NSLayoutAttributeCenterX,
+        topChromeView, NSLayoutAttributeCenterX);
+    RLVAddVisualConstraints(bottomChromeView,
+        @{@"thumbnail": thumbnailButton, @"shutter": shutterButton, @"switch": cameraSwitchButton},
+        @[@"H:|-14-[thumbnail(48)]", @"H:[switch(48)]-14-|", @"V:[thumbnail(48)]",
+          @"V:[switch(48)]"]);
+    [bottomChromeView addConstraint:[NSLayoutConstraint constraintWithItem:shutterButton
+        attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:nil
+        attribute:NSLayoutAttributeNotAnAttribute multiplier:1.0 constant:shutterSize.width]];
+    [bottomChromeView addConstraint:[NSLayoutConstraint constraintWithItem:shutterButton
+        attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil
+        attribute:NSLayoutAttributeNotAnAttribute multiplier:1.0 constant:shutterSize.height]];
+    RLVAlignViews(bottomChromeView, thumbnailButton, NSLayoutAttributeCenterY,
+        bottomChromeView, NSLayoutAttributeCenterY);
+    RLVAlignViews(bottomChromeView, shutterButton, NSLayoutAttributeCenterX,
+        bottomChromeView, NSLayoutAttributeCenterX);
+    RLVAlignViews(bottomChromeView, shutterButton, NSLayoutAttributeCenterY,
+        bottomChromeView, NSLayoutAttributeCenterY);
+    RLVAlignViews(bottomChromeView, cameraSwitchButton, NSLayoutAttributeCenterY,
+        bottomChromeView, NSLayoutAttributeCenterY);
+}

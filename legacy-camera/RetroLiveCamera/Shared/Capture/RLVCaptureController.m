@@ -25,6 +25,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 @property (nonatomic, strong) NSData *pendingPhotoData;
 @property (nonatomic, strong) NSURL *pendingMotionURL;
 @property (nonatomic, assign) BOOL pendingMotionFinished;
+@property (nonatomic, assign) BOOL pendingMotionRequested;
 @property (nonatomic, assign) AVCaptureVideoOrientation rollingOrientation;
 @property (nonatomic, assign) BOOL wantsSessionRunning;
 @property (nonatomic, assign) BOOL cameraSwitchPending;
@@ -40,6 +41,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
         _state = RLVCaptureStateIdle;
         _cameraPosition = AVCaptureDevicePositionBack;
         _flashMode = AVCaptureFlashModeAuto;
+        _motionCaptureEnabled = YES;
         _rollingOrientation = AVCaptureVideoOrientationPortrait;
         _sessionQueue = dispatch_queue_create("com.retrolive.capture.session", DISPATCH_QUEUE_SERIAL);
         [self removeAbandonedRollingFiles];
@@ -186,6 +188,23 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
     });
 }
 
+- (void)setMotionCaptureEnabled:(BOOL)motionCaptureEnabled
+{
+    if (_motionCaptureEnabled == motionCaptureEnabled) return;
+    _motionCaptureEnabled = motionCaptureEnabled;
+    dispatch_async(_sessionQueue, ^{
+        if (motionCaptureEnabled) {
+            [self startRollingRecording];
+        } else if ([self.movieFileOutput isRecording]) {
+            [self.movieFileOutput stopRecording];
+        } else {
+            if (self.rollingURL) [[NSFileManager defaultManager] removeItemAtURL:self.rollingURL error:NULL];
+            self.rollingURL = nil;
+            self.rollingStartedAt = nil;
+        }
+    });
+}
+
 - (void)capturePhotoWithOrientation:(RLVCaptureOrientation)orientation
                    videoOrientation:(AVCaptureVideoOrientation)videoOrientation
                          aspectRatio:(NSString *)aspectRatio
@@ -206,6 +225,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
     self.pendingPhotoData = nil;
     self.pendingMotionURL = nil;
     self.pendingMotionFinished = NO;
+    self.pendingMotionRequested = self.isMotionCaptureEnabled && [self.movieFileOutput isRecording];
     [self updateState:RLVCaptureStateCapturing];
 
     dispatch_async(_sessionQueue, ^{
@@ -239,7 +259,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
                 }
             });
         }];
-        if ([self.movieFileOutput isRecording]) {
+        if (self.pendingMotionRequested && [self.movieFileOutput isRecording]) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(RLVTargetPostRollSeconds * NSEC_PER_SEC)), self->_sessionQueue, ^{
                 if (self.pendingEvent == event && [self.movieFileOutput isRecording]) {
                     [self.movieFileOutput stopRecording];
@@ -306,7 +326,8 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 
 - (void)startRollingRecording
 {
-    if (!self.wantsSessionRunning || ![self.session isRunning] || self.pendingEvent || [self.movieFileOutput isRecording]) return;
+    if (!self.isMotionCaptureEnabled || !self.wantsSessionRunning || ![self.session isRunning] ||
+        self.pendingEvent || [self.movieFileOutput isRecording]) return;
     AVCaptureConnection *connection = [self.movieFileOutput connectionWithMediaType:AVMediaTypeVideo];
     if (connection == nil || ![connection isEnabled] || ![connection isActive]) {
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -341,12 +362,21 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
     (void)captureOutput;
     (void)connections;
     dispatch_async(_sessionQueue, ^{
-        if (self.pendingEvent) {
+        if (self.pendingEvent && self.pendingMotionRequested) {
             if ([[NSFileManager defaultManager] fileExistsAtPath:[outputFileURL path]]) {
                 [self exportMotionFromRollingURL:outputFileURL startedAt:self.rollingStartedAt event:self.pendingEvent];
             } else {
                 [self finishMotionWithError:error ?: [self errorWithCode:8 description:NSLocalizedString(@"capture.error.no_movie", nil)]];
             }
+            return;
+        }
+
+        if (self.pendingEvent) {
+            [[NSFileManager defaultManager] removeItemAtURL:outputFileURL error:NULL];
+            self.rollingURL = nil;
+            self.rollingStartedAt = nil;
+            self.pendingMotionFinished = YES;
+            [self completePendingCaptureWithMotionURL:nil];
             return;
         }
 
@@ -441,6 +471,7 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
     self.pendingPhotoData = nil;
     self.pendingMotionURL = nil;
     self.pendingMotionFinished = NO;
+    self.pendingMotionRequested = NO;
     self.rollingURL = nil;
     self.rollingStartedAt = nil;
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -470,6 +501,7 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
     self.pendingPhotoData = nil;
     self.pendingMotionURL = nil;
     self.pendingMotionFinished = NO;
+    self.pendingMotionRequested = NO;
     dispatch_async(dispatch_get_main_queue(), ^{
         [self updateState:RLVCaptureStateRunning];
         [self notifyError:error];
@@ -604,5 +636,7 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
 @synthesize wantsSessionRunning = _wantsSessionRunning;
 @synthesize cameraSwitchPending = _cameraSwitchPending;
 @synthesize orientationRestartPending = _orientationRestartPending;
+@synthesize motionCaptureEnabled = _motionCaptureEnabled;
+@synthesize pendingMotionRequested = _pendingMotionRequested;
 
 @end

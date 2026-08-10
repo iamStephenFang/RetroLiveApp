@@ -1,4 +1,5 @@
 #import "RLVBaseCameraViewController.h"
+#import "RLVAssetDetailViewController.h"
 #import "RLVAssetStore.h"
 #import "RLVDeviceCapabilities.h"
 #import "RLVLibraryViewController.h"
@@ -9,6 +10,19 @@
 
 static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 static NSInteger const RLVAspectRatioActionSheetTag = 817;
+
+static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
+{
+    if (!image) return nil;
+    UIGraphicsBeginImageContextWithOptions(image.size, NO, image.scale);
+    CGRect rect = CGRectMake(0.0, 0.0, image.size.width, image.size.height);
+    [color setFill];
+    UIRectFill(rect);
+    [image drawInRect:rect blendMode:kCGBlendModeDestinationIn alpha:1.0];
+    UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return result;
+}
 
 @interface RLVBaseCameraViewController ()
 @property (nonatomic, strong) RLVCaptureController *captureController;
@@ -37,7 +51,6 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
     if (![@[@"4:3", @"1:1", @"16:9"] containsObject:savedAspectRatio]) savedAspectRatio = @"4:3";
     self.activeAspectRatio = savedAspectRatio;
     [self configureCameraActions];
-    [self configureLiveCaptureIndicator];
 
     self.shutterOverlay = [[UIView alloc] initWithFrame:self.previewView.bounds];
     self.shutterOverlay.backgroundColor = [UIColor blackColor];
@@ -45,6 +58,7 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
     self.shutterOverlay.userInteractionEnabled = NO;
     [self.previewView addSubview:self.shutterOverlay];
     RLVPinViewToEdges(self.shutterOverlay, self.previewView);
+    [self configureLiveCaptureIndicator];
 
     __weak RLVBaseCameraViewController *controller = self;
     [self.captureController prepareWithCompletion:^(NSError *error) {
@@ -147,6 +161,7 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 {
     [self.shutterButton addTarget:self action:@selector(shutterPressed:) forControlEvents:UIControlEventTouchUpInside];
     [self.thumbnailButton addTarget:self action:@selector(thumbnailPressed:) forControlEvents:UIControlEventTouchUpInside];
+    [self.livePhotoButton addTarget:self action:@selector(livePhotoTogglePressed:) forControlEvents:UIControlEventTouchUpInside];
     [self.cameraSwitchButton addTarget:self action:@selector(cameraSwitchPressed:) forControlEvents:UIControlEventTouchUpInside];
     [self.flashButton addTarget:self action:@selector(flashPressed:) forControlEvents:UIControlEventTouchUpInside];
     [self.aspectRatioButton addTarget:self action:@selector(aspectRatioPressed:) forControlEvents:UIControlEventTouchUpInside];
@@ -157,6 +172,7 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
     self.cameraSwitchButton.hidden = !self.capabilities.supportsFrontCamera;
     self.flashButton.hidden = !self.capabilities.supportsFlash;
     [self updateFlashButton];
+    [self updateLivePhotoButton];
     [self updateAspectRatioButton];
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(previewTapped:)];
     [self.previewView addGestureRecognizer:tap];
@@ -188,7 +204,7 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
     RLVAddVisualConstraints(self.liveCaptureIndicator, @{@"icon": icon, @"label": label},
         @[@"H:|-8-[icon(20)]-4-[label]-8-|", @"V:|[icon]|", @"V:|[label]|"]);
     RLVAddVisualConstraints(self.previewView, @{@"live": self.liveCaptureIndicator},
-        @[@"H:[live(76)]", @"V:|-56-[live(28)]"]);
+        @[@"H:[live(76)]", @"V:|-12-[live(28)]"]);
     RLVAlignViews(self.previewView, self.liveCaptureIndicator, NSLayoutAttributeCenterX,
         self.previewView, NSLayoutAttributeCenterX);
 
@@ -256,8 +272,39 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 - (void)thumbnailPressed:(id)sender
 {
     (void)sender;
-    RLVLibraryViewController *library = [[RLVLibraryViewController alloc] init];
-    [self.navigationController pushViewController:library animated:YES];
+    self.thumbnailButton.enabled = NO;
+    __weak RLVBaseCameraViewController *controller = self;
+    [[RLVAssetStore sharedStore] loadAssetsWithCompletion:^(NSArray *assets, NSError *error) {
+        (void)error;
+        if (!controller) return;
+        controller.thumbnailButton.enabled = [assets count] > 0;
+        if ([assets count] == 0 || controller.navigationController.topViewController != controller) return;
+        RLVLibraryViewController *library = [[RLVLibraryViewController alloc] init];
+        RLVAssetDetailViewController *detail = [[RLVAssetDetailViewController alloc]
+            initWithAssets:assets selectedIndex:0];
+        [controller.navigationController setViewControllers:
+            [NSArray arrayWithObjects:controller, library, detail, nil] animated:YES];
+    }];
+}
+
+- (void)livePhotoTogglePressed:(id)sender
+{
+    (void)sender;
+    self.captureController.motionCaptureEnabled = !self.captureController.isMotionCaptureEnabled;
+    [self updateLivePhotoButton];
+}
+
+- (void)updateLivePhotoButton
+{
+    BOOL active = self.captureController.isMotionCaptureEnabled;
+    UIColor *color = active ? [UIColor colorWithRed:1.0 green:0.78 blue:0.0 alpha:1.0]
+                            : [UIColor colorWithWhite:0.72 alpha:1.0];
+    UIImage *image = RLVTintedImage([UIImage imageNamed:@"InterfaceIcons/RLVLiveEffect"], color);
+    [self.livePhotoButton setImage:image forState:UIControlStateNormal];
+    self.livePhotoButton.alpha = active ? 1.0 : 0.72;
+    self.livePhotoButton.accessibilityLabel = NSLocalizedString(@"camera.live.toggle", nil);
+    self.livePhotoButton.accessibilityValue = active ? NSLocalizedString(@"camera.live.on", nil)
+                                                     : NSLocalizedString(@"camera.live.off", nil);
 }
 
 - (void)cameraSwitchPressed:(id)sender
@@ -311,9 +358,10 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 - (void)captureController:(RLVCaptureController *)controller didChangeState:(RLVCaptureState)state
 {
     self.shutterButton.enabled = state == RLVCaptureStateRunning;
+    self.livePhotoButton.enabled = state != RLVCaptureStateCapturing;
     self.shutterButton.capturing = state == RLVCaptureStateCapturing;
     if (state == RLVCaptureStateCapturing) {
-        if (controller.isRecordingMotion) [self showLiveCaptureIndicator];
+        if (controller.isMotionCaptureEnabled && controller.isRecordingMotion) [self showLiveCaptureIndicator];
         self.shutterOverlay.alpha = 0.72;
         [UIView animateWithDuration:0.16 animations:^{ self.shutterOverlay.alpha = 0.0; }];
     } else {
@@ -407,6 +455,7 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 @synthesize shutterButton = _shutterButton;
 @synthesize thumbnailButton = _thumbnailButton;
 @synthesize flashButton = _flashButton;
+@synthesize livePhotoButton = _livePhotoButton;
 @synthesize cameraSwitchButton = _cameraSwitchButton;
 @synthesize aspectRatioButton = _aspectRatioButton;
 @synthesize rotatingControls = _rotatingControls;

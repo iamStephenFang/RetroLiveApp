@@ -21,6 +21,7 @@ typedef NS_ENUM(NSInteger, RLVCaptureState) {
 @property (nonatomic, assign, readonly) AVCaptureDevicePosition cameraPosition;
 @property (nonatomic, assign, readonly) AVCaptureFlashMode flashMode;
 @property (nonatomic, assign, readonly, getter=isRecordingMotion) BOOL recordingMotion;
+@property (nonatomic, assign, getter=isMotionCaptureEnabled) BOOL motionCaptureEnabled;
 
 - (void)prepareWithCompletion:(void (^)(NSError *error))completion;
 - (void)startRunning;

@@ -83,6 +83,9 @@
 		D00000000000000000000001 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 400000000000000000000016 /* Localizable.strings */; };
 		D00000000000000000000002 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 400000000000000000000018 /* InfoPlist.strings */; };
 		D00000000000000000000003 /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000002 /* Default-568h@2x.png */; };
+		D00000000000000000000004 /* Default@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000003 /* Default@2x.png */; };
+		D00000000000000000000006 /* Default-667h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000005 /* Default-667h@2x.png */; };
+		D00000000000000000000007 /* Default-736h@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000006 /* Default-736h@3x.png */; };
 		E70000000000000000000001 /* InterfaceIcons in Resources */ = {isa = PBXBuildFile; fileRef = F70000000000000000000001 /* InterfaceIcons */; };
 		E70000000000000000000002 /* InterfaceIcons in Resources */ = {isa = PBXBuildFile; fileRef = F70000000000000000000001 /* InterfaceIcons */; };
 /* End PBXBuildFile section */
@@ -165,6 +168,9 @@
 		F50000000000000000000009 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "Resources/ClassicInfoPlist/zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		F60000000000000000000001 /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
 		F60000000000000000000002 /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
+		F60000000000000000000003 /* Default@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default@2x.png"; sourceTree = "<group>"; };
+		F60000000000000000000005 /* Default-667h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-667h@2x.png"; sourceTree = "<group>"; };
+		F60000000000000000000006 /* Default-736h@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-736h@3x.png"; sourceTree = "<group>"; };
 		F70000000000000000000001 /* InterfaceIcons */ = {isa = PBXFileReference; lastKnownFileType = folder; path = InterfaceIcons; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -451,6 +457,9 @@
 			isa = PBXGroup;
 			children = (
 				F60000000000000000000002 /* Default-568h@2x.png */,
+				F60000000000000000000003 /* Default@2x.png */,
+				F60000000000000000000005 /* Default-667h@2x.png */,
+				F60000000000000000000006 /* Default-736h@3x.png */,
 			);
 			path = ClassicLaunchImages;
 			sourceTree = "<group>";
@@ -562,6 +571,9 @@
 				D00000000000000000000001 /* Localizable.strings in Resources */,
 				D00000000000000000000002 /* InfoPlist.strings in Resources */,
 				D00000000000000000000003 /* Default-568h@2x.png in Resources */,
+				D00000000000000000000004 /* Default@2x.png in Resources */,
+				D00000000000000000000006 /* Default-667h@2x.png in Resources */,
+				D00000000000000000000007 /* Default-736h@3x.png in Resources */,
 				E70000000000000000000002 /* InterfaceIcons in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

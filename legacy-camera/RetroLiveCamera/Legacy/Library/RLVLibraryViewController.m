@@ -31,17 +31,28 @@
 @property (nonatomic, strong) NSCache *thumbnailCache;
 @property (nonatomic, strong) NSOperationQueue *thumbnailQueue;
 @property (nonatomic, assign) NSUInteger reloadGeneration;
+@property (nonatomic, copy) RLVLibrarySelectionHandler selectionHandler;
 @end
 
 @implementation RLVLibraryViewController
 
 - (id)init
 {
+    return [self initWithSelectionHandler:nil];
+}
+
+- (id)initWithSelectionHandler:(RLVLibrarySelectionHandler)selectionHandler
+{
     UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
     layout.minimumInteritemSpacing = 2.0;
     layout.minimumLineSpacing = 2.0;
     layout.sectionInset = UIEdgeInsetsMake(2, 2, 2, 2);
-    return [super initWithCollectionViewLayout:layout];
+    self = [super initWithCollectionViewLayout:layout];
+    if (self) {
+        _selectionHandler = [selectionHandler copy];
+        self.title = NSLocalizedString(@"library.title", nil);
+    }
+    return self;
 }
 
 - (void)viewDidLoad
@@ -50,7 +61,7 @@
     if ([self respondsToSelector:@selector(setEdgesForExtendedLayout:)]) {
         self.edgesForExtendedLayout = UIRectEdgeNone;
     }
-    self.title = @"RetroLive";
+    self.title = NSLocalizedString(@"library.title", nil);
     self.thumbnailCache = [[NSCache alloc] init];
     self.thumbnailCache.countLimit = 60;
     self.thumbnailCache.totalCostLimit = 8 * 1024 * 1024;
@@ -75,7 +86,9 @@
 - (void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
-    [self.navigationController setNavigationBarHidden:NO animated:YES];
+    if (self.navigationController.navigationBarHidden) {
+        [self.navigationController setNavigationBarHidden:NO animated:animated];
+    }
     [self reloadAssets];
 }
 
@@ -150,7 +163,13 @@
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
 {
     (void)collectionView;
-    RLVAssetDetailViewController *detail = [[RLVAssetDetailViewController alloc] initWithAsset:[self.assets objectAtIndex:indexPath.item]];
+    if (self.selectionHandler) {
+        self.selectionHandler(self.assets, indexPath.item);
+        [self.navigationController popViewControllerAnimated:YES];
+        return;
+    }
+    RLVAssetDetailViewController *detail = [[RLVAssetDetailViewController alloc]
+        initWithAssets:self.assets selectedIndex:indexPath.item];
     [self.navigationController pushViewController:detail animated:YES];
 }
 
@@ -178,5 +197,6 @@
 @synthesize thumbnailCache = _thumbnailCache;
 @synthesize thumbnailQueue = _thumbnailQueue;
 @synthesize reloadGeneration = _reloadGeneration;
+@synthesize selectionHandler = _selectionHandler;
 
 @end
