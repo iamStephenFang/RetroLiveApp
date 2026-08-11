@@ -1,5 +1,8 @@
 # Phase 0 to Phase 1 Audit
 
+Document status: Historical design record. Use [`README.md`](README.md) to find
+the current contracts and acceptance criteria.
+
 ## Existing state found
 
 | Area | Phase 0 state |

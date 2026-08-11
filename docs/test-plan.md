@@ -29,7 +29,10 @@
 - Classic: iPhone 5s, iPhone 6, or iPhone 6 Plus running an iOS 8-era system.
 - Capture 20 photos continuously without crash, freeze, or session loss.
 - Verify Portrait, Landscape Left, and Landscape Right preview/capture/Manifest agreement.
-- Exercise rear/front switching, supported flash modes, focus, background/foreground, low storage, forced termination during staging, and relaunch recovery.
+- Exercise rear/front switching, supported flash modes, the capability and
+  recovery cases in the [Tap to Focus specification](specs/tap-to-focus.md),
+  background/foreground, low storage, forced termination during staging, and
+  relaunch recovery.
 - Confirm no capture is copied into the system Camera Roll.
 - For warmed captures, verify approximately 1.5 seconds of pre-roll and post-roll, still-time error no greater than 200 ms, correct movie orientation, and audio when permission is granted.
 - Repeat near startup and a rolling-segment boundary and verify any shortened duration is reported accurately rather than padded or fabricated.

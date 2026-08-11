@@ -1,5 +1,8 @@
 # Phase 2 Motion Capture Delivery Plan
 
+Document status: Historical delivery plan. Use [`README.md`](README.md) to find
+the current contracts and acceptance criteria.
+
 ## Scope
 
 Phase 2 turns each supported shutter press into one immutable photo-plus-motion asset. The legacy camera remains the capture owner; networking, modern-device download, Live Photo metadata injection, and PhotoKit import remain later phases.
@@ -39,4 +42,3 @@ The trimmed movie is inspected for duration, transformed dimensions, nominal fra
 - Modern importer workflow
 - Live Photo pairing metadata or PhotoKit writes
 - Pixel-level camera chrome changes
-

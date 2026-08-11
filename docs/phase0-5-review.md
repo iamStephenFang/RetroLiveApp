@@ -2,6 +2,9 @@
 
 Review date: 2026-08-08
 
+Document status: Dated review snapshot. Use [`README.md`](README.md) to find the
+current contracts and acceptance criteria.
+
 ## Outcome
 
 The review closed the correctness and safety gaps that could produce an invalid

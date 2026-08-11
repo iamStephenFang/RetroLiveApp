@@ -133,6 +133,8 @@ CameraAPIClient -> DownloadStore -> LivePhotoAssembler -> PhotoLibraryImporter
 ```
 
 For component ownership and data boundaries, read [Architecture](docs/architecture.md). For the on-disk representation, read [Asset format](docs/asset-format.md) and [Live Photo format](docs/live-photo-format.md).
+The [documentation guide](docs/README.md) identifies current specifications,
+acceptance criteria, build notes, and historical phase records.
 
 ## Development guidelines
 

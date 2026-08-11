@@ -1,5 +1,8 @@
 # Phase 0–2 Completion Audit
 
+Document status: Historical audit snapshot. Use [`README.md`](README.md) to find
+the current contracts and acceptance criteria.
+
 ## Result
 
 All repository-implementable requirements defined for Phase 0, Phase 1, and Phase 2 are present. The audit found and closed three internal gaps: optional-thumbnail OpenAPI consistency, full validation before exposing local assets, and automated coverage for both asset lifecycles plus corrupted assets.
