@@ -1,5 +1,4 @@
 #import "RLVLibraryViewController.h"
-#import "RLVAssetDetailViewController.h"
 #import "RLVAssetStore.h"
 #import "RLVLayout.h"
 #import <ImageIO/ImageIO.h>
@@ -58,10 +57,11 @@
 @property (nonatomic, strong) NSCache *thumbnailCache;
 @property (nonatomic, strong) NSOperationQueue *thumbnailQueue;
 @property (nonatomic, assign) NSUInteger reloadGeneration;
-@property (nonatomic, copy) RLVLibrarySelectionHandler selectionHandler;
 @property (nonatomic, assign, getter=isSelectingAssets) BOOL selectingAssets;
 @property (nonatomic, strong) UIBarButtonItem *shareButton;
 @property (nonatomic, strong) UIBarButtonItem *deleteButton;
+@property (nonatomic, strong) UIToolbar *selectionToolbar;
+@property (nonatomic, assign) UIEdgeInsets normalContentInset;
 @end
 
 static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
@@ -70,18 +70,12 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
 
 - (id)init
 {
-    return [self initWithSelectionHandler:nil];
-}
-
-- (id)initWithSelectionHandler:(RLVLibrarySelectionHandler)selectionHandler
-{
     UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
     layout.minimumInteritemSpacing = 2.0;
     layout.minimumLineSpacing = 2.0;
     layout.sectionInset = UIEdgeInsetsMake(2, 2, 2, 2);
     self = [super initWithCollectionViewLayout:layout];
     if (self) {
-        _selectionHandler = [selectionHandler copy];
         self.title = NSLocalizedString(@"library.title", nil);
     }
     return self;
@@ -101,21 +95,27 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
     self.thumbnailQueue.maxConcurrentOperationCount = 2;
     self.collectionView.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1];
     [self.collectionView registerClass:[RLVAssetCell class] forCellWithReuseIdentifier:@"AssetCell"];
-    if (!self.selectionHandler) {
-        self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
-            initWithTitle:NSLocalizedString(@"library.select", nil) style:UIBarButtonItemStylePlain
-            target:self action:@selector(toggleAssetSelection:)];
-        self.shareButton = [[UIBarButtonItem alloc]
-            initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(shareSelectedAssets:)];
-        self.shareButton.accessibilityLabel = NSLocalizedString(@"asset.share", nil);
-        self.deleteButton = [[UIBarButtonItem alloc]
-            initWithBarButtonSystemItem:UIBarButtonSystemItemTrash target:self action:@selector(confirmDeleteSelectedAssets:)];
-        self.deleteButton.accessibilityLabel = NSLocalizedString(@"asset.delete", nil);
-        UIBarButtonItem *space = [[UIBarButtonItem alloc]
-            initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
-        self.toolbarItems = @[self.shareButton, space, self.deleteButton];
-        [self updateSelectionActions];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
+        initWithTitle:NSLocalizedString(@"library.select", nil) style:UIBarButtonItemStylePlain
+        target:self action:@selector(toggleAssetSelection:)];
+    self.shareButton = [[UIBarButtonItem alloc]
+        initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(shareSelectedAssets:)];
+    self.shareButton.accessibilityLabel = NSLocalizedString(@"asset.share", nil);
+    self.deleteButton = [[UIBarButtonItem alloc]
+        initWithBarButtonSystemItem:UIBarButtonSystemItemTrash target:self action:@selector(confirmDeleteSelectedAssets:)];
+    self.deleteButton.accessibilityLabel = NSLocalizedString(@"asset.delete", nil);
+    UIBarButtonItem *space = [[UIBarButtonItem alloc]
+        initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
+    self.selectionToolbar = [[UIToolbar alloc] initWithFrame:CGRectZero];
+    self.selectionToolbar.barStyle = UIBarStyleBlack;
+    if ([self.selectionToolbar respondsToSelector:@selector(setTranslucent:)]) {
+        self.selectionToolbar.translucent = YES;
     }
+    self.selectionToolbar.items = @[self.shareButton, space, self.deleteButton];
+    self.selectionToolbar.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
+    self.selectionToolbar.hidden = YES;
+    [self.navigationController.view addSubview:self.selectionToolbar];
+    [self updateSelectionActions];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(assetStoreDidChange:)
                                                  name:RLVAssetStoreDidChangeNotification object:nil];
 }
@@ -123,6 +123,7 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
 - (void)toggleAssetSelection:(id)sender
 {
     (void)sender;
+    if (!self.isSelectingAssets) self.normalContentInset = self.collectionView.contentInset;
     self.selectingAssets = !self.isSelectingAssets;
     self.collectionView.allowsMultipleSelection = self.isSelectingAssets;
     self.navigationItem.rightBarButtonItem.title = self.isSelectingAssets
@@ -132,7 +133,8 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
             [self.collectionView deselectItemAtIndexPath:indexPath animated:NO];
         }
     }
-    [self.navigationController setToolbarHidden:!self.isSelectingAssets animated:YES];
+    [self.delegate libraryViewController:self didChangeSelectingAssets:self.isSelectingAssets];
+    [self updateSelectionToolbarAnimated:YES];
     [self updateSelectionActions];
 }
 
@@ -142,15 +144,40 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
     if (self.navigationController.navigationBarHidden) {
         [self.navigationController setNavigationBarHidden:NO animated:animated];
     }
-    [self.navigationController setToolbarHidden:!self.isSelectingAssets animated:NO];
+    if (!self.isSelectingAssets) self.normalContentInset = self.collectionView.contentInset;
+    [self updateSelectionToolbarAnimated:NO];
     [self reloadAssets];
 }
 
-- (void)viewWillDisappear:(BOOL)animated
+- (void)updateSelectionToolbarAnimated:(BOOL)animated
 {
-    [super viewWillDisappear:animated];
-    if ([self.navigationController.viewControllers indexOfObject:self] == NSNotFound) {
-        [self.navigationController setToolbarHidden:YES animated:NO];
+    CGFloat height = 44.0;
+    CGRect bounds = self.navigationController.view.bounds;
+    self.selectionToolbar.frame = CGRectMake(0.0, CGRectGetHeight(bounds) - height,
+        CGRectGetWidth(bounds), height);
+    UIEdgeInsets contentInset = self.normalContentInset;
+    if (self.isSelectingAssets) contentInset.bottom = height;
+    if (!UIEdgeInsetsEqualToEdgeInsets(self.collectionView.contentInset, contentInset)) {
+        self.collectionView.contentInset = contentInset;
+        self.collectionView.scrollIndicatorInsets = contentInset;
+    }
+
+    if (self.isSelectingAssets) {
+        self.selectionToolbar.hidden = NO;
+        if (!animated) {
+            self.selectionToolbar.alpha = 1.0;
+            return;
+        }
+        self.selectionToolbar.alpha = 0.0;
+        [UIView animateWithDuration:0.2 animations:^{ self.selectionToolbar.alpha = 1.0; }];
+    } else if (animated && !self.selectionToolbar.hidden) {
+        [UIView animateWithDuration:0.2 animations:^{ self.selectionToolbar.alpha = 0.0; }
+            completion:^(BOOL finished) {
+                if (finished) self.selectionToolbar.hidden = YES;
+            }];
+    } else {
+        self.selectionToolbar.alpha = 0.0;
+        self.selectionToolbar.hidden = YES;
     }
 }
 
@@ -160,6 +187,7 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
     CGFloat width = CGRectGetWidth(self.collectionView.bounds);
     CGFloat item = floor((width - 8.0) / 3.0);
     ((UICollectionViewFlowLayout *)self.collectionViewLayout).itemSize = CGSizeMake(item, item);
+    if (self.isSelectingAssets) [self updateSelectionToolbarAnimated:NO];
 }
 
 - (void)reloadAssets
@@ -231,14 +259,7 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
         return;
     }
     [collectionView deselectItemAtIndexPath:indexPath animated:NO];
-    if (self.selectionHandler) {
-        self.selectionHandler(self.assets, indexPath.item);
-        [self.navigationController popViewControllerAnimated:YES];
-        return;
-    }
-    RLVAssetDetailViewController *detail = [[RLVAssetDetailViewController alloc]
-        initWithAssets:self.assets selectedIndex:indexPath.item];
-    [self.navigationController pushViewController:detail animated:YES];
+    [self.delegate libraryViewController:self didSelectAssets:self.assets selectedIndex:indexPath.item];
 }
 
 - (void)collectionView:(UICollectionView *)collectionView didDeselectItemAtIndexPath:(NSIndexPath *)indexPath
@@ -338,9 +359,11 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
 @synthesize thumbnailCache = _thumbnailCache;
 @synthesize thumbnailQueue = _thumbnailQueue;
 @synthesize reloadGeneration = _reloadGeneration;
-@synthesize selectionHandler = _selectionHandler;
 @synthesize selectingAssets = _selectingAssets;
 @synthesize shareButton = _shareButton;
 @synthesize deleteButton = _deleteButton;
+@synthesize selectionToolbar = _selectionToolbar;
+@synthesize normalContentInset = _normalContentInset;
+@synthesize delegate = _delegate;
 
 @end

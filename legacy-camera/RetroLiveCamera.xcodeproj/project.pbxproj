@@ -21,7 +21,6 @@
 		A0000000000000000000000C /* RLVShutterButton.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000C /* RLVShutterButton.m */; };
 		A0000000000000000000000D /* RLVBaseCameraViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000D /* RLVBaseCameraViewController.m */; };
 		A0000000000000000000000E /* RLVLegacyCameraViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000E /* RLVLegacyCameraViewController.m */; };
-		A0000000000000000000000F /* RLVClassicCameraViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000F /* RLVClassicCameraViewController.m */; };
 		A00000000000000000000010 /* RLVLibraryViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000010 /* RLVLibraryViewController.m */; };
 		A00000000000000000000011 /* RLVAssetDetailViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000011 /* RLVAssetDetailViewController.m */; };
 		A00000000000000000000012 /* RLVHTTPResponse.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000012 /* RLVHTTPResponse.m */; };
@@ -56,7 +55,6 @@
 		B0000000000000000000000B /* RLVAssetStore.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000B /* RLVAssetStore.m */; };
 		B0000000000000000000000C /* RLVShutterButton.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000C /* RLVShutterButton.m */; };
 		B0000000000000000000000D /* RLVBaseCameraViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000D /* RLVBaseCameraViewController.m */; };
-		B0000000000000000000000E /* RLVLegacyCameraViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000E /* RLVLegacyCameraViewController.m */; };
 		B0000000000000000000000F /* RLVClassicCameraViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000000F /* RLVClassicCameraViewController.m */; };
 		B00000000000000000000010 /* RLVLibraryViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000010 /* RLVLibraryViewController.m */; };
 		B00000000000000000000011 /* RLVAssetDetailViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000011 /* RLVAssetDetailViewController.m */; };
@@ -289,6 +287,7 @@
 				40000000000000000000000A /* Device */,
 				40000000000000000000000B /* Utilities */,
 				400000000000000000000012 /* Transfer */,
+				40000000000000000000000E /* Library */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -345,7 +344,6 @@
 			isa = PBXGroup;
 			children = (
 				40000000000000000000000D /* Camera */,
-				40000000000000000000000E /* Library */,
 			);
 			path = Legacy;
 			sourceTree = "<group>";
@@ -605,7 +603,6 @@
 				A0000000000000000000000C /* RLVShutterButton.m in Sources */,
 				A0000000000000000000000D /* RLVBaseCameraViewController.m in Sources */,
 				A0000000000000000000000E /* RLVLegacyCameraViewController.m in Sources */,
-				A0000000000000000000000F /* RLVClassicCameraViewController.m in Sources */,
 				A00000000000000000000010 /* RLVLibraryViewController.m in Sources */,
 				A00000000000000000000011 /* RLVAssetDetailViewController.m in Sources */,
 				A00000000000000000000012 /* RLVHTTPResponse.m in Sources */,
@@ -634,7 +631,6 @@
 				B0000000000000000000000B /* RLVAssetStore.m in Sources */,
 				B0000000000000000000000C /* RLVShutterButton.m in Sources */,
 				B0000000000000000000000D /* RLVBaseCameraViewController.m in Sources */,
-				B0000000000000000000000E /* RLVLegacyCameraViewController.m in Sources */,
 				B0000000000000000000000F /* RLVClassicCameraViewController.m in Sources */,
 				B00000000000000000000010 /* RLVLibraryViewController.m in Sources */,
 				B00000000000000000000011 /* RLVAssetDetailViewController.m in Sources */,
@@ -732,9 +728,8 @@
 					"$(SRCROOT)/RetroLiveCamera/Shared/Device",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Utilities",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Library",
 					"$(SRCROOT)/RetroLiveCamera/Legacy/Camera",
-					"$(SRCROOT)/RetroLiveCamera/Legacy/Library",
-					"$(SRCROOT)/RetroLiveCamera/Classic/Camera",
 				);
 				INFOPLIST_FILE = RetroLiveCamera/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
@@ -761,9 +756,8 @@
 					"$(SRCROOT)/RetroLiveCamera/Shared/Device",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Utilities",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Library",
 					"$(SRCROOT)/RetroLiveCamera/Legacy/Camera",
-					"$(SRCROOT)/RetroLiveCamera/Legacy/Library",
-					"$(SRCROOT)/RetroLiveCamera/Classic/Camera",
 				);
 				INFOPLIST_FILE = RetroLiveCamera/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
@@ -794,8 +788,7 @@
 					"$(SRCROOT)/RetroLiveCamera/Shared/Device",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Utilities",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
-					"$(SRCROOT)/RetroLiveCamera/Legacy/Camera",
-					"$(SRCROOT)/RetroLiveCamera/Legacy/Library",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Library",
 					"$(SRCROOT)/RetroLiveCamera/Classic/Camera",
 				);
 				INFOPLIST_FILE = "RetroLiveCamera/Classic-Info.plist";
@@ -827,8 +820,7 @@
 					"$(SRCROOT)/RetroLiveCamera/Shared/Device",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Utilities",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
-					"$(SRCROOT)/RetroLiveCamera/Legacy/Camera",
-					"$(SRCROOT)/RetroLiveCamera/Legacy/Library",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Library",
 					"$(SRCROOT)/RetroLiveCamera/Classic/Camera",
 				);
 				INFOPLIST_FILE = "RetroLiveCamera/Classic-Info.plist";

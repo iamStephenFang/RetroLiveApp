@@ -8,4 +8,4 @@ FOUNDATION_EXPORT void RLVAlignViews(UIView *container, UIView *firstView, NSLay
 FOUNDATION_EXPORT void RLVInstallCameraLayout(UIView *rootView, UIView *previewView,
     UIView *topChromeView, UIView *bottomChromeView, UIView *flashButton, UIView *livePhotoButton,
     UIView *aspectRatioButton, UIView *thumbnailButton, UIView *shutterButton, CGSize shutterSize,
-    UIView *cameraSwitchButton);
+    CGFloat bottomHeight, CGFloat sideControlSize, UIView *cameraSwitchButton);

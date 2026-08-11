@@ -1,6 +1,6 @@
 #import "RLVAssetDetailViewController.h"
+#import "RLVAsset.h"
 #import "RLVAssetStore.h"
-#import "RLVLibraryViewController.h"
 #import "RLVLayout.h"
 #import <AVFoundation/AVFoundation.h>
 #import <QuartzCore/QuartzCore.h>
@@ -16,18 +16,18 @@ static NSInteger const RLVDeleteConfirmationAlertTag = 918;
 
 static UIImage *RLVInformationImage(void)
 {
-    CGSize size = CGSizeMake(22.0, 22.0);
+    CGSize size = CGSizeMake(30.0, 30.0);
     UIGraphicsBeginImageContextWithOptions(size, NO, 0.0);
     CGContextRef context = UIGraphicsGetCurrentContext();
     CGContextSetStrokeColorWithColor(context, [UIColor whiteColor].CGColor);
     CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
-    CGContextSetLineWidth(context, 1.5);
-    CGContextStrokeEllipseInRect(context, CGRectMake(2.5, 2.5, 17.0, 17.0));
-    CGContextFillEllipseInRect(context, CGRectMake(10.0, 6.0, 2.0, 2.0));
+    CGContextSetLineWidth(context, 1.25);
+    CGContextStrokeEllipseInRect(context, CGRectMake(2.0, 2.0, 26.0, 26.0));
+    CGContextFillEllipseInRect(context, CGRectMake(13.8, 6.8, 2.4, 2.4));
     CGContextSetLineCap(context, kCGLineCapRound);
-    CGContextSetLineWidth(context, 2.0);
-    CGContextMoveToPoint(context, 11.0, 10.0);
-    CGContextAddLineToPoint(context, 11.0, 16.0);
+    CGContextSetLineWidth(context, 1.5);
+    CGContextMoveToPoint(context, 15.0, 12.5);
+    CGContextAddLineToPoint(context, 15.0, 22.0);
     CGContextStrokePath(context);
     UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
@@ -52,11 +52,6 @@ static UIImage *RLVInformationImage(void)
 @end
 
 @implementation RLVAssetDetailViewController
-
-- (id)initWithAsset:(RLVAsset *)asset
-{
-    return [self initWithAssets:asset ? [NSArray arrayWithObject:asset] : [NSArray array] selectedIndex:0];
-}
 
 - (id)initWithAssets:(NSArray *)assets selectedIndex:(NSUInteger)selectedIndex
 {
@@ -185,21 +180,6 @@ static UIImage *RLVInformationImage(void)
     self.playerLayer.frame = self.imageView.bounds;
 }
 
-- (void)selectAssetFromAssets:(NSArray *)assets atIndex:(NSUInteger)index
-{
-    if ([assets count] == 0 || index >= [assets count]) return;
-    NSUInteger oldIndex = self.selectedIndex;
-    self.assets = [assets copy];
-    self.selectedIndex = index;
-    if (self.navigationController.topViewController != self) {
-        self.asset = [self.assets objectAtIndex:self.selectedIndex];
-        self.imageView.image = nil;
-        self.didAutoPlay = NO;
-        return;
-    }
-    [self displaySelectedAssetWithDirection:index > oldIndex ? 1 : -1 animated:NO];
-}
-
 - (void)photoSwiped:(UISwipeGestureRecognizer *)recognizer
 {
     if (recognizer.direction == UISwipeGestureRecognizerDirectionLeft) {
@@ -263,7 +243,8 @@ static UIImage *RLVInformationImage(void)
 - (void)finishViewing:(id)sender
 {
     (void)sender;
-    [self.navigationController popToRootViewControllerAnimated:YES];
+    if (self.delegate) [self.delegate assetDetailViewControllerDidRequestClose:self];
+    else [self.navigationController popToRootViewControllerAnimated:YES];
 }
 
 - (void)sharePhoto:(id)sender
@@ -596,5 +577,6 @@ static UIImage *RLVInformationImage(void)
 @synthesize playbackMode = _playbackMode;
 @synthesize playingBackward = _playingBackward;
 @synthesize didAutoPlay = _didAutoPlay;
+@synthesize delegate = _delegate;
 
 @end

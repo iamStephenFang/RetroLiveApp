@@ -29,13 +29,14 @@ void RLVAlignViews(UIView *container, UIView *firstView, NSLayoutAttribute first
 void RLVInstallCameraLayout(UIView *rootView, UIView *previewView,
     UIView *topChromeView, UIView *bottomChromeView, UIView *flashButton, UIView *livePhotoButton,
     UIView *aspectRatioButton, UIView *thumbnailButton, UIView *shutterButton, CGSize shutterSize,
-    UIView *cameraSwitchButton)
+    CGFloat bottomHeight, CGFloat sideControlSize, UIView *cameraSwitchButton)
 {
     RLVPrepareViewsForAutoLayout(@[previewView, topChromeView, bottomChromeView, flashButton,
         livePhotoButton, aspectRatioButton, thumbnailButton, shutterButton, cameraSwitchButton]);
     RLVAddVisualConstraints(rootView,
         @{@"preview": previewView, @"top": topChromeView, @"bottom": bottomChromeView},
-        @[@"H:|[top]|", @"H:|[preview]|", @"H:|[bottom]|", @"V:|[top(44)][preview][bottom(96)]|"]);
+        @[@"H:|[top]|", @"H:|[preview]|", @"H:|[bottom]|",
+          [NSString stringWithFormat:@"V:|[top(44)][preview][bottom(%.0f)]|", bottomHeight]]);
     RLVAddVisualConstraints(topChromeView,
         @{@"flash": flashButton, @"live": livePhotoButton, @"aspect": aspectRatioButton},
         @[@"H:|-4-[flash(44)]", @"V:|[flash]|", @"H:[live(52)]", @"V:|[live]|",
@@ -44,8 +45,10 @@ void RLVInstallCameraLayout(UIView *rootView, UIView *previewView,
         topChromeView, NSLayoutAttributeCenterX);
     RLVAddVisualConstraints(bottomChromeView,
         @{@"thumbnail": thumbnailButton, @"shutter": shutterButton, @"switch": cameraSwitchButton},
-        @[@"H:|-14-[thumbnail(48)]", @"H:[switch(48)]-14-|", @"V:[thumbnail(48)]",
-          @"V:[switch(48)]"]);
+        @[[NSString stringWithFormat:@"H:|-14-[thumbnail(%.0f)]", sideControlSize],
+          [NSString stringWithFormat:@"H:[switch(%.0f)]-14-|", sideControlSize],
+          [NSString stringWithFormat:@"V:[thumbnail(%.0f)]", sideControlSize],
+          [NSString stringWithFormat:@"V:[switch(%.0f)]", sideControlSize]]);
     [bottomChromeView addConstraint:[NSLayoutConstraint constraintWithItem:shutterButton
         attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:nil
         attribute:NSLayoutAttributeNotAnAttribute multiplier:1.0 constant:shutterSize.width]];

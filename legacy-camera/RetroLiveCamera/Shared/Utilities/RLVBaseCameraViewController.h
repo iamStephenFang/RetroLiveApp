@@ -19,7 +19,4 @@
 @property (nonatomic, strong) NSArray *rotatingControls;
 @property (nonatomic, strong, readonly) RLVDeviceCapabilities *capabilities;
 
-- (void)configureCameraActions;
-- (void)updateThumbnail;
-
 @end

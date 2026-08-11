@@ -1,5 +1,4 @@
 #import "RLVBaseCameraViewController.h"
-#import "RLVAssetDetailViewController.h"
 #import "RLVAssetStore.h"
 #import "RLVDeviceCapabilities.h"
 #import "RLVLibraryTabBarController.h"
@@ -35,6 +34,8 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
 @property (nonatomic, copy) NSString *activeAspectRatio;
 - (void)attachPreviewLayerIfNeeded;
 - (void)updatePreviewFrame;
+- (void)configureCameraActions;
+- (void)updateThumbnail;
 @end
 
 @implementation RLVBaseCameraViewController
@@ -75,7 +76,6 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
 {
     [super viewWillAppear:animated];
     self.viewVisible = YES;
-    [self.navigationController setNavigationBarHidden:YES animated:NO];
     [self.orientationCoordinator start];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationWillResignActive:)
                                                  name:UIApplicationWillResignActiveNotification object:nil];
@@ -278,8 +278,9 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
         (void)error;
         if (!controller) return;
         controller.thumbnailButton.enabled = [assets count] > 0;
-        if ([assets count] == 0 || controller.navigationController.topViewController != controller) return;
-        RLVLibraryTabBarController *library = [[RLVLibraryTabBarController alloc] init];
+        if ([assets count] == 0 || controller.presentedViewController || !controller.view.window) return;
+        RLVLibraryTabBarController *library = [[RLVLibraryTabBarController alloc]
+            initWithAssets:assets selectedIndex:0];
         library.modalPresentationStyle = UIModalPresentationFullScreen;
         [controller presentViewController:library animated:YES completion:nil];
     }];

@@ -40,7 +40,7 @@
 
     RLVInstallCameraLayout(root, self.previewView, self.topChromeView, self.bottomChromeView,
         self.flashButton, self.livePhotoButton, self.aspectRatioButton, self.thumbnailButton,
-        self.shutterButton, CGSizeMake(76.0, 76.0), self.cameraSwitchButton);
+        self.shutterButton, CGSizeMake(76.0, 76.0), 96.0, 48.0, self.cameraSwitchButton);
 
     self.rotatingControls = [NSArray arrayWithObjects:self.flashButton, self.livePhotoButton, self.aspectRatioButton,
         self.cameraSwitchButton, self.thumbnailButton, nil];

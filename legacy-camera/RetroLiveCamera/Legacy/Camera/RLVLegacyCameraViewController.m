@@ -73,10 +73,14 @@
     [bottom addSubview:self.shutterButton];
 
     CGFloat screenLongEdge = MAX(CGRectGetWidth(bounds), CGRectGetHeight(bounds));
-    CGSize shutterSize = screenLongEdge <= 480.0 ? CGSizeMake(66.0, 50.0) : CGSizeMake(76.0, 76.0);
+    BOOL compactCameraChrome = screenLongEdge <= 480.0;
+    CGSize shutterSize = compactCameraChrome ? CGSizeMake(76.0, 44.0) : CGSizeMake(76.0, 76.0);
+    CGFloat bottomHeight = compactCameraChrome ? 50.0 : 96.0;
+    CGFloat sideControlSize = compactCameraChrome ? 34.0 : 48.0;
+    if (compactCameraChrome) self.thumbnailButton.layer.cornerRadius = 1.0;
     RLVInstallCameraLayout(root, self.previewView, top, bottom, self.flashButton, self.livePhotoButton,
         self.aspectRatioButton, self.thumbnailButton, self.shutterButton, shutterSize,
-        self.cameraSwitchButton);
+        bottomHeight, sideControlSize, self.cameraSwitchButton);
 
     self.rotatingControls = [NSArray arrayWithObjects:self.flashButton, self.livePhotoButton, self.aspectRatioButton,
         self.cameraSwitchButton, self.thumbnailButton, nil];

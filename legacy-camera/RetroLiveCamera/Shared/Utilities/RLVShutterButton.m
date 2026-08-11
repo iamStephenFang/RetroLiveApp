@@ -36,10 +36,19 @@
 
 @end
 
+@interface RLVLegacyShutterButton ()
+- (void)drawCompactCameraButtonInRect:(CGRect)rect;
+@end
+
 @implementation RLVLegacyShutterButton
 
 - (void)drawRect:(CGRect)rect
 {
+    if (CGRectGetWidth(rect) > CGRectGetHeight(rect) * 1.4) {
+        [self drawCompactCameraButtonInRect:rect];
+        return;
+    }
+
     CGContextRef context = UIGraphicsGetCurrentContext();
     CGRect ring = CGRectInset(rect, 5.0, 5.0);
     CGContextSaveGState(context);
@@ -68,6 +77,56 @@
     CGContextSetStrokeColorWithColor(context, [[UIColor whiteColor] CGColor]);
     CGContextSetLineWidth(context, 1.0);
     CGContextStrokeEllipseInRect(context, CGRectInset(face, 0.5, 0.5));
+}
+
+- (void)drawCompactCameraButtonInRect:(CGRect)rect
+{
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGRect buttonRect = CGRectInset(rect, 2.0, 7.0);
+    CGFloat radius = CGRectGetHeight(buttonRect) * 0.5;
+    UIBezierPath *buttonPath = [UIBezierPath bezierPathWithRoundedRect:buttonRect cornerRadius:radius];
+
+    CGContextSaveGState(context);
+    CGContextSetShadowWithColor(context, CGSizeMake(0.0, 1.0), 2.0,
+        [UIColor colorWithWhite:0.0 alpha:0.85].CGColor);
+    [[UIColor colorWithWhite:0.20 alpha:1.0] setFill];
+    [buttonPath fill];
+    CGContextRestoreGState(context);
+
+    CGFloat white = !self.enabled ? 0.48 : (self.highlighted || self.isCapturing ? 0.62 : 0.88);
+    CGRect faceRect = CGRectInset(buttonRect, 2.0, 2.0);
+    UIBezierPath *facePath = [UIBezierPath bezierPathWithRoundedRect:faceRect
+        cornerRadius:CGRectGetHeight(faceRect) * 0.5];
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    NSArray *colors = [NSArray arrayWithObjects:
+        (id)[UIColor colorWithWhite:MIN(1.0, white + 0.10) alpha:1.0].CGColor,
+        (id)[UIColor colorWithWhite:MAX(0.0, white - 0.16) alpha:1.0].CGColor, nil];
+    CGGradientRef gradient = CGGradientCreateWithColors(colorSpace, (__bridge CFArrayRef)colors, NULL);
+    CGContextSaveGState(context);
+    [facePath addClip];
+    CGContextDrawLinearGradient(context, gradient, CGPointMake(0.0, CGRectGetMinY(faceRect)),
+        CGPointMake(0.0, CGRectGetMaxY(faceRect)), 0);
+    CGContextRestoreGState(context);
+    CGGradientRelease(gradient);
+    CGColorSpaceRelease(colorSpace);
+
+    [[UIColor colorWithWhite:0.96 alpha:0.9] setStroke];
+    facePath.lineWidth = 1.0;
+    [facePath stroke];
+
+    UIColor *iconColor = self.enabled ? [UIColor colorWithWhite:0.15 alpha:1.0]
+                                      : [UIColor colorWithWhite:0.34 alpha:1.0];
+    [iconColor setFill];
+    CGFloat centerX = CGRectGetMidX(rect);
+    CGFloat centerY = CGRectGetMidY(rect) + 1.0;
+    UIBezierPath *cameraBody = [UIBezierPath bezierPathWithRoundedRect:
+        CGRectMake(centerX - 11.0, centerY - 6.0, 22.0, 13.0) cornerRadius:2.5];
+    [cameraBody fill];
+    UIRectFill(CGRectMake(centerX - 5.0, centerY - 9.0, 10.0, 4.0));
+    [[UIColor colorWithWhite:0.72 alpha:1.0] setFill];
+    [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(centerX - 4.0, centerY - 4.0, 8.0, 8.0)] fill];
+    [iconColor setFill];
+    [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(centerX - 2.5, centerY - 2.5, 5.0, 5.0)] fill];
 }
 
 @end
