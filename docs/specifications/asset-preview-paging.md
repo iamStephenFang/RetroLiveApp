@@ -1,8 +1,15 @@
-# Asset Preview Paging Specification
+---
+title: Asset Preview Paging
+status: implemented-pending-device-validation
+type: specification
+---
 
-- Status: Implemented; physical-device acceptance pending
-- Targets: `RetroLiveCamera` (iOS 6) and `RetroLiveClassic` (iOS 7/8)
-- Owner boundary: shared asset-detail UI only
+# Asset Preview Paging
+
+| Scope | Value |
+| --- | --- |
+| Targets | `RetroLiveCamera` (iOS 6) and `RetroLiveClassic` (iOS 7/8) |
+| Owner boundary | Shared asset-detail UI only |
 
 ## Outcome
 

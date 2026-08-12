@@ -1,8 +1,15 @@
-# Tap to Focus Specification
+---
+title: Tap to Focus
+status: implemented-pending-device-validation
+type: specification
+---
 
-- Status: Implemented; physical-device acceptance pending
-- Targets: `RetroLiveCamera` (iOS 6) and `RetroLiveClassic` (iOS 7/8)
-- Owner boundary: shared camera UI plus `RLVCaptureController`
+# Tap to Focus
+
+| Scope | Value |
+| --- | --- |
+| Targets | `RetroLiveCamera` (iOS 6) and `RetroLiveClassic` (iOS 7/8) |
+| Owner boundary | Shared camera UI plus `RLVCaptureController` |
 
 ## Outcome
 
@@ -100,7 +107,8 @@ Swift-only APIs into the shared implementation.
   completion event for this flow.
 
 The exact size, color, line width, and timing remain provisional until the
-device/screenshot comparison in `../camera-ui-measurements.md` is completed.
+device/screenshot comparison in [Camera UI Measurements](camera-ui-measurements.md)
+is completed.
 
 ## Code boundaries
 

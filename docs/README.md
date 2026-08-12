@@ -1,55 +1,87 @@
-# Documentation Guide
+---
+title: RetroLive Documentation
+status: current
+type: index
+---
 
-This index separates current contracts and acceptance criteria from historical
-phase records. A phase document describes the decision or audit at that point in
-time; it is not automatically the current source of truth.
+# RetroLive Documentation
+
+This directory separates current references and feature specifications from
+historical delivery records. Start with the current documents below; use
+historical records only when earlier decisions or audit context are relevant.
 
 ## Sources of truth
 
-| Area | Document | Role |
+Machine-readable contracts take precedence over explanatory prose.
+
+| Area | Source of truth | Supporting document |
 | --- | --- | --- |
-| Manifest | [`../protocol/manifest.schema.json`](../protocol/manifest.schema.json) | Normative machine-readable Manifest V1 contract |
-| HTTP API | [`../protocol/api.openapi.yaml`](../protocol/api.openapi.yaml) | Normative camera/importer API contract |
-| Protocol explanation | [`protocol.md`](protocol.md) | Human-readable protocol overview |
-| Component ownership | [`architecture.md`](architecture.md) | Current runtime boundaries and data flow |
-| Camera asset storage | [`asset-format.md`](asset-format.md) | Current on-device asset representation |
-| Live Photo assembly | [`live-photo-format.md`](live-photo-format.md) | Current paired-resource rules |
-| Repository and device acceptance | [`test-plan.md`](test-plan.md) | Current verification matrix |
+| Manifest V1 | [`../protocol/manifest.schema.json`](../protocol/manifest.schema.json) | [`reference/protocol-v1.md`](reference/protocol-v1.md) |
+| HTTP API | [`../protocol/api.openapi.yaml`](../protocol/api.openapi.yaml) | [`specifications/lan-transfer.md`](specifications/lan-transfer.md) |
+| Component ownership | Current implementation | [`reference/architecture.md`](reference/architecture.md) |
+| Asset storage | Current implementation and Manifest V1 | [`reference/asset-storage.md`](reference/asset-storage.md) |
+| Live Photo paired-media output | Current implementation and tests | [`reference/live-photo-assembly.md`](reference/live-photo-assembly.md) |
+| Verification routing | Test evidence | [`reference/verification-guide.md`](reference/verification-guide.md) |
 
-When prose conflicts with a machine-readable contract, the JSON Schema or
-OpenAPI file wins. When a historical phase record conflicts with current code or
-the test plan, update the current design document and keep the historical record
-as context.
+If a historical record conflicts with a current contract, implementation,
+feature specification, or verification evidence, follow the current source and
+update its supporting document.
 
-## Active feature specifications
+## Directory map
 
-- [`camera-ui-measurements.md`](camera-ui-measurements.md) records provisional
-  camera layout metrics and the physical-device comparison procedure.
-- [`specs/tap-to-focus.md`](specs/tap-to-focus.md) defines the proposed shared
-  Tap to Focus behavior for Legacy and Classic.
-- [`phase3-delivery.md`](phase3-delivery.md) remains the detailed transfer
-  contract and physical-device acceptance list.
-- [`phase4-5-delivery.md`](phase4-5-delivery.md) remains the detailed download,
-  assembly, PhotoKit, and recovery contract.
+### `reference/`
 
-## Build notes
+Current system facts and verification boundaries:
 
-- [`ios6-build-environment.md`](ios6-build-environment.md) records the archived
-  Xcode/iOS SDK boundary. A current-SDK compile check is not an old-device build.
+- [`architecture.md`](reference/architecture.md) — components, ownership, and data flow.
+- [`protocol-v1.md`](reference/protocol-v1.md) — human-readable Manifest V1 rules.
+- [`asset-storage.md`](reference/asset-storage.md) — immutable camera-side asset layout.
+- [`live-photo-assembly.md`](reference/live-photo-assembly.md) — paired-media output contract.
+- [`verification-guide.md`](reference/verification-guide.md) — evidence levels and verification index.
 
-## Historical phase records
+### `guides/`
 
-These files explain earlier scope and decisions. They should not be used alone
-to determine current completion status.
+Task-oriented operational guidance:
 
-- [`phase1-audit.md`](phase1-audit.md): state found before Phase 1 and its design decisions.
-- [`phase2-plan.md`](phase2-plan.md): original motion-capture delivery plan.
-- [`phase0-2-completion-audit.md`](phase0-2-completion-audit.md): Phase 0-2 repository audit snapshot.
-- [`phase0-5-review.md`](phase0-5-review.md): dated cross-phase correctness review.
+- [`ios-6-build-environment.md`](guides/ios-6-build-environment.md) — archived toolchain and device-build requirements.
 
-## Maintenance rule
+### `specifications/`
 
-New feature work should add or update one active specification and the central
-test plan. Avoid copying the same acceptance criteria into a new phase file;
-link to the source-of-truth document instead. Keep delivery snapshots only when
-their historical decisions remain useful.
+Feature behavior, implementation boundaries, and acceptance criteria:
+
+- [`camera-ui-measurements.md`](specifications/camera-ui-measurements.md)
+- [`capture-and-storage.md`](specifications/capture-and-storage.md)
+- [`tap-to-focus.md`](specifications/tap-to-focus.md)
+- [`asset-preview-paging.md`](specifications/asset-preview-paging.md)
+- [`lan-transfer.md`](specifications/lan-transfer.md)
+- [`modern-import-workflow.md`](specifications/modern-import-workflow.md)
+
+### `history/`
+
+Historical scope, decisions, validation, and remaining acceptance by phase:
+
+- [`history/README.md`](history/README.md) provides the complete Phase 0–5 map.
+- `history/phase-00-*.md` through `history/phase-05-*.md` provide one consistent
+  scope summary per phase.
+- Earlier plan, audit, and review findings are consolidated into their owning
+  phase; exact previous wording remains available through Git history.
+
+## Document metadata
+
+Every Markdown document begins with YAML front matter using these fields:
+
+| Field | Meaning |
+| --- | --- |
+| `title` | Human-readable document name |
+| `status` | `current`, `provisional`, `implemented-pending-device-validation`, or `historical` |
+| `type` | `index`, `reference`, `guide`, `specification`, or `history` |
+| `reviewed` | Review date for a dated snapshot; omit when no reliable date is recorded |
+
+## Maintenance rules
+
+1. Use lowercase kebab-case filenames and descriptive names rather than only a phase number.
+2. Update an existing current reference or specification before creating a new document.
+3. Keep one source for each acceptance criterion and link to it elsewhere.
+4. Consolidate superseded plans and dated reviews into the owning Phase history;
+   preserve their conclusions and rely on Git for exact earlier wording.
+5. Distinguish repository checks, current-SDK builds, simulator tests, archived-toolchain builds, and physical-device acceptance.

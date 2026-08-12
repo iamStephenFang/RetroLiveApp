@@ -40,7 +40,7 @@ Both camera targets use Objective-C and ARC. The importer is a SwiftUI applicati
 3. The importer pairs with the camera, downloads immutable resources, and verifies their declared byte lengths and SHA-256 hashes.
 4. For a motion asset, the importer writes a shared content identifier and still-image-time metadata into a separate working copy before submitting the pair to PhotoKit. A photo-only asset is imported as a normal photo.
 
-The original files on the camera and the verified download cache are never edited in place. The cross-device contract is defined by [Protocol V1](docs/protocol.md), with [`protocol/manifest.schema.json`](protocol/manifest.schema.json) as the normative Manifest specification.
+The original files on the camera and the verified download cache are never edited in place. The cross-device contract is described by [Protocol V1](docs/reference/protocol-v1.md), with [`protocol/manifest.schema.json`](protocol/manifest.schema.json) as the normative Manifest specification.
 
 ## Build from source
 
@@ -65,7 +65,7 @@ The importer can be built in the simulator, but Bonjour, local-network transfer,
 
 ### Legacy and Classic cameras
 
-1. Read [the legacy build-environment notes](docs/ios6-build-environment.md).
+1. Read [the legacy build-environment notes](docs/guides/ios-6-build-environment.md).
 2. Open `legacy-camera/RetroLiveCamera.xcodeproj` with the toolchain appropriate for the target device.
 3. Choose either the `RetroLiveCamera` or `RetroLiveClassic` scheme.
 4. Configure a signing identity and, if necessary, a unique bundle identifier.
@@ -132,7 +132,7 @@ Bonjour + paired read-only HTTP
 CameraAPIClient -> DownloadStore -> LivePhotoAssembler -> PhotoLibraryImporter
 ```
 
-For component ownership and data boundaries, read [Architecture](docs/architecture.md). For the on-disk representation, read [Asset format](docs/asset-format.md) and [Live Photo format](docs/live-photo-format.md).
+For component ownership and data boundaries, read [Architecture](docs/reference/architecture.md). For the on-disk representation, read [Asset storage](docs/reference/asset-storage.md) and the [Live Photo assembly contract](docs/reference/live-photo-assembly.md).
 The [documentation guide](docs/README.md) identifies current specifications,
 acceptance criteria, build notes, and historical phase records.
 
@@ -209,7 +209,7 @@ find legacy-camera/RetroLiveCamera modern-importer/RetroLiveImporter \
 git diff --check
 ```
 
-The full automated and physical-device matrix is in [the test plan](docs/test-plan.md). When building both camera schemes in parallel, give them different `-derivedDataPath` values to avoid Xcode's build-database lock.
+The verification levels and feature-specific acceptance indexes are in the [verification guide](docs/reference/verification-guide.md). When building both camera schemes in parallel, give them different `-derivedDataPath` values to avoid Xcode's build-database lock.
 
 ## Project status
 
@@ -223,7 +223,7 @@ The following checks remain hardware- or environment-dependent:
 - Bonjour discovery and transfer between physical devices, including interrupted Wi-Fi and capture/download concurrency; and
 - PhotoKit persistence and Live Photo playback on a physical modern iPhone.
 
-The detailed acceptance boundary is tracked in the [test plan](docs/test-plan.md).
+Detailed acceptance criteria are owned by the feature specifications linked from the [verification guide](docs/reference/verification-guide.md).
 
 ## Contributing and support
 

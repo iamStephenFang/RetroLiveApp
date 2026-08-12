@@ -1,12 +1,24 @@
-# Phase 4 and Phase 5 Delivery Plan
+---
+title: Modern Import Workflow
+status: implemented-pending-device-validation
+type: specification
+---
+
+# Modern Import Workflow
 
 ## Product boundary
 
-Phase 4 turns the modern iOS application into a verified downloader for the Phase 3 read-only API. Phase 5 converts a verified photo-plus-motion download into new paired resources and imports them into Photos as one Live Photo. A photo-only fallback is imported as a normal photo.
+The modern importer discovers and pairs with a camera, downloads committed assets
+through the read-only API, and commits only verified resources to its immutable
+cache. It then converts a verified photo-plus-motion asset into new paired
+resources and imports them into Photos as one Live Photo. A photo-only fallback
+is imported as a normal photo.
 
-The immutable files under Downloads/Assets are never edited. Phase 5 writes generated resources under Assembly/{assetId}, validates their identity and timing, and only then calls PhotoKit.
+The immutable files under `Downloads/Assets` are never edited. Assembly writes
+generated resources under `Assembly/{assetId}`, validates their identity and
+timing, and only then calls PhotoKit.
 
-## Phase 4: Discover, pair, download, verify
+## Discover, pair, download, and verify
 
 ### Technical design
 
@@ -39,11 +51,11 @@ The immutable files under Downloads/Assets are never edited. Phase 5 writes gene
 6. Lose and restore Wi-Fi, stop and restart camera sharing, and recover through a clear retry path.
 7. Verify progress remains responsive and cache cleanup never modifies camera-side originals.
 
-## Phase 5: Assemble and import
+## Assemble and import
 
 ### Goal and input contract
 
-Phase 5 starts only from a Phase 4 `CachedAsset` whose Manifest, byte lengths, and
+Assembly starts only from a `CachedAsset` whose Manifest, byte lengths, and
 SHA-256 values have just been validated. It produces either one normal photo or
 one Live Photo in the system Photos library. It does not repair corrupt source
 media, infer a missing still time, or fabricate motion for a photo-only asset.
@@ -58,13 +70,12 @@ The following preconditions are enforced before PhotoKit is called:
    than the actual MOV duration. The actual media duration is authoritative when
    it differs slightly from the Manifest duration.
 4. A photo-only Manifest has no motion input or generated paired-video output.
-5. Phase 5 has sufficient free space for a second JPEG and remuxed MOV. A storage
-   failure is reported without deleting the verified Phase 4 cache.
+5. The device has sufficient free space for a second JPEG and remuxed MOV. A
+   storage failure is reported without deleting the verified download cache.
 
 ### Current baseline and remaining gap
 
-The implementation now covers the main correctness boundaries in the Phase 5
-design:
+The implementation now covers the main correctness boundaries in this design:
 
 - `LivePhotoAssembler` uses attempt-scoped staging, removes abandoned attempts,
   safely replaces committed output, and reopens generated JPEG/MOV resources to
@@ -81,8 +92,8 @@ design:
 
 The remaining delivery gap is evidence rather than known transactional logic:
 synthetic-media assembly tests, mock PhotoKit coordinator tests, and the physical
-device acceptance matrix below are still required before declaring Phase 5
-production-complete.
+device acceptance matrix below are still required before declaring the import
+workflow production-complete.
 
 Implementation is delivered in the following merge order so each slice has an
 independent verification gate:
@@ -166,7 +177,7 @@ independent verification gate:
 
 PhotoKit and the local filesystem cannot participate in one atomic transaction.
 With add-only permission the app also cannot scan Photos after a crash to discover
-whether an interrupted submission succeeded. Phase 5 therefore uses a durable
+whether an interrupted submission succeeded. The importer therefore uses a durable
 journal instead of claiming impossible cross-system atomicity.
 
 The per-asset states are:
@@ -196,8 +207,8 @@ notImported -> assembling -> ready -> submitting -> imported
 #### P5.6 UI, cancellation, and diagnostics
 
 - Show distinct row states for assembling, awaiting Photos permission, importing,
-  imported, retryable failure, and result-needs-confirmation. Phase 4 download
-  progress remains separate from Phase 5 state.
+  imported, retryable failure, and result-needs-confirmation. Download progress
+  remains separate from assembly and import state.
 - Error text identifies the failed stage and provides only valid actions: retry,
   open Settings, or confirm/re-import. It must not label an uncertain PhotoKit
   submission as failed.
@@ -234,9 +245,9 @@ tests and prevents SwiftUI from becoming the transaction owner.
 
 ### Repository delivery standard
 
-Phase 5 is repository-complete only when all of the following are true:
+The import workflow is repository-complete only when all of the following are true:
 
-1. **Source isolation:** no Phase 5 success, failure, cancellation, cleanup, or
+1. **Source isolation:** no assembly/import success, failure, cancellation, cleanup, or
    retry changes any byte or filename under `Downloads/Assets`.
 2. **Transactional output:** abandoned staging is recoverable and committing a
    replacement cannot destroy the last valid assembly on a failed move.
@@ -259,7 +270,7 @@ Phase 5 is repository-complete only when all of the following are true:
 9. **Testability:** filesystem roots, PhotoKit adapter, journal, and attempt ID are
    injectable. Tests do not depend on the user's Photos library.
 10. **Build quality:** the importer app and test bundle compile with warnings
-    treated as errors for changed Phase 5 files; focused tests, `plutil -lint`,
+    treated as errors for changed import-workflow files; focused tests, `plutil -lint`,
     and `git diff --check` pass.
 
 ### Automated verification matrix
@@ -308,10 +319,14 @@ asset IDs, screenshots or screen recordings, and pass/fail notes.
    suite and confirm no source byte was modified.
 10. Relaunch the app and verify imported, retryable, and needs-confirmation states
     are restored from durable data rather than inferred from the current UI.
+11. Import one motion asset for each `4:3`, `1:1`, and `16:9` capture ratio.
+    Verify that the generated JPEG and MOV share the requested display ratio,
+    retain valid duration/audio and still-time metadata, show no still-to-motion
+    framing jump in Photos, and leave cached source hashes unchanged.
 
-### Phase 5 definition of done
+### Definition of done
 
-Phase 5 is complete only when the repository delivery standard passes, the
+The import workflow is complete only when the repository delivery standard passes, the
 physical-device acceptance sheet is attached to the release record, and every
 failure or unperformed case is listed explicitly. Simulator compilation alone is
 not delivery evidence for PhotoKit persistence or Live Photo playback.

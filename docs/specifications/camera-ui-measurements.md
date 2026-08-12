@@ -1,4 +1,10 @@
-# Camera UI Measurement Spec
+---
+title: Camera UI Measurements
+status: provisional
+type: specification
+---
+
+# Camera UI Measurements
 
 This file separates current implementation metrics from pixel-accepted measurements. Values marked **provisional** must be replaced or confirmed from an exact-device native Camera screenshot.
 
@@ -11,7 +17,7 @@ This file separates current implementation metrics from pixel-accepted measureme
 ## Current layout metrics
 
 | Metric | iPhone 4S 320×480 | iPhone 5/5s 320×568 | iPhone 6 375×667 |
-|---|---:|---:|---:|
+| --- | ---: | ---: | ---: |
 | Legacy top chrome | 44 | 44 | n/a |
 | Legacy bottom chrome | 88 | 96 | n/a |
 | Legacy shutter visual frame | 76 | 76 | n/a |

@@ -1,3 +1,9 @@
+---
+title: iOS 6 Build Environment
+status: current
+type: guide
+---
+
 # iOS 6 Build Environment
 
 The legacy target is Objective-C/UIKit with `IPHONEOS_DEPLOYMENT_TARGET = 6.0` and uses only APIs available on iOS 6.

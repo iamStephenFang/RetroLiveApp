@@ -1,10 +1,16 @@
-# Phase 3 Delivery: Read-only LAN Transfer
+---
+title: Read-only LAN Transfer
+status: implemented-pending-device-validation
+type: specification
+---
+
+# Read-only LAN Transfer
 
 ## Goal
 
-Phase 3 makes every committed RetroLive asset downloadable from a modern device on the same local network. It does not capture motion, implement the modern import UI, assemble Live Photos, write to PhotoKit, upload files, or remotely delete assets.
+The transfer feature makes every committed RetroLive asset downloadable from a modern device on the same local network. It does not capture motion, implement the modern import UI, assemble Live Photos, write to PhotoKit, upload files, or remotely delete assets.
 
-Phase 3 serves both Phase 2 photo-plus-motion assets and the supported photo-only fallback. The motion endpoint exists only when the committed asset contains motion.mov; a photo-only asset returns 404 for that optional resource without affecting its photo or Manifest.
+It serves both photo-plus-motion assets and the supported photo-only fallback. The motion endpoint exists only when the committed asset contains `motion.mov`; a photo-only asset returns 404 for that optional resource without affecting its photo or Manifest.
 
 ## Product scope
 
@@ -31,7 +37,7 @@ The server is read-only. It exposes health, pairing, device information, paginat
 - Stopping or restarting sharing replaces the router and invalidates the previous token.
 - Asset identifiers must be UUIDs and are resolved through RLVAssetStore; request paths are never appended directly to the filesystem.
 - There are no write, upload, mutation, or delete routes.
-- HTTP protects against accidental or unauthorized API use through pairing, but does not encrypt traffic from another observer on the same network. Phase 3 therefore assumes a trusted local Wi-Fi network.
+- HTTP protects against accidental or unauthorized API use through pairing, but does not encrypt traffic from another observer on the same network. The feature therefore assumes a trusted local Wi-Fi network.
 
 ### HTTP behavior
 
@@ -50,7 +56,7 @@ The server is read-only. It exposes health, pairing, device information, paginat
 
 ## Delivery standard
 
-Phase 3 is code-complete when all repository checks below pass:
+The feature is repository-complete when all checks below pass:
 
 1. Both camera targets contain the same shared transfer sources and the project can be inspected by xcodebuild -list.
 2. The host-side router integration test verifies health, failed and successful pairing, bearer authorization, device information, pagination, manifest/photo access, normal and suffix ranges, 404, and 416.
@@ -58,7 +64,7 @@ Phase 3 is code-complete when all repository checks below pass:
 4. plutil -lint and git diff --check pass.
 5. Both targets compile with the current SDK using the existing host-compatible deployment and architecture overrides.
 
-Phase 3 is device-accepted only after recording all of the following on one iOS 6 Legacy device and one iOS 8 Classic device:
+The feature is device-accepted only after recording all of the following on one iOS 6 Legacy device and one iOS 8 Classic device:
 
 1. A modern phone discovers _retrolive._tcp., pairs using the displayed code, and lists every committed asset in the same order as the local library.
 2. A complete photo download and, when present, a motion download match Manifest byte lengths and SHA-256 values.
