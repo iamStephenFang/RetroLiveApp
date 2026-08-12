@@ -12,6 +12,8 @@
 "camera.ready" = "Ready to capture";
 "camera.shutter" = "Shutter";
 "camera.switch" = "Switch Camera";
+"camera.preview" = "Camera preview";
+"camera.focus.hint" = "Double tap to adjust focus and exposure at the center.";
 "asset.unknown_device" = "Unknown device";
 "asset.share" = "Share";
 "asset.info" = "Photo Information";

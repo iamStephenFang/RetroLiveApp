@@ -5,7 +5,18 @@
 @class RLVDeviceCapabilities;
 @class RLVShutterButton;
 
-@interface RLVBaseCameraViewController : UIViewController <RLVCaptureControllerDelegate, RLVCameraOrientationCoordinatorDelegate, UIActionSheetDelegate>
+@protocol RLVFocusPreviewViewDelegate;
+
+@interface RLVFocusPreviewView : UIView
+@property (nonatomic, assign) id<RLVFocusPreviewViewDelegate> focusDelegate;
+@end
+
+@protocol RLVFocusPreviewViewDelegate <NSObject>
+- (void)focusPreviewViewDidRequestCenterFocus:(RLVFocusPreviewView *)previewView;
+@end
+
+@interface RLVBaseCameraViewController : UIViewController <RLVCaptureControllerDelegate,
+    RLVCameraOrientationCoordinatorDelegate, RLVFocusPreviewViewDelegate, UIActionSheetDelegate>
 
 @property (nonatomic, strong) UIView *previewView;
 @property (nonatomic, strong) UIView *topChromeView;

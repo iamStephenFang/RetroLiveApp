@@ -6,9 +6,23 @@
 #import "RLVShutterButton.h"
 #import <ImageIO/ImageIO.h>
 #import <QuartzCore/QuartzCore.h>
+#import <math.h>
 
 static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 static NSInteger const RLVAspectRatioActionSheetTag = 817;
+
+@implementation RLVFocusPreviewView
+
+- (BOOL)accessibilityActivate
+{
+    if (!self.focusDelegate) return NO;
+    [self.focusDelegate focusPreviewViewDidRequestCenterFocus:self];
+    return YES;
+}
+
+@synthesize focusDelegate = _focusDelegate;
+
+@end
 
 static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
 {
@@ -29,12 +43,19 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
 @property (nonatomic, strong, readwrite) RLVDeviceCapabilities *capabilities;
 @property (nonatomic, strong) UIView *shutterOverlay;
 @property (nonatomic, strong) UIView *liveCaptureIndicator;
+@property (nonatomic, strong) UIView *focusOverlayView;
+@property (nonatomic, strong) UIView *focusReticleView;
 @property (nonatomic, assign, getter=isViewVisible) BOOL viewVisible;
+@property (nonatomic, assign) NSUInteger focusRequestGeneration;
 @property (nonatomic, copy) NSString *thumbnailRequestAssetId;
 @property (nonatomic, copy) NSString *activeAspectRatio;
 - (void)attachPreviewLayerIfNeeded;
 - (void)updatePreviewFrame;
 - (void)configureCameraActions;
+- (void)configureFocusReticle;
+- (void)requestFocusAtPreviewPoint:(CGPoint)point;
+- (void)showFocusReticleAtPreviewPoint:(CGPoint)point;
+- (void)hideFocusReticle;
 - (void)updateThumbnail;
 @end
 
@@ -59,6 +80,7 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
     self.shutterOverlay.userInteractionEnabled = NO;
     [self.previewView addSubview:self.shutterOverlay];
     RLVPinViewToEdges(self.shutterOverlay, self.previewView);
+    [self configureFocusReticle];
     [self configureLiveCaptureIndicator];
 
     __weak RLVBaseCameraViewController *controller = self;
@@ -95,12 +117,16 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
     [self.orientationCoordinator stop];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillResignActiveNotification object:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+    self.focusRequestGeneration += 1;
+    [self hideFocusReticle];
     [self.captureController stopRunning];
 }
 
 - (void)applicationWillResignActive:(NSNotification *)notification
 {
     (void)notification;
+    self.focusRequestGeneration += 1;
+    [self hideFocusReticle];
     [self.captureController interrupt];
 }
 
@@ -135,8 +161,10 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
         height = CGRectGetHeight(bounds);
         width = height * portraitRatio;
     }
-    self.captureController.previewLayer.frame = CGRectIntegral(CGRectMake(
+    CGRect previewFrame = CGRectIntegral(CGRectMake(
         CGRectGetMidX(bounds) - width * 0.5, CGRectGetMidY(bounds) - height * 0.5, width, height));
+    self.captureController.previewLayer.frame = previewFrame;
+    self.focusOverlayView.frame = previewFrame;
 }
 
 - (void)attachPreviewLayerIfNeeded
@@ -176,6 +204,32 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
     [self updateAspectRatioButton];
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(previewTapped:)];
     [self.previewView addGestureRecognizer:tap];
+    self.previewView.isAccessibilityElement = YES;
+    self.previewView.accessibilityTraits = UIAccessibilityTraitButton;
+    self.previewView.accessibilityLabel = NSLocalizedString(@"camera.preview", nil);
+    self.previewView.accessibilityHint = NSLocalizedString(@"camera.focus.hint", nil);
+    if ([self.previewView isKindOfClass:[RLVFocusPreviewView class]]) {
+        [(RLVFocusPreviewView *)self.previewView setFocusDelegate:self];
+    }
+}
+
+- (void)configureFocusReticle
+{
+    self.focusOverlayView = [[UIView alloc] initWithFrame:self.captureController.previewLayer.frame];
+    self.focusOverlayView.backgroundColor = [UIColor clearColor];
+    self.focusOverlayView.clipsToBounds = YES;
+    self.focusOverlayView.userInteractionEnabled = NO;
+    self.focusOverlayView.isAccessibilityElement = NO;
+
+    self.focusReticleView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, 72.0, 72.0)];
+    self.focusReticleView.backgroundColor = [UIColor clearColor];
+    self.focusReticleView.layer.borderColor = [UIColor colorWithRed:1.0 green:0.80 blue:0.0 alpha:1.0].CGColor;
+    self.focusReticleView.layer.borderWidth = 1.0;
+    self.focusReticleView.layer.cornerRadius = 1.0;
+    self.focusReticleView.userInteractionEnabled = NO;
+    self.focusReticleView.hidden = YES;
+    [self.focusOverlayView addSubview:self.focusReticleView];
+    [self.previewView insertSubview:self.focusOverlayView belowSubview:self.shutterOverlay];
 }
 
 - (void)configureLiveCaptureIndicator
@@ -258,6 +312,8 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
     self.activeAspectRatio = [@[@"4:3", @"1:1", @"16:9"] objectAtIndex:buttonIndex];
     [[NSUserDefaults standardUserDefaults] setObject:self.activeAspectRatio forKey:RLVAspectRatioDefaultsKey];
     [[NSUserDefaults standardUserDefaults] synchronize];
+    self.focusRequestGeneration += 1;
+    [self hideFocusReticle];
     [self updateAspectRatioButton];
     [self updatePreviewFrame];
 }
@@ -309,6 +365,8 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
 - (void)cameraSwitchPressed:(id)sender
 {
     (void)sender;
+    self.focusRequestGeneration += 1;
+    [self hideFocusReticle];
     [self.captureController switchCamera];
 }
 
@@ -348,10 +406,70 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
 
 - (void)previewTapped:(UITapGestureRecognizer *)recognizer
 {
-    CGPoint point = [recognizer locationInView:self.previewView];
-    point = [self.previewView.layer convertPoint:point toLayer:self.captureController.previewLayer];
-    CGPoint devicePoint = [self.captureController.previewLayer captureDevicePointOfInterestForPoint:point];
-    [self.captureController focusAtDevicePoint:devicePoint];
+    [self requestFocusAtPreviewPoint:[recognizer locationInView:self.previewView]];
+}
+
+- (void)focusPreviewViewDidRequestCenterFocus:(RLVFocusPreviewView *)previewView
+{
+    (void)previewView;
+    [self requestFocusAtPreviewPoint:CGPointMake(
+        CGRectGetMidX(self.captureController.previewLayer.frame),
+        CGRectGetMidY(self.captureController.previewLayer.frame))];
+}
+
+- (void)requestFocusAtPreviewPoint:(CGPoint)point
+{
+    AVCaptureVideoPreviewLayer *previewLayer = self.captureController.previewLayer;
+    if (self.captureController.state != RLVCaptureStateRunning || !previewLayer ||
+        previewLayer.superlayer != self.previewView.layer ||
+        !CGRectContainsPoint(previewLayer.frame, point)) return;
+
+    CGPoint layerPoint = [self.previewView.layer convertPoint:point toLayer:previewLayer];
+    CGPoint devicePoint = [previewLayer captureDevicePointOfInterestForPoint:layerPoint];
+    if (!isfinite(devicePoint.x) || !isfinite(devicePoint.y) ||
+        devicePoint.x < 0.0 || devicePoint.x > 1.0 ||
+        devicePoint.y < 0.0 || devicePoint.y > 1.0) return;
+
+    NSUInteger requestGeneration = ++self.focusRequestGeneration;
+    __weak RLVBaseCameraViewController *controller = self;
+    [self.captureController focusAndExposeAtDevicePoint:devicePoint
+                                             completion:^(RLVPointOfInterestResult result) {
+        if (!controller || requestGeneration != controller.focusRequestGeneration ||
+            result == RLVPointOfInterestResultNone || !controller.isViewVisible) return;
+        [controller showFocusReticleAtPreviewPoint:point];
+    }];
+}
+
+- (void)showFocusReticleAtPreviewPoint:(CGPoint)point
+{
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideFocusReticle) object:nil];
+    [self.focusReticleView.layer removeAllAnimations];
+    CGPoint localPoint = CGPointMake(point.x - CGRectGetMinX(self.focusOverlayView.frame),
+                                     point.y - CGRectGetMinY(self.focusOverlayView.frame));
+    self.focusReticleView.center = localPoint;
+    self.focusReticleView.hidden = NO;
+    self.focusReticleView.alpha = 1.0;
+    self.focusReticleView.transform = CGAffineTransformMakeScale(1.35, 1.35);
+    [UIView animateWithDuration:0.16 delay:0.0
+                        options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction
+                     animations:^{ self.focusReticleView.transform = CGAffineTransformIdentity; }
+                     completion:nil];
+    [self performSelector:@selector(hideFocusReticle) withObject:nil afterDelay:0.85];
+}
+
+- (void)hideFocusReticle
+{
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideFocusReticle) object:nil];
+    if (self.focusReticleView.hidden) return;
+    [UIView animateWithDuration:0.22 delay:0.0
+                        options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction
+                     animations:^{ self.focusReticleView.alpha = 0.0; }
+                     completion:^(BOOL finished) {
+        if (finished) {
+            self.focusReticleView.hidden = YES;
+            self.focusReticleView.transform = CGAffineTransformIdentity;
+        }
+    }];
 }
 
 - (void)captureController:(RLVCaptureController *)controller didChangeState:(RLVCaptureState)state
@@ -359,6 +477,10 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
     self.shutterButton.enabled = state == RLVCaptureStateRunning;
     self.livePhotoButton.enabled = state != RLVCaptureStateCapturing;
     self.shutterButton.capturing = state == RLVCaptureStateCapturing;
+    if (state != RLVCaptureStateRunning) {
+        self.focusRequestGeneration += 1;
+        [self hideFocusReticle];
+    }
     if (state == RLVCaptureStateCapturing) {
         if (controller.isMotionCaptureEnabled && controller.isRecordingMotion) [self showLiveCaptureIndicator];
         self.shutterOverlay.alpha = 0.72;
@@ -387,6 +509,8 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
 
 - (void)orientationCoordinator:(RLVCameraOrientationCoordinator *)coordinator didUpdateControlTransform:(CGAffineTransform)transform
 {
+    self.focusRequestGeneration += 1;
+    [self hideFocusReticle];
     [self.captureController updateVideoOrientation:coordinator.videoOrientation];
     AVCaptureConnection *previewConnection = self.captureController.previewLayer.connection;
     if ([previewConnection isVideoOrientationSupported]) {

@@ -1,6 +1,6 @@
 # Tap to Focus Specification
 
-- Status: Proposed for implementation
+- Status: Implemented; physical-device acceptance pending
 - Targets: `RetroLiveCamera` (iOS 6) and `RetroLiveClassic` (iOS 7/8)
 - Owner boundary: shared camera UI plus `RLVCaptureController`
 
@@ -15,22 +15,26 @@ neither ignores the tap.
 This behavior belongs only to the camera preview. It does not change the saved
 Manifest, asset format, motion timing, transfer protocol, or importer.
 
-## Current repository state
+## Implementation
 
-The shared camera already contains the basic path:
+The shared camera implements this path:
 
 1. `RLVBaseCameraViewController` installs a tap recognizer on `previewView`.
 2. It converts the view point into `AVCaptureVideoPreviewLayer` coordinates.
 3. `captureDevicePointOfInterestForPoint:` converts that point to normalized
    device coordinates while accounting for preview geometry and `videoGravity`.
-4. `RLVCaptureController` sets `focusPointOfInterest`, one-shot autofocus, and an
-   exposure point while holding the device configuration lock.
+4. `RLVCaptureController` serializes the request on its session queue, configures
+   supported focus and exposure independently while holding the device lock, and
+   reports the accepted capabilities to the UI.
+5. The shared camera UI shows one clipped yellow reticle only for an accepted
+   request. Camera switching, capture, and leaving the view invalidate pending
+   reticle feedback.
+6. Subject-area changes, camera switching, interruption recovery, and session
+   restart restore centered continuous automatic behavior.
 
-This is a useful skeleton, not the completed feature. It currently accepts taps
-outside the actual preview-layer frame, performs device configuration from the
-caller thread rather than the capture session queue, couples exposure support to
-focus support, leaves the post-focus reset behavior implicit, and gives no
-visible feedback.
+Repository source builds and localization lint pass. Exact focus/exposure
+behavior and visual fidelity remain pending on the intended iOS 6 and iOS 7/8
+devices.
 
 ## Compatibility decision
 

@@ -11,6 +11,12 @@ typedef NS_ENUM(NSInteger, RLVCaptureState) {
     RLVCaptureStateFailed
 };
 
+typedef NS_OPTIONS(NSUInteger, RLVPointOfInterestResult) {
+    RLVPointOfInterestResultNone = 0,
+    RLVPointOfInterestResultFocus = 1 << 0,
+    RLVPointOfInterestResultExposure = 1 << 1
+};
+
 @protocol RLVCaptureControllerDelegate;
 
 @interface RLVCaptureController : NSObject
@@ -34,7 +40,8 @@ typedef NS_ENUM(NSInteger, RLVCaptureState) {
 - (void)updateVideoOrientation:(AVCaptureVideoOrientation)videoOrientation;
 - (void)switchCamera;
 - (void)setFlashMode:(AVCaptureFlashMode)flashMode;
-- (void)focusAtDevicePoint:(CGPoint)devicePoint;
+- (void)focusAndExposeAtDevicePoint:(CGPoint)devicePoint
+                         completion:(void (^)(RLVPointOfInterestResult result))completion;
 
 @end
 

@@ -35,7 +35,7 @@
     UIView *root = [[UIView alloc] initWithFrame:bounds];
     root.backgroundColor = [UIColor blackColor];
 
-    self.previewView = [[UIView alloc] initWithFrame:CGRectZero];
+    self.previewView = [[RLVFocusPreviewView alloc] initWithFrame:CGRectZero];
     self.previewView.backgroundColor = [UIColor blackColor];
     self.previewView.clipsToBounds = YES;
     [root addSubview:self.previewView];
@@ -74,7 +74,7 @@
 
     CGFloat screenLongEdge = MAX(CGRectGetWidth(bounds), CGRectGetHeight(bounds));
     BOOL compactCameraChrome = screenLongEdge <= 480.0;
-    CGSize shutterSize = compactCameraChrome ? CGSizeMake(76.0, 44.0) : CGSizeMake(76.0, 76.0);
+    CGSize shutterSize = compactCameraChrome ? CGSizeMake(96.0, 48.0) : CGSizeMake(76.0, 76.0);
     CGFloat bottomHeight = compactCameraChrome ? 50.0 : 96.0;
     CGFloat sideControlSize = compactCameraChrome ? 34.0 : 48.0;
     if (compactCameraChrome) self.thumbnailButton.layer.cornerRadius = 1.0;

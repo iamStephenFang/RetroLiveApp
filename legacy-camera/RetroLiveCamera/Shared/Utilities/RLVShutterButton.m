@@ -82,7 +82,7 @@
 - (void)drawCompactCameraButtonInRect:(CGRect)rect
 {
     CGContextRef context = UIGraphicsGetCurrentContext();
-    CGRect buttonRect = CGRectInset(rect, 2.0, 7.0);
+    CGRect buttonRect = CGRectInset(rect, 2.0, 4.0);
     CGFloat radius = CGRectGetHeight(buttonRect) * 0.5;
     UIBezierPath *buttonPath = [UIBezierPath bezierPathWithRoundedRect:buttonRect cornerRadius:radius];
 

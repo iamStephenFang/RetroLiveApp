@@ -9,7 +9,7 @@
 {
     UIView *root = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     root.backgroundColor = [UIColor blackColor];
-    self.previewView = [[UIView alloc] initWithFrame:CGRectZero];
+    self.previewView = [[RLVFocusPreviewView alloc] initWithFrame:CGRectZero];
     self.previewView.backgroundColor = [UIColor blackColor];
     self.previewView.clipsToBounds = YES;
     [root addSubview:self.previewView];

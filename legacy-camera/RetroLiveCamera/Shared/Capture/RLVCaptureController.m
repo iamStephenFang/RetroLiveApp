@@ -30,6 +30,10 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 @property (nonatomic, assign) BOOL wantsSessionRunning;
 @property (nonatomic, assign) BOOL cameraSwitchPending;
 @property (nonatomic, assign) BOOL orientationRestartPending;
+- (void)resetFocusAndExposureForDevice:(AVCaptureDevice *)device;
+- (void)subjectAreaDidChange:(NSNotification *)notification;
+- (void)finishPointOfInterestRequest:(void (^)(RLVPointOfInterestResult result))completion
+                              result:(RLVPointOfInterestResult)result;
 @end
 
 @implementation RLVCaptureController
@@ -114,6 +118,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
                 device.flashMode = AVCaptureFlashModeAuto;
                 [device unlockForConfiguration];
             }
+            [self resetFocusAndExposureForDevice:device];
             [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(sessionRuntimeError:)
                                                          name:AVCaptureSessionRuntimeErrorNotification object:session];
         }
@@ -135,10 +140,12 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 {
     dispatch_async(_sessionQueue, ^{
         self.wantsSessionRunning = YES;
+        BOOL wasRunning = [self.session isRunning];
         if (self.session && ![self.session isRunning]) {
             [self.session startRunning];
         }
         if ([self.session isRunning]) {
+            if (!wasRunning) [self resetFocusAndExposureForDevice:self.videoInput.device];
             [self startRollingRecording];
             dispatch_async(dispatch_get_main_queue(), ^{ [self updateState:RLVCaptureStateRunning]; });
         }
@@ -149,6 +156,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 {
     dispatch_async(_sessionQueue, ^{
         self.wantsSessionRunning = NO;
+        [self resetFocusAndExposureForDevice:self.videoInput.device];
         if ([self.movieFileOutput isRecording]) [self.movieFileOutput stopRecording];
         if ([self.session isRunning]) {
             [self.session stopRunning];
@@ -161,6 +169,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 {
     dispatch_async(_sessionQueue, ^{
         self.wantsSessionRunning = NO;
+        [self resetFocusAndExposureForDevice:self.videoInput.device];
         if ([self.movieFileOutput isRecording]) [self.movieFileOutput stopRecording];
         if ([self.session isRunning]) [self.session stopRunning];
         dispatch_async(dispatch_get_main_queue(), ^{ [self updateState:RLVCaptureStateInterrupted]; });
@@ -295,6 +304,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 {
         AVCaptureDevicePosition desired = self.cameraPosition == AVCaptureDevicePositionBack
             ? AVCaptureDevicePositionFront : AVCaptureDevicePositionBack;
+        AVCaptureDevice *previousDevice = self.videoInput.device;
         AVCaptureDevice *device = [self cameraWithPosition:desired];
         NSError *error = nil;
         AVCaptureDeviceInput *input = device ? [AVCaptureDeviceInput deviceInputWithDevice:device error:&error] : nil;
@@ -303,6 +313,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
             self.cameraSwitchPending = NO;
             return;
         }
+        [self resetFocusAndExposureForDevice:previousDevice];
         [self.session beginConfiguration];
         [self.session removeInput:self.videoInput];
         if ([self.session canAddInput:input]) {
@@ -315,6 +326,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
         }
         [self.session commitConfiguration];
         if (self.cameraPosition == desired) {
+            [self resetFocusAndExposureForDevice:device];
             dispatch_async(dispatch_get_main_queue(), ^{
                 if ([self.delegate respondsToSelector:@selector(captureController:didChangeCameraPosition:)]) {
                     [self.delegate captureController:self didChangeCameraPosition:desired];
@@ -546,22 +558,108 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
     }
 }
 
-- (void)focusAtDevicePoint:(CGPoint)devicePoint
+- (void)focusAndExposeAtDevicePoint:(CGPoint)devicePoint
+                         completion:(void (^)(RLVPointOfInterestResult result))completion
 {
-    AVCaptureDevice *device = self.videoInput.device;
-    NSError *error = nil;
-    if ([device isFocusPointOfInterestSupported] && [device isFocusModeSupported:AVCaptureFocusModeAutoFocus] &&
-        [device lockForConfiguration:&error]) {
-        device.focusPointOfInterest = devicePoint;
-        device.focusMode = AVCaptureFocusModeAutoFocus;
-        if ([device isExposurePointOfInterestSupported] && [device isExposureModeSupported:AVCaptureExposureModeContinuousAutoExposure]) {
-            device.exposurePointOfInterest = devicePoint;
-            device.exposureMode = AVCaptureExposureModeContinuousAutoExposure;
-        }
-        [device unlockForConfiguration];
-    } else if (error) {
-        [self notifyError:error];
+    if (!isfinite(devicePoint.x) || !isfinite(devicePoint.y) ||
+        devicePoint.x < 0.0 || devicePoint.x > 1.0 ||
+        devicePoint.y < 0.0 || devicePoint.y > 1.0) {
+        [self finishPointOfInterestRequest:completion result:RLVPointOfInterestResultNone];
+        return;
     }
+
+    dispatch_async(_sessionQueue, ^{
+        if (!self.wantsSessionRunning || ![self.session isRunning] ||
+            self.cameraSwitchPending || self.pendingEvent) {
+            [self finishPointOfInterestRequest:completion result:RLVPointOfInterestResultNone];
+            return;
+        }
+
+        AVCaptureDevice *device = self.videoInput.device;
+        BOOL canFocus = [device isFocusPointOfInterestSupported] &&
+            [device isFocusModeSupported:AVCaptureFocusModeAutoFocus];
+        BOOL canAutoExpose = [device isExposurePointOfInterestSupported] &&
+            [device isExposureModeSupported:AVCaptureExposureModeAutoExpose];
+        BOOL canContinuouslyExpose = [device isExposurePointOfInterestSupported] &&
+            [device isExposureModeSupported:AVCaptureExposureModeContinuousAutoExposure];
+        if (!canFocus && !canAutoExpose && !canContinuouslyExpose) {
+            [self finishPointOfInterestRequest:completion result:RLVPointOfInterestResultNone];
+            return;
+        }
+
+        NSError *error = nil;
+        if (![device lockForConfiguration:&error]) {
+            NSLog(@"RetroLive: unable to configure focus/exposure: %@", [error localizedDescription]);
+            [self finishPointOfInterestRequest:completion result:RLVPointOfInterestResultNone];
+            return;
+        }
+
+        RLVPointOfInterestResult result = RLVPointOfInterestResultNone;
+        if (canFocus) {
+            device.focusPointOfInterest = devicePoint;
+            device.focusMode = AVCaptureFocusModeAutoFocus;
+            result |= RLVPointOfInterestResultFocus;
+        }
+        if (canAutoExpose || canContinuouslyExpose) {
+            device.exposurePointOfInterest = devicePoint;
+            device.exposureMode = canAutoExpose ? AVCaptureExposureModeAutoExpose
+                                                : AVCaptureExposureModeContinuousAutoExposure;
+            result |= RLVPointOfInterestResultExposure;
+        }
+        device.subjectAreaChangeMonitoringEnabled = YES;
+        [device unlockForConfiguration];
+
+        [[NSNotificationCenter defaultCenter] removeObserver:self
+            name:AVCaptureDeviceSubjectAreaDidChangeNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(subjectAreaDidChange:)
+            name:AVCaptureDeviceSubjectAreaDidChangeNotification object:device];
+        [self finishPointOfInterestRequest:completion result:result];
+    });
+}
+
+- (void)resetFocusAndExposureForDevice:(AVCaptureDevice *)device
+{
+    if (!device) return;
+
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+        name:AVCaptureDeviceSubjectAreaDidChangeNotification object:device];
+
+    BOOL canFocus = [device isFocusPointOfInterestSupported] &&
+        [device isFocusModeSupported:AVCaptureFocusModeContinuousAutoFocus];
+    BOOL canExpose = [device isExposurePointOfInterestSupported] &&
+        [device isExposureModeSupported:AVCaptureExposureModeContinuousAutoExposure];
+    NSError *error = nil;
+    if (![device lockForConfiguration:&error]) {
+        if (error) NSLog(@"RetroLive: unable to reset focus/exposure: %@", [error localizedDescription]);
+        return;
+    }
+    device.subjectAreaChangeMonitoringEnabled = NO;
+    CGPoint centerPoint = CGPointMake(0.5, 0.5);
+    if (canFocus) {
+        device.focusPointOfInterest = centerPoint;
+        device.focusMode = AVCaptureFocusModeContinuousAutoFocus;
+    }
+    if (canExpose) {
+        device.exposurePointOfInterest = centerPoint;
+        device.exposureMode = AVCaptureExposureModeContinuousAutoExposure;
+    }
+    [device unlockForConfiguration];
+}
+
+- (void)subjectAreaDidChange:(NSNotification *)notification
+{
+    AVCaptureDevice *device = [notification object];
+    dispatch_async(_sessionQueue, ^{
+        if (device != self.videoInput.device) return;
+        [self resetFocusAndExposureForDevice:device];
+    });
+}
+
+- (void)finishPointOfInterestRequest:(void (^)(RLVPointOfInterestResult result))completion
+                              result:(RLVPointOfInterestResult)result
+{
+    if (!completion) return;
+    dispatch_async(dispatch_get_main_queue(), ^{ completion(result); });
 }
 
 - (AVCaptureDevice *)cameraWithPosition:(AVCaptureDevicePosition)position
