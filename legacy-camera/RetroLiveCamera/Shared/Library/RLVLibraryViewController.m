@@ -53,6 +53,7 @@
 @end
 
 @interface RLVLibraryViewController () <UIAlertViewDelegate>
+@property (nonatomic, strong) UICollectionViewFlowLayout *flowLayout;
 @property (nonatomic, strong) NSArray *assets;
 @property (nonatomic, strong) NSCache *thumbnailCache;
 @property (nonatomic, strong) NSOperationQueue *thumbnailQueue;
@@ -76,6 +77,7 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
     layout.sectionInset = UIEdgeInsetsMake(2, 2, 2, 2);
     self = [super initWithCollectionViewLayout:layout];
     if (self) {
+        _flowLayout = layout;
         self.title = NSLocalizedString(@"library.title", nil);
     }
     return self;
@@ -151,9 +153,10 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
 
 - (void)updateSelectionToolbarAnimated:(BOOL)animated
 {
-    CGFloat height = 44.0;
+    CGFloat height = CGRectGetHeight(self.tabBarController.tabBar.frame);
+    if (height <= 0.0) height = 49.0;
     CGRect bounds = self.navigationController.view.bounds;
-    self.selectionToolbar.frame = CGRectMake(0.0, CGRectGetHeight(bounds) - height,
+    self.selectionToolbar.frame = CGRectMake(CGRectGetMinX(bounds), CGRectGetMaxY(bounds) - height,
         CGRectGetWidth(bounds), height);
     UIEdgeInsets contentInset = self.normalContentInset;
     if (self.isSelectingAssets) contentInset.bottom = height;
@@ -186,7 +189,7 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
     [super viewDidLayoutSubviews];
     CGFloat width = CGRectGetWidth(self.collectionView.bounds);
     CGFloat item = floor((width - 8.0) / 3.0);
-    ((UICollectionViewFlowLayout *)self.collectionViewLayout).itemSize = CGSizeMake(item, item);
+    self.flowLayout.itemSize = CGSizeMake(item, item);
     if (self.isSelectingAssets) [self updateSelectionToolbarAnimated:NO];
 }
 
@@ -356,6 +359,7 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
 }
 
 @synthesize assets = _assets;
+@synthesize flowLayout = _flowLayout;
 @synthesize thumbnailCache = _thumbnailCache;
 @synthesize thumbnailQueue = _thumbnailQueue;
 @synthesize reloadGeneration = _reloadGeneration;

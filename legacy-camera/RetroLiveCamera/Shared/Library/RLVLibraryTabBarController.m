@@ -93,11 +93,20 @@ static UIImage *RLVTransferTabImage(void)
         self.initialAssets = [assets copy];
         self.initialSelectedIndex = selectedIndex;
         self.view.backgroundColor = [UIColor blackColor];
-        self.tabBar.barStyle = UIBarStyleBlack;
-        self.tabBar.tintColor = [UIColor colorWithRed:1.0 green:0.78 blue:0.0 alpha:1.0];
+        UIColor *accentColor = [UIColor colorWithRed:1.0 green:0.78 blue:0.0 alpha:1.0];
         if ([self.tabBar respondsToSelector:@selector(setBarTintColor:)]) {
+            // iOS 7 and later: dark translucent material with a tinted
+            // selected item.
+            self.tabBar.barStyle = UIBarStyleBlack;
+            self.tabBar.tintColor = accentColor;
             self.tabBar.barTintColor = [UIColor blackColor];
             self.tabBar.translucent = YES;
+        } else {
+            // iOS 6: tintColor controls the tab bar background rather than
+            // the selected item. selectedImageTintColor is available on the
+            // iOS 6 runtime and preserves the yellow selection treatment.
+            self.tabBar.tintColor = [UIColor blackColor];
+            self.tabBar.selectedImageTintColor = accentColor;
         }
     }
     return self;
@@ -184,10 +193,17 @@ static UIImage *RLVTransferTabImage(void)
     tabBarFrame.size.height = tabBarHeight;
     self.tabBar.frame = tabBarFrame;
 
-    UIViewController *selectedController = self.selectedViewController;
-    CGRect contentFrame = hidden ? bounds : CGRectMake(0.0, 0.0,
-        CGRectGetWidth(bounds), CGRectGetMinY(tabBarFrame));
-    selectedController.view.frame = contentFrame;
+    BOOL tabBarOverlaysContent = [self.tabBar respondsToSelector:@selector(isTranslucent)] &&
+        self.tabBar.isTranslucent;
+    if (hidden || tabBarOverlaysContent) {
+        // iOS 7 and later: translucent bars overlay full-height content. This
+        // also keeps the grid height stable during batch-mode transitions.
+        self.selectedViewController.view.frame = bounds;
+    } else {
+        // iOS 6: the tab bar is opaque, so visible content ends above it.
+        self.selectedViewController.view.frame = CGRectMake(0.0, 0.0,
+            CGRectGetWidth(bounds), CGRectGetMinY(tabBarFrame));
+    }
 }
 
 - (void)close:(id)sender
