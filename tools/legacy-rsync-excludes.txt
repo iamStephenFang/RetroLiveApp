@@ -1,11 +1,9 @@
 .DS_Store
-__pycache__/
-*.py[cod]
+.git/
 DerivedData/
 build/
-*.xcuserstate
 xcuserdata/
+*.xcuserstate
 *.xccheckout
 *.xcscmblueprint
 *.moved-aside
-.retrolive-legacy.env

@@ -44,6 +44,7 @@ Current system facts and verification boundaries:
 Task-oriented operational guidance:
 
 - [`ios-6-build-environment.md`](guides/ios-6-build-environment.md) — archived toolchain and device-build requirements.
+- [`remote-legacy-build.md`](guides/remote-legacy-build.md) — one-way source synchronization, remote Xcode builds, and signing.
 
 ### `specifications/`
 

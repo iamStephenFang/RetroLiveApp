@@ -66,10 +66,11 @@ The importer can be built in the simulator, but Bonjour, local-network transfer,
 ### Legacy and Classic cameras
 
 1. Read [the legacy build-environment notes](docs/guides/ios-6-build-environment.md).
-2. Open `legacy-camera/RetroLiveCamera.xcodeproj` with the toolchain appropriate for the target device.
-3. Choose either the `RetroLiveCamera` or `RetroLiveClassic` scheme.
-4. Configure a signing identity and, if necessary, a unique bundle identifier.
-5. Build and run on a physical iPhone. Grant camera, microphone, and local-network access when the OS requests them.
+2. For a modern editing Mac plus an isolated archived-toolchain Mac, follow the [remote legacy build guide](docs/guides/remote-legacy-build.md).
+3. Open `legacy-camera/RetroLiveCamera.xcodeproj` with the toolchain appropriate for the target device.
+4. Choose either the `RetroLiveCamera` or `RetroLiveClassic` scheme.
+5. Configure a signing identity and, if necessary, a unique bundle identifier.
+6. Build and run on a physical iPhone. Grant camera, microphone, and local-network access when the OS requests them.
 
 Do not raise the deployment target or replace legacy APIs merely to make the iOS 6 scheme build in current Xcode. That would stop the build from representing the device it is intended to support.
 
