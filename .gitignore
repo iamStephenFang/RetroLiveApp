@@ -8,4 +8,5 @@ xcuserdata/
 *.xccheckout
 *.xcscmblueprint
 *.moved-aside
-.retrolive-legacy.env
+.retrolive-legacy-sync.env
+.retrolive-legacy-build.env
