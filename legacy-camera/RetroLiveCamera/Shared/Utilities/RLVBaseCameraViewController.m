@@ -24,19 +24,6 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 
 @end
 
-static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
-{
-    if (!image) return nil;
-    UIGraphicsBeginImageContextWithOptions(image.size, NO, image.scale);
-    CGRect rect = CGRectMake(0.0, 0.0, image.size.width, image.size.height);
-    [color setFill];
-    UIRectFill(rect);
-    [image drawInRect:rect blendMode:kCGBlendModeDestinationIn alpha:1.0];
-    UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-    return result;
-}
-
 @interface RLVBaseCameraViewController ()
 @property (nonatomic, strong) RLVCaptureController *captureController;
 @property (nonatomic, strong) RLVCameraOrientationCoordinator *orientationCoordinator;
@@ -235,30 +222,28 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
 - (void)configureLiveCaptureIndicator
 {
     self.liveCaptureIndicator = [[UIView alloc] initWithFrame:CGRectZero];
-    self.liveCaptureIndicator.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.68];
+    self.liveCaptureIndicator.backgroundColor = [UIColor colorWithRed:1.0 green:0.80 blue:0.0 alpha:0.96];
     self.liveCaptureIndicator.layer.cornerRadius = 14.0;
     self.liveCaptureIndicator.hidden = YES;
     self.liveCaptureIndicator.isAccessibilityElement = YES;
     self.liveCaptureIndicator.accessibilityLabel = NSLocalizedString(@"camera.live.capturing", nil);
 
-    UIImageView *icon = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"InterfaceIcons/RLVLiveEffect"]];
-    icon.contentMode = UIViewContentModeCenter;
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
     label.backgroundColor = [UIColor clearColor];
-    label.text = @"LIVE";
-    label.textColor = [UIColor colorWithRed:1.0 green:0.78 blue:0.0 alpha:1.0];
-    label.font = [UIFont boldSystemFontOfSize:11.0];
-    label.textAlignment = NSTextAlignmentLeft;
+    label.text = NSLocalizedString(@"asset.live.badge.live", nil);
+    label.textColor = [UIColor colorWithWhite:0.10 alpha:1.0];
+    label.font = [UIFont boldSystemFontOfSize:13.0];
+    label.textAlignment = NSTextAlignmentCenter;
     label.isAccessibilityElement = NO;
-    [self.liveCaptureIndicator addSubview:icon];
     [self.liveCaptureIndicator addSubview:label];
     [self.previewView addSubview:self.liveCaptureIndicator];
 
-    RLVPrepareViewsForAutoLayout(@[self.liveCaptureIndicator, icon, label]);
-    RLVAddVisualConstraints(self.liveCaptureIndicator, @{@"icon": icon, @"label": label},
-        @[@"H:|-8-[icon(20)]-4-[label]-8-|", @"V:|[icon]|", @"V:|[label]|"]);
+    RLVPrepareViewsForAutoLayout(@[self.liveCaptureIndicator, label]);
+    RLVAddVisualConstraints(self.liveCaptureIndicator, @{@"label": label},
+        @[@"H:|-6-[label]-6-|", @"V:|[label]|"]);
+    CGFloat indicatorWidth = ceil([label.text sizeWithFont:label.font].width + 12.0);
     RLVAddVisualConstraints(self.previewView, @{@"live": self.liveCaptureIndicator},
-        @[@"H:[live(76)]", @"V:|-12-[live(28)]"]);
+        @[[NSString stringWithFormat:@"H:[live(%.0f)]", indicatorWidth], @"V:|-12-[live(28)]"]);
     RLVAlignViews(self.previewView, self.liveCaptureIndicator, NSLayoutAttributeCenterX,
         self.previewView, NSLayoutAttributeCenterX);
 
@@ -354,8 +339,11 @@ static UIImage *RLVTintedImage(UIImage *image, UIColor *color)
     BOOL active = self.captureController.isMotionCaptureEnabled;
     UIColor *color = active ? [UIColor colorWithRed:1.0 green:0.78 blue:0.0 alpha:1.0]
                             : [UIColor colorWithWhite:0.72 alpha:1.0];
-    UIImage *image = RLVTintedImage([UIImage imageNamed:@"InterfaceIcons/RLVLiveEffect"], color);
+    UIImage *image = RLVTintedInterfaceImage([UIImage imageNamed:@"InterfaceIcons/RLVLiveEffect"], color);
+    [self.livePhotoButton setTitle:nil forState:UIControlStateNormal];
+    [self.livePhotoButton setBackgroundImage:nil forState:UIControlStateNormal];
     [self.livePhotoButton setImage:image forState:UIControlStateNormal];
+    self.livePhotoButton.contentEdgeInsets = UIEdgeInsetsZero;
     self.livePhotoButton.alpha = active ? 1.0 : 0.72;
     self.livePhotoButton.accessibilityLabel = NSLocalizedString(@"camera.live.toggle", nil);
     self.livePhotoButton.accessibilityValue = active ? NSLocalizedString(@"camera.live.on", nil)

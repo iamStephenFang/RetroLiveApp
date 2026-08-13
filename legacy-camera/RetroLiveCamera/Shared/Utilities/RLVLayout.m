@@ -84,6 +84,62 @@ void RLVAlignViews(UIView *container, UIView *firstView, NSLayoutAttribute first
         relatedBy:NSLayoutRelationEqual toItem:secondView attribute:secondAttribute multiplier:1 constant:0]];
 }
 
+BOOL RLVUsesFlatInterfaceStyle(void)
+{
+    return [[UIToolbar class] instancesRespondToSelector:@selector(setBarTintColor:)];
+}
+
+UIImage *RLVTintedInterfaceImage(UIImage *image, UIColor *color)
+{
+    if (!image) return nil;
+    UIGraphicsBeginImageContextWithOptions(image.size, NO, image.scale);
+    CGRect rect = CGRectMake(0.0, 0.0, image.size.width, image.size.height);
+    [color setFill];
+    UIRectFill(rect);
+    [image drawInRect:rect blendMode:kCGBlendModeDestinationIn alpha:1.0];
+    UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return result;
+}
+
+UIImage *RLVLiveControlBackgroundImage(BOOL flatInterface, BOOL active)
+{
+    CGSize size = CGSizeMake(36.0, 32.0);
+    UIGraphicsBeginImageContextWithOptions(size, NO, 0.0);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGRect bounds = CGRectInset(CGRectMake(0.0, 0.0, size.width, size.height), 0.5, 0.5);
+    UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:bounds cornerRadius:15.5];
+    CGContextSaveGState(context);
+    [path addClip];
+    if (flatInterface) {
+        UIColor *fill = active ? [UIColor colorWithWhite:1.0 alpha:0.92]
+                               : [UIColor colorWithWhite:0.0 alpha:0.58];
+        CGContextSetFillColorWithColor(context, fill.CGColor);
+        CGContextFillRect(context, bounds);
+    } else {
+        NSArray *colors = active
+            ? @[(id)[UIColor colorWithRed:1.0 green:0.88 blue:0.34 alpha:1.0].CGColor,
+                (id)[UIColor colorWithRed:0.78 green:0.45 blue:0.02 alpha:1.0].CGColor]
+            : @[(id)[UIColor colorWithWhite:0.38 alpha:0.96].CGColor,
+                (id)[UIColor colorWithWhite:0.06 alpha:0.96].CGColor];
+        CGGradientRef gradient = CGGradientCreateWithColors(NULL, (__bridge CFArrayRef)colors, NULL);
+        CGContextDrawLinearGradient(context, gradient, CGPointMake(0.0, 0.0),
+            CGPointMake(0.0, size.height), 0);
+        CGGradientRelease(gradient);
+        CGContextSetFillColorWithColor(context, [UIColor colorWithWhite:1.0 alpha:0.18].CGColor);
+        CGContextFillRect(context, CGRectMake(1.0, 1.0, size.width - 2.0, size.height * 0.46));
+    }
+    CGContextRestoreGState(context);
+    UIColor *stroke = flatInterface ? [UIColor colorWithWhite:1.0 alpha:0.48]
+                                    : [UIColor colorWithWhite:1.0 alpha:0.72];
+    [stroke setStroke];
+    path.lineWidth = 1.0;
+    [path stroke];
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return [image resizableImageWithCapInsets:UIEdgeInsetsMake(0.0, 17.0, 0.0, 17.0)];
+}
+
 UIButton *RLVCreateMetalButton(void)
 {
     RLVMetalButton *button = [RLVMetalButton buttonWithType:UIButtonTypeCustom];

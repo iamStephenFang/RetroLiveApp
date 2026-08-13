@@ -228,6 +228,23 @@ static UIImage *RLVInformationImage(void)
     return image;
 }
 
+static CGFloat RLVLiveBadgeWidth(UIFont *font)
+{
+    NSArray *titles = @[
+        NSLocalizedString(@"asset.live.badge.live", nil),
+        NSLocalizedString(@"asset.live.badge.loop", nil),
+        NSLocalizedString(@"asset.live.badge.bounce", nil),
+        NSLocalizedString(@"asset.live.badge.still", nil)
+    ];
+    CGFloat maximumTitleWidth = 0.0;
+    for (NSString *title in titles) {
+        maximumTitleWidth = MAX(maximumTitleWidth, [title sizeWithFont:font].width);
+    }
+    CGFloat disclosureWidth = [@"\u203a" sizeWithFont:[UIFont boldSystemFontOfSize:18.0]].width;
+    // 24pt icon + 4pt gap + measured title + 4pt gap + disclosure + 5pt padding per side.
+    return ceil(24.0 + 4.0 + maximumTitleWidth + 4.0 + disclosureWidth + 10.0);
+}
+
 @interface RLVAssetDetailViewController () <UIActionSheetDelegate, UIAlertViewDelegate, UIScrollViewDelegate, RLVZoomingImagePageDelegate>
 @property (nonatomic, strong) NSArray *assets;
 @property (nonatomic, assign) NSUInteger selectedIndex;
@@ -348,10 +365,19 @@ static UIImage *RLVInformationImage(void)
     [root addSubview:self.metadataLabel];
 
     self.liveBadge = [UIButton buttonWithType:UIButtonTypeCustom];
-    self.liveBadge.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.58];
-    self.liveBadge.titleLabel.font = [UIFont boldSystemFontOfSize:12.0];
-    self.liveBadge.contentEdgeInsets = UIEdgeInsetsMake(0.0, 10.0, 0.0, 10.0);
-    self.liveBadge.layer.cornerRadius = 14.0;
+    self.liveBadge.titleLabel.font = [UIFont boldSystemFontOfSize:RLVUsesFlatInterfaceStyle() ? 12.0 : 13.0];
+    self.liveBadge.contentEdgeInsets = UIEdgeInsetsMake(0.0, 5.0, 0.0, 5.0);
+    self.liveBadge.imageEdgeInsets = UIEdgeInsetsMake(0.0, 0.0, 0.0, 2.0);
+    self.liveBadge.titleEdgeInsets = UIEdgeInsetsMake(0.0, 2.0, 0.0, 0.0);
+    self.liveBadge.adjustsImageWhenHighlighted = NO;
+    self.liveBadge.accessibilityTraits = UIAccessibilityTraitButton;
+    if (!RLVUsesFlatInterfaceStyle()) {
+        self.liveBadge.titleLabel.shadowOffset = CGSizeMake(0.0, -1.0);
+        self.liveBadge.layer.shadowColor = [UIColor blackColor].CGColor;
+        self.liveBadge.layer.shadowOpacity = 0.55;
+        self.liveBadge.layer.shadowRadius = 1.5;
+        self.liveBadge.layer.shadowOffset = CGSizeMake(0.0, 1.0);
+    }
     [self.liveBadge addTarget:self action:@selector(showPlaybackModes:) forControlEvents:UIControlEventTouchUpInside];
     [root addSubview:self.liveBadge];
 
@@ -360,9 +386,20 @@ static UIImage *RLVInformationImage(void)
     UIBarButtonItem *share = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction
         target:self action:@selector(sharePhoto:)];
     share.accessibilityLabel = NSLocalizedString(@"asset.share", nil);
-    UIBarButtonItem *info = [[UIBarButtonItem alloc] initWithImage:RLVInformationImage()
-        style:UIBarButtonItemStylePlain target:self action:@selector(toggleMetadata:)];
+    UIBarButtonItem *info = nil;
+    if (RLVUsesFlatInterfaceStyle()) {
+        info = [[UIBarButtonItem alloc] initWithImage:RLVInformationImage()
+            style:UIBarButtonItemStylePlain target:self action:@selector(toggleMetadata:)];
+    } else {
+        // Keep the original glossy system treatment on iOS 6 instead of
+        // flattening the information control into a hand-drawn glyph.
+        UIButton *infoButton = [UIButton buttonWithType:UIButtonTypeInfoLight];
+        infoButton.frame = CGRectMake(0.0, 0.0, 44.0, 44.0);
+        [infoButton addTarget:self action:@selector(toggleMetadata:) forControlEvents:UIControlEventTouchUpInside];
+        info = [[UIBarButtonItem alloc] initWithCustomView:infoButton];
+    }
     info.accessibilityLabel = NSLocalizedString(@"asset.info", nil);
+    info.customView.accessibilityLabel = NSLocalizedString(@"asset.info", nil);
     UIBarButtonItem *trash = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemTrash
         target:self action:@selector(confirmDelete:)];
     trash.accessibilityLabel = NSLocalizedString(@"asset.delete", nil);
@@ -380,8 +417,10 @@ static UIImage *RLVInformationImage(void)
     RLVAddVisualConstraints(root, @{ @"metadata": self.metadataLabel, @"toolbar": self.toolbar },
         @[@"H:|[metadata]|", @"H:|[toolbar]|",
           [NSString stringWithFormat:@"V:[metadata(82)][toolbar(%.0f)]|", toolbarHeight]]);
+    CGFloat liveBadgeWidth = RLVLiveBadgeWidth(self.liveBadge.titleLabel.font);
     RLVAddVisualConstraints(root, @{ @"live": self.liveBadge },
-        @[@"H:|-(12)-[live]", @"V:|-(12)-[live(28)]"]);
+        @[[NSString stringWithFormat:@"H:|-(12)-[live(%.0f)]", liveBadgeWidth],
+          @"V:|-(12)-[live(32)]"]);
     self.view = root;
 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationWillResignActive:)
@@ -1218,7 +1257,13 @@ static UIImage *RLVInformationImage(void)
         case RLVLivePlaybackModeStill: title = NSLocalizedString(@"asset.live.badge.still", nil); break;
         default: title = NSLocalizedString(@"asset.live.badge.live", nil); break;
     }
-    [self.liveBadge setTitle:title forState:UIControlStateNormal];
+    NSString *displayTitle = [NSString stringWithFormat:@"%@  \u203a", title];
+    NSMutableAttributedString *attributedTitle = [[NSMutableAttributedString alloc]
+        initWithString:displayTitle attributes:@{NSFontAttributeName: self.liveBadge.titleLabel.font,
+            NSForegroundColorAttributeName: [UIColor whiteColor]}];
+    [attributedTitle addAttribute:NSFontAttributeName value:[UIFont boldSystemFontOfSize:18.0]
+                            range:NSMakeRange([displayTitle length] - 1, 1)];
+    [self.liveBadge setAttributedTitle:attributedTitle forState:UIControlStateNormal];
     self.liveBadge.accessibilityLabel = NSLocalizedString(@"asset.live.effect.title", nil);
     self.liveBadge.accessibilityValue = title;
 
@@ -1227,8 +1272,23 @@ static UIImage *RLVInformationImage(void)
 
 - (void)setBadgeActive:(BOOL)active
 {
-    self.liveBadge.backgroundColor = active ? [UIColor colorWithWhite:1.0 alpha:0.92] : [UIColor colorWithWhite:0.0 alpha:0.58];
-    [self.liveBadge setTitleColor:active ? [UIColor blackColor] : [UIColor whiteColor] forState:UIControlStateNormal];
+    BOOL flatInterface = RLVUsesFlatInterfaceStyle();
+    UIColor *foreground = active ? [UIColor blackColor] : [UIColor whiteColor];
+    UIImage *icon = [UIImage imageNamed:@"InterfaceIcons/RLVLiveEffect"];
+    [self.liveBadge setBackgroundImage:RLVLiveControlBackgroundImage(flatInterface, active)
+                              forState:UIControlStateNormal];
+    [self.liveBadge setTitleColor:foreground forState:UIControlStateNormal];
+    NSMutableAttributedString *attributedTitle = [[self.liveBadge attributedTitleForState:UIControlStateNormal]
+        mutableCopy];
+    if (attributedTitle) {
+        [attributedTitle addAttribute:NSForegroundColorAttributeName value:foreground
+                                range:NSMakeRange(0, [attributedTitle length])];
+        [self.liveBadge setAttributedTitle:attributedTitle forState:UIControlStateNormal];
+    }
+    [self.liveBadge setTitleShadowColor:flatInterface ? [UIColor clearColor]
+                                                      : [UIColor colorWithWhite:0.0 alpha:0.75]
+                               forState:UIControlStateNormal];
+    [self.liveBadge setImage:RLVTintedInterfaceImage(icon, foreground) forState:UIControlStateNormal];
 }
 
 - (RLVLivePlaybackMode)savedPlaybackMode

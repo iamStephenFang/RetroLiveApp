@@ -29,12 +29,12 @@
 "library.delete.title" = "刪除所選相片？";
 "library.delete.message" = "所選的 %lu 張相片將從 RetroLive 中永久刪除。";
 "asset.live.effect" = "效果";
-"asset.live.effect.title" = "Live 實況效果";
+"asset.live.effect.title" = "實況效果";
 "asset.live.mode.live" = "實況";
 "asset.live.mode.loop" = "循環";
 "asset.live.mode.bounce" = "來回播放";
 "asset.live.mode.still" = "靜止";
-"asset.live.badge.live" = "LIVE";
+"asset.live.badge.live" = "實況";
 "asset.live.badge.loop" = "循環";
 "asset.live.badge.bounce" = "來回";
 "asset.live.badge.still" = "靜止";

@@ -112,12 +112,13 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
     self.selectionToolbar = [[UIToolbar alloc] initWithFrame:CGRectZero];
     self.selectionToolbar.barStyle = UIBarStyleBlack;
     if ([self.selectionToolbar respondsToSelector:@selector(setTranslucent:)]) {
-        self.selectionToolbar.translucent = YES;
+        self.selectionToolbar.translucent = [self.selectionToolbar respondsToSelector:@selector(setBarTintColor:)];
     }
     self.selectionToolbar.items = @[self.shareButton, space, self.deleteButton];
     self.selectionToolbar.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
     self.selectionToolbar.hidden = YES;
-    [self.navigationController.view addSubview:self.selectionToolbar];
+    UIView *toolbarContainer = self.tabBarController.view ?: self.navigationController.view;
+    [toolbarContainer addSubview:self.selectionToolbar];
     [self updateSelectionActions];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(assetStoreDidChange:)
                                                  name:RLVAssetStoreDidChangeNotification object:nil];
@@ -154,11 +155,17 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
 
 - (void)updateSelectionToolbarAnimated:(BOOL)animated
 {
+    UIView *toolbarContainer = self.tabBarController.view ?: self.navigationController.view;
+    if (self.selectionToolbar.superview != toolbarContainer) {
+        [self.selectionToolbar removeFromSuperview];
+        [toolbarContainer addSubview:self.selectionToolbar];
+    }
     CGFloat height = CGRectGetHeight(self.tabBarController.tabBar.frame);
     if (height <= 0.0) height = 49.0;
-    CGRect bounds = self.navigationController.view.bounds;
+    CGRect bounds = toolbarContainer.bounds;
     self.selectionToolbar.frame = CGRectMake(CGRectGetMinX(bounds), CGRectGetMaxY(bounds) - height,
         CGRectGetWidth(bounds), height);
+    [toolbarContainer bringSubviewToFront:self.selectionToolbar];
     UIEdgeInsets contentInset = self.normalContentInset;
     if (self.isSelectingAssets) contentInset.bottom = height;
     if (!UIEdgeInsetsEqualToEdgeInsets(self.collectionView.contentInset, contentInset)) {
