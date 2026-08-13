@@ -44,6 +44,8 @@ actor DownloadStore {
     private let session: URLSession
     private let fileManager: FileManager
     private let parser = ManifestParser()
+    private var activeAssetIds: Set<String> = []
+    private var validatedAssets: [String: CachedAsset] = [:]
 
     init(
         rootURL: URL? = nil,
@@ -66,9 +68,15 @@ actor DownloadStore {
         }
         let directory = assetsURL.appendingPathComponent(assetId, isDirectory: true)
         guard fileManager.fileExists(atPath: directory.path) else { return nil }
+        if let cached = validatedAssets[assetId], cached.directoryURL == directory {
+            return cached
+        }
         do {
-            return try validateAsset(at: directory)
+            let cached = try validateAsset(at: directory)
+            validatedAssets[assetId] = cached
+            return cached
         } catch {
+            validatedAssets.removeValue(forKey: assetId)
             try quarantineCorruptAsset(directory, assetId: assetId)
             return nil
         }
@@ -83,6 +91,10 @@ actor DownloadStore {
             progress(1)
             return cached
         }
+        guard activeAssetIds.insert(summary.assetId).inserted else {
+            throw DownloadStoreError.invalidAssetIdentifier
+        }
+        defer { activeAssetIds.remove(summary.assetId) }
         try ensureDirectories()
         let manifestData = try await api.manifestData(assetId: summary.assetId)
         let manifest = try parser.parse(manifestData)
@@ -127,12 +139,14 @@ actor DownloadStore {
         }
         try fileManager.moveItem(at: staging, to: finalURL)
         let committed = try validateAsset(at: finalURL)
+        validatedAssets[manifest.assetId] = committed
         progress(1)
         return committed
     }
 
     func removeCachedAsset(assetId: String) throws {
-        guard UUID(uuidString: assetId) != nil else { return }
+        guard UUID(uuidString: assetId) != nil,
+              !activeAssetIds.contains(assetId) else { return }
         let assetURL = assetsURL.appendingPathComponent(assetId, isDirectory: true)
         let partialURL = temporaryURL.appendingPathComponent(assetId, isDirectory: true)
         if fileManager.fileExists(atPath: assetURL.path) {
@@ -140,6 +154,57 @@ actor DownloadStore {
         }
         if fileManager.fileExists(atPath: partialURL.path) {
             try fileManager.removeItem(at: partialURL)
+        }
+        validatedAssets.removeValue(forKey: assetId)
+    }
+
+    func storageUsage() throws -> (verified: Int64, temporary: Int64) {
+        (
+            try directorySize(assetsURL),
+            try directorySize(temporaryURL) + directorySize(corruptURL)
+        )
+    }
+
+    func availableCapacity() throws -> Int64 {
+        let probe = rootURL.deletingLastPathComponent()
+        try fileManager.createDirectory(at: probe, withIntermediateDirectories: true)
+        let values = try probe.resourceValues(forKeys: [
+            .volumeAvailableCapacityForImportantUsageKey,
+            .volumeAvailableCapacityKey
+        ])
+        if let capacity = values.volumeAvailableCapacityForImportantUsage {
+            return capacity
+        }
+        return Int64(values.volumeAvailableCapacity ?? 0)
+    }
+
+    func cachedResourceBytes(assetId: String) throws -> Int64? {
+        guard UUID(uuidString: assetId) != nil else { return nil }
+        let directory = assetsURL.appendingPathComponent(assetId, isDirectory: true)
+        guard fileManager.fileExists(atPath: directory.path) else { return nil }
+        _ = try cachedAsset(assetId: assetId)
+        return try directorySize(directory)
+    }
+
+    func removeAllCachedAssets(excluding protectedAssetIds: Set<String>) throws {
+        let protected = protectedAssetIds.union(activeAssetIds)
+        for directory in try childDirectories(at: assetsURL) {
+            let assetId = directory.lastPathComponent
+            guard UUID(uuidString: assetId) != nil,
+                  !protected.contains(assetId) else { continue }
+            try fileManager.removeItem(at: directory)
+            validatedAssets.removeValue(forKey: assetId)
+        }
+    }
+
+    func removeTemporaryData(excluding protectedAssetIds: Set<String>) throws {
+        let protected = protectedAssetIds.union(activeAssetIds)
+        for directory in try childDirectories(at: temporaryURL) {
+            guard !protected.contains(directory.lastPathComponent) else { continue }
+            try fileManager.removeItem(at: directory)
+        }
+        for directory in try childDirectories(at: corruptURL) {
+            try fileManager.removeItem(at: directory)
         }
     }
 
@@ -356,6 +421,45 @@ actor DownloadStore {
     private func fileSize(_ url: URL) throws -> Int64 {
         let values = try url.resourceValues(forKeys: [.fileSizeKey])
         return Int64(values.fileSize ?? 0)
+    }
+
+    private func childDirectories(at root: URL) throws -> [URL] {
+        guard fileManager.fileExists(atPath: root.path) else { return [] }
+        return try fileManager.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ).filter { try $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true }
+    }
+
+    private func directorySize(_ directory: URL) throws -> Int64 {
+        guard fileManager.fileExists(atPath: directory.path) else { return 0 }
+        guard let enumerator = fileManager.enumerator(
+            at: directory,
+            includingPropertiesForKeys: [
+                .isRegularFileKey,
+                .fileSizeKey,
+                .fileAllocatedSizeKey,
+                .totalFileAllocatedSizeKey
+            ],
+            options: [.skipsHiddenFiles]
+        ) else { return 0 }
+        var total: Int64 = 0
+        for case let url as URL in enumerator {
+            let values = try url.resourceValues(forKeys: [
+                .isRegularFileKey,
+                .fileSizeKey,
+                .fileAllocatedSizeKey,
+                .totalFileAllocatedSizeKey
+            ])
+            guard values.isRegularFile == true else { continue }
+            total += Int64(
+                values.totalFileAllocatedSize ??
+                values.fileAllocatedSize ??
+                values.fileSize ?? 0
+            )
+        }
+        return total
     }
 
     private func sha256(_ url: URL) throws -> String {

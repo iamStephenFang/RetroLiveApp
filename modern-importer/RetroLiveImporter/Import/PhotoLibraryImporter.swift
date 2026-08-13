@@ -2,8 +2,12 @@ import Photos
 
 protocol PhotoLibraryImporting: Sendable {
     func authorizeForAdditions() async throws
-    func importPhoto(photoURL: URL) async throws -> String
-    func importLivePhoto(photoURL: URL, pairedVideoURL: URL) async throws -> String
+    func importPhoto(photoURL: URL, captureDate: Date) async throws -> String
+    func importLivePhoto(
+        photoURL: URL,
+        pairedVideoURL: URL,
+        captureDate: Date
+    ) async throws -> String
 }
 
 enum PhotoLibraryImportError: Error, LocalizedError {
@@ -28,14 +32,26 @@ struct PhotoLibraryImporter: PhotoLibraryImporting, Sendable {
         try await authorize()
     }
 
-    func importPhoto(photoURL: URL) async throws -> String {
+    func importPhoto(photoURL: URL, captureDate: Date) async throws -> String {
         try await authorize()
-        return try await createAsset(photoURL: photoURL, pairedVideoURL: nil)
+        return try await createAsset(
+            photoURL: photoURL,
+            pairedVideoURL: nil,
+            captureDate: captureDate
+        )
     }
 
-    func importLivePhoto(photoURL: URL, pairedVideoURL: URL) async throws -> String {
+    func importLivePhoto(
+        photoURL: URL,
+        pairedVideoURL: URL,
+        captureDate: Date
+    ) async throws -> String {
         try await authorize()
-        return try await createAsset(photoURL: photoURL, pairedVideoURL: pairedVideoURL)
+        return try await createAsset(
+            photoURL: photoURL,
+            pairedVideoURL: pairedVideoURL,
+            captureDate: captureDate
+        )
     }
 
     private func authorize() async throws {
@@ -45,11 +61,16 @@ struct PhotoLibraryImporter: PhotoLibraryImporting, Sendable {
         }
     }
 
-    private func createAsset(photoURL: URL, pairedVideoURL: URL?) async throws -> String {
+    private func createAsset(
+        photoURL: URL,
+        pairedVideoURL: URL?,
+        captureDate: Date
+    ) async throws -> String {
         var placeholderIdentifier: String?
         do {
             try await PHPhotoLibrary.shared().performChanges {
                 let request = PHAssetCreationRequest.forAsset()
+                request.creationDate = captureDate
                 let photoOptions = PHAssetResourceCreationOptions()
                 photoOptions.shouldMoveFile = false
                 request.addResource(with: .photo, fileURL: photoURL, options: photoOptions)

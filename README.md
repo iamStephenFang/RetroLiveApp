@@ -18,7 +18,10 @@ RetroLive is under active development. The protocol, storage, transfer, and impo
 - Explicit, six-digit pairing over the local network
 - Bonjour discovery and a versioned, read-only HTTP API
 - Resumable downloads with byte-length and SHA-256 verification
+- Durable serial batch-import queue with relaunch recovery
+- Import storage preflight, usage reporting, and safe local-cache cleanup
 - Live Photo metadata assembly and PhotoKit import
+- Capture-date and source-metadata preservation when saving to Photos
 - Photo-only fallback when motion capture is unavailable
 - English, Simplified Chinese, and Traditional Chinese localization
 - No package-manager or third-party runtime dependencies

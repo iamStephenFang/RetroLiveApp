@@ -12,6 +12,13 @@ enum RetroPalette {
 struct ContentView: View {
     @StateObject private var model = ImporterViewModel()
     @FocusState private var pairingFieldFocused: Bool
+    @State private var showsStorage = false
+    @State private var cleanupTarget: CleanupTarget?
+
+    private enum CleanupTarget: String, Identifiable {
+        case downloads, assemblies, temporary
+        var id: String { rawValue }
+    }
 
     var body: some View {
         NavigationStack {
@@ -35,6 +42,7 @@ struct ContentView: View {
         }
         .sensoryFeedback(.error, trigger: model.pairingFailureCount)
         .task { model.startDiscovery() }
+        .sheet(isPresented: $showsStorage) { storageSheet }
     }
 
     private var cameraIsSelected: Binding<Bool> {
@@ -63,9 +71,20 @@ struct ContentView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.white, for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                if model.deviceInfo != nil {
+                    Button(model.selectionMode ? L10n.text("common.cancel") : L10n.text("batch.select")) {
+                        model.setSelectionMode(!model.selectionMode)
+                    }
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 if model.deviceInfo != nil {
                     Menu {
+                        Button(L10n.text("storage.title")) {
+                            showsStorage = true
+                            Task { await model.refreshStorageOverview() }
+                        }
                         Button(L10n.text("common.disconnect")) {
                             model.disconnect()
                         }
@@ -336,6 +355,10 @@ struct ContentView: View {
                     deviceSummary(device)
                 }
 
+                if !model.visibleQueueItems.isEmpty {
+                    queueSummary
+                }
+
                 if model.assets.isEmpty && !model.isLoadingAssets {
                     Text(L10n.text("asset.none"))
                         .font(.subheadline)
@@ -360,6 +383,80 @@ struct ContentView: View {
                     .tint(RetroPalette.persimmon)
             }
         }
+        .safeAreaInset(edge: .bottom) {
+            if model.selectionMode {
+                batchSelectionBar
+            }
+        }
+    }
+
+    private var batchSelectionBar: some View {
+        HStack(spacing: 12) {
+            Button(L10n.text("batch.select_all")) { model.selectAllAvailable() }
+                .font(.subheadline.bold())
+            Spacer()
+            Text(L10n.format("batch.selected_count", model.selectedCount))
+                .font(.subheadline.monospacedDigit())
+                .foregroundStyle(RetroPalette.secondaryInk)
+            Button(L10n.text("batch.import")) { model.startSelectedImports() }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.selectedCount == 0 || model.isPreparingBatch)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
+    }
+
+    private var queueSummary: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label(L10n.text("queue.title"), systemImage: "list.number")
+                    .font(.headline)
+                Spacer()
+                if model.isQueuePaused {
+                    Button(L10n.text("queue.resume")) { model.resumeQueue() }
+                } else {
+                    Button(L10n.text("queue.pause")) { model.pauseQueue() }
+                }
+            }
+            ForEach(model.visibleQueueItems) { item in
+                HStack(spacing: 10) {
+                    Image(systemName: queueIcon(item.status))
+                        .foregroundStyle(item.status == .imported ? RetroPalette.sage : RetroPalette.persimmon)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(formattedDate(item.summary.createdAt))
+                            .font(.subheadline)
+                        Text(queueStatusTitle(item))
+                            .font(.caption)
+                            .foregroundStyle(RetroPalette.secondaryInk)
+                        if item.status == .downloading {
+                            ProgressView(value: item.progress).tint(RetroPalette.persimmon)
+                        }
+                    }
+                    Spacer()
+                    if item.status == .failed || item.status == .cancelled {
+                        Button(L10n.text("common.retry")) { model.retryQueueItem(item.id) }
+                            .font(.caption.bold())
+                    } else if item.status == .needsConfirmation {
+                        Menu {
+                            Button(L10n.text("queue.reimport"), role: .destructive) {
+                                model.explicitlyReimportUnconfirmed(item.id)
+                            }
+                        } label: { Image(systemName: "exclamationmark.triangle.fill") }
+                    } else if !item.status.isTerminal {
+                        Button(role: .destructive) { model.cancelQueueItem(item.id) } label: {
+                            Image(systemName: "xmark.circle")
+                        }
+                    }
+                }
+            }
+            if model.visibleQueueItems.contains(where: { $0.status == .imported || $0.status == .cancelled }) {
+                Button(L10n.text("queue.clear_finished")) { model.clearFinishedQueueItems() }
+                    .font(.caption.bold())
+            }
+        }
+        .padding(16)
+        .background(RetroPalette.paper, in: RoundedRectangle(cornerRadius: 22))
     }
 
     private func deviceSummary(_ device: CameraDeviceInfo) -> some View {
@@ -389,6 +486,16 @@ struct ContentView: View {
     private func assetRow(_ asset: CameraAssetSummary) -> some View {
         let state = model.assetStates[asset.assetId] ?? .available
         return HStack(alignment: .top, spacing: 14) {
+            if model.selectionMode {
+                Button { model.toggleSelection(asset.assetId) } label: {
+                    Image(systemName: model.selectedAssetIds.contains(asset.assetId)
+                        ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundStyle(model.canSelect(asset.assetId)
+                            ? RetroPalette.persimmon : RetroPalette.secondaryInk.opacity(0.35))
+                }
+                .disabled(!model.canSelect(asset.assetId))
+            }
             assetThumbnail(asset)
 
             VStack(alignment: .leading, spacing: 10) {
@@ -430,18 +537,18 @@ struct ContentView: View {
                         .lineLimit(3)
                 }
 
-                Button(state.title) {
-                    model.importAsset(asset)
+                if !model.selectionMode {
+                    Button(state.title) { model.importAsset(asset) }
+                        .font(.subheadline.bold())
+                        .foregroundStyle(state == .imported ? RetroPalette.sage : Color.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            state == .imported ? RetroPalette.sage.opacity(0.13) : RetroPalette.persimmon,
+                            in: RoundedRectangle(cornerRadius: 13)
+                        )
+                        .disabled(state.isBusy || state == .imported || state == .needsConfirmation)
                 }
-                .font(.subheadline.bold())
-                .foregroundStyle(state == .imported ? RetroPalette.sage : Color.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(
-                    state == .imported ? RetroPalette.sage.opacity(0.13) : RetroPalette.persimmon,
-                    in: RoundedRectangle(cornerRadius: 13)
-                )
-                .disabled(state.isBusy || state == .imported || state == .needsConfirmation)
             }
         }
         .padding(12)
@@ -472,5 +579,101 @@ struct ContentView: View {
     private func formattedDate(_ value: String) -> String {
         guard let date = RetroLiveISO8601.date(from: value) else { return value }
         return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private func queueStatusTitle(_ item: ImportQueueItem) -> String {
+        switch item.status {
+        case .queued: L10n.text("asset.state.queued")
+        case .downloading: L10n.format("asset.action.downloading", Int(item.progress * 100))
+        case .verifying: L10n.text("asset.state.verifying")
+        case .cached: L10n.text("asset.state.cached")
+        case .assembling: L10n.text("asset.state.assembling")
+        case .authorizing: L10n.text("asset.state.authorizing")
+        case .importing: L10n.text("asset.state.importing")
+        case .imported: L10n.text("asset.state.imported")
+        case .needsConfirmation: L10n.text("asset.state.needs_confirmation")
+        case .failed: item.errorMessage ?? L10n.text("queue.unknown_error")
+        case .paused: L10n.text("asset.state.paused")
+        case .cancelled: L10n.text("asset.state.cancelled")
+        }
+    }
+
+    private func queueIcon(_ status: ImportQueueItemStatus) -> String {
+        switch status {
+        case .imported: "checkmark.circle.fill"
+        case .needsConfirmation, .failed: "exclamationmark.triangle.fill"
+        case .cancelled: "xmark.circle.fill"
+        case .paused: "pause.circle.fill"
+        case .queued: "clock.fill"
+        default: "arrow.triangle.2.circlepath"
+        }
+    }
+
+    private var storageSheet: some View {
+        NavigationStack {
+            List {
+                if let storage = model.storageOverview {
+                    Section(L10n.text("storage.usage")) {
+                        storageRow("storage.downloads", bytes: storage.verifiedDownloadsBytes)
+                        storageRow("storage.assembly", bytes: storage.assemblyBytes)
+                        storageRow("storage.temporary", bytes: storage.temporaryBytes)
+                        storageRow("storage.available", bytes: storage.availableBytes)
+                    }
+                }
+                Section {
+                    Button(L10n.text("storage.cleanup.downloads"), role: .destructive) {
+                        cleanupTarget = .downloads
+                    }
+                    Button(L10n.text("storage.cleanup.assembly"), role: .destructive) {
+                        cleanupTarget = .assemblies
+                    }
+                    Button(L10n.text("storage.cleanup.temporary"), role: .destructive) {
+                        cleanupTarget = .temporary
+                    }
+                } header: {
+                    Text(L10n.text("storage.cleanup"))
+                } footer: {
+                    Text(L10n.text("storage.cleanup.note"))
+                }
+            }
+            .navigationTitle(L10n.text("storage.title"))
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.text("common.done")) { showsStorage = false }
+                }
+            }
+            .task { await model.refreshStorageOverview() }
+            .confirmationDialog(
+                L10n.text("storage.cleanup.confirm.title"),
+                isPresented: Binding(
+                    get: { cleanupTarget != nil },
+                    set: { if !$0 { cleanupTarget = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button(L10n.text("storage.cleanup.confirm.action"), role: .destructive) {
+                    let target = cleanupTarget
+                    cleanupTarget = nil
+                    switch target {
+                    case .downloads: model.cleanVerifiedDownloads()
+                    case .assemblies: model.cleanAssemblies()
+                    case .temporary: model.cleanTemporaryData()
+                    case nil: break
+                    }
+                }
+                Button(L10n.text("common.cancel"), role: .cancel) { cleanupTarget = nil }
+            } message: {
+                Text(L10n.text("storage.cleanup.confirm.message"))
+            }
+        }
+    }
+
+    private func storageRow(_ key: String, bytes: Int64) -> some View {
+        HStack {
+            Text(L10n.text(key))
+            Spacer()
+            Text(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
+                .foregroundStyle(.secondary)
+        }
     }
 }

@@ -11,6 +11,10 @@ struct ManifestV1: Codable, Equatable, Sendable {
     let thumbnail: ImageResource?
     let device: Device
 
+    var captureDate: Date {
+        Date(timeIntervalSince1970: Double(createdAtUnixMilliseconds) / 1_000)
+    }
+
     struct Capture: Codable, Equatable, Sendable {
         let cameraPosition: CameraPosition
         let orientation: Int

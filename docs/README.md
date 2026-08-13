@@ -61,9 +61,12 @@ Feature behavior, implementation boundaries, and acceptance criteria:
 
 Historical scope, decisions, validation, and remaining acceptance by phase:
 
-- [`history/README.md`](history/README.md) provides the complete Phase 0–5 map.
+- [`history/README.md`](history/README.md) provides the Phase 0–6 history.
 - `history/phase-00-*.md` through `history/phase-05-*.md` provide one consistent
-  scope summary per phase.
+  historical scope summary per delivered phase.
+- [`history/phase-06-batch-import-and-storage.md`](history/phase-06-batch-import-and-storage.md)
+  records the implemented batch queue, storage management, and metadata-fidelity
+  boundary and its remaining physical-device acceptance.
 - Earlier plan, audit, and review findings are consolidated into their owning
   phase; exact previous wording remains available through Git history.
 

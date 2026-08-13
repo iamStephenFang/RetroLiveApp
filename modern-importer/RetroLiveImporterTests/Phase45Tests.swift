@@ -28,6 +28,72 @@ private final class MockURLProtocol: URLProtocol {
 }
 
 final class Phase45Tests: XCTestCase {
+    func testImportQueueRecoveryRestartsSafeStagesAndQuarantinesImporting() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("RetroLiveTests-\(UUID().uuidString)/queue", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let fileURL = root.appendingPathComponent("import-queue.json")
+        let summaryA = CameraAssetSummary(
+            assetId: UUID().uuidString,
+            createdAt: "2026-08-13T00:00:00Z",
+            thumbnailURL: nil,
+            manifestURL: "/manifest-a",
+            hasMotion: true
+        )
+        let summaryB = CameraAssetSummary(
+            assetId: UUID().uuidString,
+            createdAt: "2026-08-13T00:01:00Z",
+            thumbnailURL: nil,
+            manifestURL: "/manifest-b",
+            hasMotion: false
+        )
+        let store = ImportQueueStore(fileURL: fileURL)
+        try await store.save([
+            ImportQueueItem(deviceId: "device", summary: summaryA, status: .downloading, progress: 0.5),
+            ImportQueueItem(deviceId: "device", summary: summaryB, status: .importing, progress: 1)
+        ])
+
+        let recovered = try await ImportQueueStore(fileURL: fileURL).loadRecoveringInterruptedItems()
+        XCTAssertEqual(recovered[0].status, .queued)
+        XCTAssertEqual(recovered[0].progress, 0)
+        XCTAssertEqual(recovered[1].status, .needsConfirmation)
+    }
+
+    func testStoragePreflightRetainsSafetyMargin() {
+        let sufficient = ImportStoragePreflight(
+            requiredAdditionalBytes: 100,
+            availableBytes: ImportStoragePreflight.safetyMarginBytes + 100
+        )
+        let insufficient = ImportStoragePreflight(
+            requiredAdditionalBytes: 101,
+            availableBytes: ImportStoragePreflight.safetyMarginBytes + 100
+        )
+        XCTAssertTrue(sufficient.isSufficient)
+        XCTAssertFalse(insufficient.isSufficient)
+    }
+
+    func testStoragePreflightArithmeticSaturatesInsteadOfOverflowing() {
+        XCTAssertEqual(
+            ImportStoragePreflight.clampedAdd(Int64.max - 1, 2),
+            Int64.max
+        )
+        XCTAssertEqual(
+            ImportStoragePreflight.clampedMultiply(Int64.max / 2 + 1, by: 2),
+            Int64.max
+        )
+        XCTAssertEqual(ImportStoragePreflight.clampedAdd(20, -10), 20)
+    }
+
+    func testManifestCaptureDateUsesCanonicalUnixMilliseconds() throws {
+        let manifest = try ManifestParser().parse(try fixtureData("valid-v1"))
+        XCTAssertEqual(
+            manifest.captureDate.timeIntervalSince1970,
+            Double(manifest.createdAtUnixMilliseconds) / 1_000,
+            accuracy: 0.000_001
+        )
+    }
+
     override func tearDown() {
         MockURLProtocol.handler = nil
         super.tearDown()
@@ -366,6 +432,16 @@ final class Phase45Tests: XCTestCase {
         )
         XCTAssertEqual((properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue, 480)
         XCTAssertEqual((properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue, 360)
+        let makerApple = try XCTUnwrap(
+            properties[kCGImagePropertyMakerAppleDictionary] as? [String: Any]
+        )
+        XCTAssertEqual(makerApple["17"] as? String, assetId)
+        let tiff = try XCTUnwrap(properties[kCGImagePropertyTIFFDictionary] as? [String: Any])
+        XCTAssertEqual(tiff["Make"] as? String, "RetroLive")
+        XCTAssertEqual(tiff["Model"] as? String, "Test Camera")
+        let exif = try XCTUnwrap(properties[kCGImagePropertyExifDictionary] as? [String: Any])
+        XCTAssertEqual(exif["Flash"] as? NSNumber, 1)
+        XCTAssertEqual(exif["DateTimeOriginal"] as? String, "2026:08:10 00:00:00")
         let videoAsset = AVURLAsset(url: try XCTUnwrap(assembled.pairedVideoURL))
         let tracks = try await videoAsset.loadTracks(withMediaType: .video)
         let track = try XCTUnwrap(tracks.first)
@@ -400,7 +476,21 @@ final class Phase45Tests: XCTestCase {
             1,
             nil
         ))
-        CGImageDestinationAddImage(destination, try XCTUnwrap(context.makeImage()), nil)
+        let properties: [CFString: Any] = [
+            kCGImagePropertyTIFFDictionary: [
+                "Make": "RetroLive",
+                "Model": "Test Camera"
+            ],
+            kCGImagePropertyExifDictionary: [
+                "Flash": 1,
+                "DateTimeOriginal": "2026:08:10 00:00:00"
+            ]
+        ]
+        CGImageDestinationAddImage(
+            destination,
+            try XCTUnwrap(context.makeImage()),
+            properties as CFDictionary
+        )
         XCTAssertTrue(CGImageDestinationFinalize(destination))
     }
 

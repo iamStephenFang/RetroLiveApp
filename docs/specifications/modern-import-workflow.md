@@ -18,6 +18,11 @@ The immutable files under `Downloads/Assets` are never edited. Assembly writes
 generated resources under `Assembly/{assetId}`, validates their identity and
 timing, and only then calls PhotoKit.
 
+The asset list also supports multi-selection backed by a durable serial queue.
+Queue state is persisted independently from SwiftUI view state. Storage
+preflight, usage reporting, and cleanup remain within the download and assembly
+stores that own those directories.
+
 ## Discover, pair, download, and verify
 
 ### Technical design
@@ -40,6 +45,12 @@ timing, and only then calls PhotoKit.
 4. The SwiftUI flow displays discovery, pairing, asset list, busy/progress, retryable failure, cached, and imported states.
 5. API and store boundaries accept injected URLSession and filesystem roots for deterministic tests.
 6. The importer target and test bundle compile with the current iOS SDK; protocol and legacy-camera regression checks remain green.
+7. Selected assets enter a durable queue that runs one import pipeline at a time,
+   restores safe work after relaunch, and converts an interrupted PhotoKit write
+   into `needsConfirmation` rather than retrying it.
+8. Preflight estimates additional download, committed assembly, and peak attempt
+   space with a safety margin. Cleanup can remove only canonical, inactive local
+   resources owned by `DownloadStore` or `LivePhotoAssembler`.
 
 ### Device acceptance
 
@@ -168,6 +179,8 @@ independent verification gate:
 - For a motion asset, submit `.photo` and `.pairedVideo` on one
   `PHAssetCreationRequest`. For a photo-only asset, submit only `.photo`.
 - Set `shouldMoveFile = false`; PhotoKit must not consume the assembly cache.
+- Set the PhotoKit creation date from the Manifest's validated
+  `createdAtUnixMilliseconds` value for both photo-only and paired imports.
 - Treat `performChanges` completion plus a non-empty placeholder local identifier
   as the success boundary. Do not report success when only assembly completed.
 - Wrap PhotoKit behind an injectable protocol so unit tests can cover permission,

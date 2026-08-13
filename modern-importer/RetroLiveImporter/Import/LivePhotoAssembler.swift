@@ -15,6 +15,7 @@ enum LivePhotoAssemblyError: Error, LocalizedError {
     case invalidStillTime
     case imageSource
     case imageDestination
+    case imageContentIdentifier
     case imageMetadata
     case missingVideoTrack
     case reader
@@ -32,6 +33,8 @@ enum LivePhotoAssemblyError: Error, LocalizedError {
             L10n.text("assembly.image_source")
         case .imageDestination:
             L10n.text("assembly.image_destination")
+        case .imageContentIdentifier:
+            L10n.text("assembly.image_content_identifier")
         case .imageMetadata:
             L10n.text("assembly.image_metadata")
         case .missingVideoTrack:
@@ -149,6 +152,7 @@ actor LivePhotoAssembler {
     private let rootURL: URL
     private let fileManager: FileManager
     private var activeStagingURLs: Set<URL> = []
+    private var activeAssetIds: Set<String> = []
 
     init(rootURL: URL? = nil, fileManager: FileManager = .default) {
         let applicationSupport = fileManager.urls(
@@ -162,6 +166,10 @@ actor LivePhotoAssembler {
 
     func assemble(_ cached: CachedAsset) async throws -> AssembledAsset {
         let assetId = cached.manifest.assetId
+        guard activeAssetIds.insert(assetId).inserted else {
+            throw LivePhotoAssemblyError.mediaValidation
+        }
+        defer { activeAssetIds.remove(assetId) }
         let temporaryRoot = rootURL.appendingPathComponent("Temporary", isDirectory: true)
         let assetsRoot = rootURL.appendingPathComponent("Assets", isDirectory: true)
         try fileManager.createDirectory(at: temporaryRoot, withIntermediateDirectories: true)
@@ -219,9 +227,11 @@ actor LivePhotoAssembler {
         }
         try validatePhoto(
             pairedPhoto,
+            sourceURL: cached.photoURL,
             assetId: assetId,
             expectedWidth: Int(pairedPhotoSize.width),
-            expectedHeight: Int(pairedPhotoSize.height)
+            expectedHeight: Int(pairedPhotoSize.height),
+            geometryWasNormalized: aspectRatio != nil
         )
         if let pairedVideo {
             try await validateVideo(
@@ -253,6 +263,42 @@ actor LivePhotoAssembler {
                 ? nil
                 : finalURL.appendingPathComponent("paired-video.mov")
         )
+    }
+
+    func hasCommittedAssembly(assetId: String) -> Bool {
+        guard UUID(uuidString: assetId) != nil else { return false }
+        return fileManager.fileExists(
+            atPath: rootURL
+                .appendingPathComponent("Assets", isDirectory: true)
+                .appendingPathComponent(assetId, isDirectory: true)
+                .path
+        )
+    }
+
+    func storageUsage() throws -> (committed: Int64, temporary: Int64) {
+        (
+            try directorySize(rootURL.appendingPathComponent("Assets", isDirectory: true)),
+            try directorySize(rootURL.appendingPathComponent("Temporary", isDirectory: true))
+        )
+    }
+
+    func removeAllCommittedAssemblies(excluding protectedAssetIds: Set<String>) throws {
+        let protected = protectedAssetIds.union(activeAssetIds)
+        let assetsRoot = rootURL.appendingPathComponent("Assets", isDirectory: true)
+        for directory in try childDirectories(at: assetsRoot) {
+            let assetId = directory.lastPathComponent
+            guard UUID(uuidString: assetId) != nil,
+                  !protected.contains(assetId) else { continue }
+            try fileManager.removeItem(at: directory)
+        }
+    }
+
+    func removeTemporaryData() throws {
+        let temporaryRoot = rootURL.appendingPathComponent("Temporary", isDirectory: true)
+        for directory in try childDirectories(at: temporaryRoot)
+            where !activeStagingURLs.contains(directory) {
+            try fileManager.removeItem(at: directory)
+        }
     }
 
     private func removeAbandonedStagingDirectories(in temporaryRoot: URL) throws {
@@ -389,21 +435,32 @@ actor LivePhotoAssembler {
         ) else {
             throw LivePhotoAssemblyError.crop
         }
+        export.videoComposition = composition
+        if #available(iOS 18.0, *) {
+            try await export.export(to: destinationURL, as: .mov)
+            return destinationURL
+        }
         export.outputURL = destinationURL
         export.outputFileType = .mov
-        export.videoComposition = composition
         let exportState = AssemblyExport(export)
-        try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<Void, Error>) in
-            exportState.session.exportAsynchronously {
-                if exportState.session.status == .completed {
-                    continuation.resume()
-                } else {
-                    continuation.resume(
-                        throwing: exportState.session.error ?? LivePhotoAssemblyError.crop
-                    )
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation {
+                (continuation: CheckedContinuation<Void, Error>) in
+                exportState.session.exportAsynchronously {
+                    switch exportState.session.status {
+                    case .completed:
+                        continuation.resume()
+                    case .cancelled:
+                        continuation.resume(throwing: CancellationError())
+                    default:
+                        continuation.resume(
+                            throwing: exportState.session.error ?? LivePhotoAssemblyError.crop
+                        )
+                    }
                 }
             }
+        } onCancel: {
+            exportState.session.cancelExport()
         }
         return destinationURL
     }
@@ -522,68 +579,197 @@ actor LivePhotoAssembler {
         }
         metadataInput.markAsFinished()
 
-        try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<Void, Error>) in
-            let group = DispatchGroup()
-            let state = AssemblyTransferState()
-            let io = AssemblyIO(reader: reader, writer: writer)
-            for (index, transfer) in transfers.enumerated() {
-                group.enter()
-                let queue = DispatchQueue(label: "com.retrolive.assembly.track.\(index)")
-                transfer.input.requestMediaDataWhenReady(on: queue) {
-                    while transfer.input.isReadyForMoreMediaData {
-                        guard let sample = transfer.output.copyNextSampleBuffer() else {
-                            transfer.input.markAsFinished()
-                            group.leave()
-                            return
-                        }
-                        if !transfer.input.append(sample) {
-                            state.markFailed()
-                            io.reader.cancelReading()
-                            transfer.input.markAsFinished()
-                            group.leave()
-                            return
+        let io = AssemblyIO(reader: reader, writer: writer)
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation {
+                (continuation: CheckedContinuation<Void, Error>) in
+                let group = DispatchGroup()
+                let state = AssemblyTransferState()
+                for (index, transfer) in transfers.enumerated() {
+                    group.enter()
+                    let queue = DispatchQueue(label: "com.retrolive.assembly.track.\(index)")
+                    transfer.input.requestMediaDataWhenReady(on: queue) {
+                        while transfer.input.isReadyForMoreMediaData {
+                            guard let sample = transfer.output.copyNextSampleBuffer() else {
+                                transfer.input.markAsFinished()
+                                group.leave()
+                                return
+                            }
+                            if !transfer.input.append(sample) {
+                                state.markFailed()
+                                io.reader.cancelReading()
+                                transfer.input.markAsFinished()
+                                group.leave()
+                                return
+                            }
                         }
                     }
                 }
-            }
-            group.notify(queue: DispatchQueue.global(qos: .userInitiated)) {
-                if state.isFailed() || io.reader.status == .failed {
-                    io.writer.cancelWriting()
-                    continuation.resume(
-                        throwing: io.reader.error ?? io.writer.error ?? LivePhotoAssemblyError.reader
-                    )
-                    return
-                }
-                io.writer.finishWriting {
-                    if io.writer.status == .completed {
-                        continuation.resume()
-                    } else {
+                group.notify(queue: DispatchQueue.global(qos: .userInitiated)) {
+                    if io.reader.status == .cancelled || io.writer.status == .cancelled {
+                        io.writer.cancelWriting()
+                        continuation.resume(throwing: CancellationError())
+                    } else if state.isFailed() || io.reader.status == .failed {
+                        io.writer.cancelWriting()
                         continuation.resume(
-                            throwing: io.writer.error ?? LivePhotoAssemblyError.writer
+                            throwing: io.reader.error
+                                ?? io.writer.error
+                                ?? LivePhotoAssemblyError.reader
                         )
+                    } else {
+                        io.writer.finishWriting {
+                            switch io.writer.status {
+                            case .completed:
+                                continuation.resume()
+                            case .cancelled:
+                                continuation.resume(throwing: CancellationError())
+                            default:
+                                continuation.resume(
+                                    throwing: io.writer.error ?? LivePhotoAssemblyError.writer
+                                )
+                            }
+                        }
                     }
                 }
             }
+        } onCancel: {
+            io.reader.cancelReading()
+            io.writer.cancelWriting()
         }
     }
 
     private func validatePhoto(
         _ url: URL,
+        sourceURL: URL,
         assetId: String,
         expectedWidth: Int,
-        expectedHeight: Int
+        expectedHeight: Int,
+        geometryWasNormalized: Bool
     ) throws {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
-                as? [CFString: Any],
-              (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue == expectedWidth,
-              (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue == expectedHeight,
-              let makerApple = properties[kCGImagePropertyMakerAppleDictionary]
+                as? [CFString: Any] else {
+            throw LivePhotoAssemblyError.imageSource
+        }
+        guard (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue == expectedWidth,
+              (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue == expectedHeight else {
+            throw LivePhotoAssemblyError.mediaValidation
+        }
+        guard let makerApple = properties[kCGImagePropertyMakerAppleDictionary]
                 as? [String: Any],
               makerApple["17"] as? String == assetId else {
+            throw LivePhotoAssemblyError.imageContentIdentifier
+        }
+        guard let originalSource = CGImageSourceCreateWithURL(sourceURL as CFURL, nil),
+              let original = CGImageSourceCopyPropertiesAtIndex(originalSource, 0, nil)
+                as? [CFString: Any] else {
+            throw LivePhotoAssemblyError.imageSource
+        }
+        let preservedTopLevelKeys: [CFString] = [
+            kCGImagePropertyProfileName,
+            kCGImagePropertyColorModel
+        ]
+        for key in preservedTopLevelKeys where !metadataValue(original[key], equals: properties[key]) {
             throw LivePhotoAssemblyError.imageMetadata
         }
+        if !geometryWasNormalized,
+           !metadataValue(original[kCGImagePropertyOrientation], equals: properties[kCGImagePropertyOrientation]) {
+            throw LivePhotoAssemblyError.imageMetadata
+        }
+        guard metadataFieldsArePreserved(
+            from: original[kCGImagePropertyGPSDictionary],
+            to: properties[kCGImagePropertyGPSDictionary],
+            keys: [
+                "LatitudeRef", "Latitude", "LongitudeRef", "Longitude", "AltitudeRef", "Altitude",
+                "TimeStamp", "DateStamp", "ImgDirectionRef", "ImgDirection", "SpeedRef", "Speed"
+            ]
+        ) else {
+            throw LivePhotoAssemblyError.imageMetadata
+        }
+        guard metadataFieldsArePreserved(
+            from: original[kCGImagePropertyTIFFDictionary],
+            to: properties[kCGImagePropertyTIFFDictionary],
+            keys: ["Make", "Model", "Software", "DateTime", "Artist", "Copyright"]
+        ) else {
+            throw LivePhotoAssemblyError.imageMetadata
+        }
+        guard metadataFieldsArePreserved(
+            from: original[kCGImagePropertyExifDictionary],
+            to: properties[kCGImagePropertyExifDictionary],
+            keys: [
+                "DateTimeOriginal", "DateTimeDigitized", "ExposureTime", "FNumber",
+                "ExposureProgram", "ISOSpeedRatings", "ShutterSpeedValue", "ApertureValue",
+                "BrightnessValue", "ExposureBiasValue", "MeteringMode", "LightSource", "Flash",
+                "FocalLength", "SensingMethod", "ExposureMode", "WhiteBalance", "DigitalZoomRatio",
+                "FocalLenIn35mmFilm", "SceneCaptureType", "LensSpecification", "LensMake",
+                "LensModel", "LensSerialNumber", "BodySerialNumber"
+            ]
+        ) else {
+            throw LivePhotoAssemblyError.imageMetadata
+        }
+    }
+
+    private func metadataFieldsArePreserved(
+        from originalValue: Any?,
+        to outputValue: Any?,
+        keys: [String]
+    ) -> Bool {
+        guard let original = originalValue as? [String: Any] else { return true }
+        guard let output = outputValue as? [String: Any] else { return false }
+        return keys.allSatisfy { key in
+            guard let originalField = original[key] else { return true }
+            return metadataValue(originalField, equals: output[key])
+        }
+    }
+
+    private func metadataValue(_ lhs: Any?, equals rhs: Any?) -> Bool {
+        switch (lhs, rhs) {
+        case (nil, nil):
+            true
+        case let (left?, right?):
+            (left as AnyObject).isEqual(right)
+        default:
+            false
+        }
+    }
+
+    private func childDirectories(at root: URL) throws -> [URL] {
+        guard fileManager.fileExists(atPath: root.path) else { return [] }
+        return try fileManager.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ).filter { try $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true }
+    }
+
+    private func directorySize(_ directory: URL) throws -> Int64 {
+        guard fileManager.fileExists(atPath: directory.path) else { return 0 }
+        guard let enumerator = fileManager.enumerator(
+            at: directory,
+            includingPropertiesForKeys: [
+                .isRegularFileKey,
+                .fileSizeKey,
+                .fileAllocatedSizeKey,
+                .totalFileAllocatedSizeKey
+            ],
+            options: [.skipsHiddenFiles]
+        ) else { return 0 }
+        var total: Int64 = 0
+        for case let url as URL in enumerator {
+            let values = try url.resourceValues(forKeys: [
+                .isRegularFileKey,
+                .fileSizeKey,
+                .fileAllocatedSizeKey,
+                .totalFileAllocatedSizeKey
+            ])
+            guard values.isRegularFile == true else { continue }
+            total += Int64(
+                values.totalFileAllocatedSize ??
+                values.fileAllocatedSize ??
+                values.fileSize ?? 0
+            )
+        }
+        return total
     }
 
     private func validateVideo(
