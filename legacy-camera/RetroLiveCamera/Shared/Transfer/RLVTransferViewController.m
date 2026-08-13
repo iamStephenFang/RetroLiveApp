@@ -29,7 +29,11 @@
     self.noteLabel = [self labelWithFontSize:14.0];
     self.noteLabel.numberOfLines = 0;
     self.noteLabel.textColor = [UIColor colorWithWhite:0.72 alpha:1.0];
+#if RLV_CLASSIC
     self.actionButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+#else
+    self.actionButton = RLVCreateMetalButton();
+#endif
     self.actionButton.titleLabel.font = [UIFont boldSystemFontOfSize:18.0];
     [self.actionButton addTarget:self action:@selector(actionPressed:) forControlEvents:UIControlEventTouchUpInside];
     self.contentView = [[UIView alloc] initWithFrame:CGRectZero];

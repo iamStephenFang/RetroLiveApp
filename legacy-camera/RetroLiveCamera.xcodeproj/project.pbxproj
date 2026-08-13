@@ -29,6 +29,7 @@
 		A00000000000000000000015 /* RLVTransferViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000015 /* RLVTransferViewController.m */; };
 		A00000000000000000000016 /* RLVLayout.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000016 /* RLVLayout.m */; };
 		A00000000000000000000017 /* RLVLibraryTabBarController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000017 /* RLVLibraryTabBarController.m */; };
+		A00000000000000000000018 /* RLVOnboardingViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000018 /* RLVOnboardingViewController.m */; };
 		A00000000000000000000019 /* RLVSettingsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000019 /* RLVSettingsViewController.m */; };
 		A10000000000000000000001 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* UIKit.framework */; };
 		A10000000000000000000002 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* Foundation.framework */; };
@@ -65,6 +66,7 @@
 		B00000000000000000000015 /* RLVTransferViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000015 /* RLVTransferViewController.m */; };
 		B00000000000000000000016 /* RLVLayout.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000016 /* RLVLayout.m */; };
 		B00000000000000000000017 /* RLVLibraryTabBarController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000017 /* RLVLibraryTabBarController.m */; };
+		B00000000000000000000018 /* RLVOnboardingViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000018 /* RLVOnboardingViewController.m */; };
 		B00000000000000000000019 /* RLVSettingsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000019 /* RLVSettingsViewController.m */; };
 		B10000000000000000000001 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* UIKit.framework */; };
 		B10000000000000000000002 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* Foundation.framework */; };
@@ -116,6 +118,7 @@
 		F00000000000000000000015 /* RLVTransferViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVTransferViewController.m; sourceTree = "<group>"; };
 		F00000000000000000000016 /* RLVLayout.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVLayout.m; sourceTree = "<group>"; };
 		F00000000000000000000017 /* RLVLibraryTabBarController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVLibraryTabBarController.m; sourceTree = "<group>"; };
+		F00000000000000000000018 /* RLVOnboardingViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVOnboardingViewController.m; sourceTree = "<group>"; };
 		F00000000000000000000019 /* RLVSettingsViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RLVSettingsViewController.m; sourceTree = "<group>"; };
 		F00000000000000000000020 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F00000000000000000000021 /* Classic-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Classic-Info.plist"; sourceTree = "<group>"; };
@@ -150,6 +153,7 @@
 		F20000000000000000000014 /* RLVTransferViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVTransferViewController.h; sourceTree = "<group>"; };
 		F20000000000000000000015 /* RLVLayout.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVLayout.h; sourceTree = "<group>"; };
 		F20000000000000000000016 /* RLVLibraryTabBarController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVLibraryTabBarController.h; sourceTree = "<group>"; };
+		F20000000000000000000017 /* RLVOnboardingViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVOnboardingViewController.h; sourceTree = "<group>"; };
 		F20000000000000000000018 /* RLVSettingsViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RLVSettingsViewController.h; sourceTree = "<group>"; };
 		F30000000000000000000001 /* RetroLiveLegacyIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RetroLiveLegacyIcon.png; sourceTree = "<group>"; };
 		F30000000000000000000002 /* RetroLiveLegacyIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "RetroLiveLegacyIcon@2x.png"; sourceTree = "<group>"; };
@@ -286,6 +290,7 @@
 		400000000000000000000007 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				40000000000000000000001B /* Onboarding */,
 				400000000000000000000008 /* Capture */,
 				400000000000000000000009 /* Asset */,
 				40000000000000000000000A /* Device */,
@@ -294,6 +299,15 @@
 				40000000000000000000000E /* Library */,
 			);
 			path = Shared;
+			sourceTree = "<group>";
+		};
+		40000000000000000000001B /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				F20000000000000000000017 /* RLVOnboardingViewController.h */,
+				F00000000000000000000018 /* RLVOnboardingViewController.m */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		400000000000000000000008 /* Capture */ = {
@@ -617,6 +631,7 @@
 				A00000000000000000000015 /* RLVTransferViewController.m in Sources */,
 				A00000000000000000000016 /* RLVLayout.m in Sources */,
 				A00000000000000000000017 /* RLVLibraryTabBarController.m in Sources */,
+				A00000000000000000000018 /* RLVOnboardingViewController.m in Sources */,
 				A00000000000000000000019 /* RLVSettingsViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -647,6 +662,7 @@
 				B00000000000000000000015 /* RLVTransferViewController.m in Sources */,
 				B00000000000000000000016 /* RLVLayout.m in Sources */,
 				B00000000000000000000017 /* RLVLibraryTabBarController.m in Sources */,
+				B00000000000000000000018 /* RLVOnboardingViewController.m in Sources */,
 				B00000000000000000000019 /* RLVSettingsViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -737,6 +753,7 @@
 					"$(SRCROOT)/RetroLiveCamera/Shared/Utilities",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Library",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Onboarding",
 					"$(SRCROOT)/RetroLiveCamera/Legacy/Camera",
 				);
 				INFOPLIST_FILE = RetroLiveCamera/Info.plist;
@@ -765,6 +782,7 @@
 					"$(SRCROOT)/RetroLiveCamera/Shared/Utilities",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Library",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Onboarding",
 					"$(SRCROOT)/RetroLiveCamera/Legacy/Camera",
 				);
 				INFOPLIST_FILE = RetroLiveCamera/Info.plist;
@@ -797,6 +815,7 @@
 					"$(SRCROOT)/RetroLiveCamera/Shared/Utilities",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Library",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Onboarding",
 					"$(SRCROOT)/RetroLiveCamera/Classic/Camera",
 				);
 				INFOPLIST_FILE = "RetroLiveCamera/Classic-Info.plist";
@@ -829,6 +848,7 @@
 					"$(SRCROOT)/RetroLiveCamera/Shared/Utilities",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Library",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Onboarding",
 					"$(SRCROOT)/RetroLiveCamera/Classic/Camera",
 				);
 				INFOPLIST_FILE = "RetroLiveCamera/Classic-Info.plist";
