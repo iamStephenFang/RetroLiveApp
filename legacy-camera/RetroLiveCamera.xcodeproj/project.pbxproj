@@ -291,6 +291,7 @@
 			isa = PBXGroup;
 			children = (
 				40000000000000000000001B /* Onboarding */,
+				40000000000000000000000D /* Camera */,
 				400000000000000000000008 /* Capture */,
 				400000000000000000000009 /* Asset */,
 				40000000000000000000000A /* Device */,
@@ -348,10 +349,6 @@
 		40000000000000000000000B /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
-				F2000000000000000000000C /* RLVBaseCameraViewController.h */,
-				F0000000000000000000000D /* RLVBaseCameraViewController.m */,
-				F2000000000000000000000B /* RLVShutterButton.h */,
-				F0000000000000000000000C /* RLVShutterButton.m */,
 				F20000000000000000000015 /* RLVLayout.h */,
 				F00000000000000000000016 /* RLVLayout.m */,
 			);
@@ -361,7 +358,8 @@
 		40000000000000000000000C /* Legacy */ = {
 			isa = PBXGroup;
 			children = (
-				40000000000000000000000D /* Camera */,
+				F2000000000000000000000D /* RLVLegacyCameraViewController.h */,
+				F0000000000000000000000E /* RLVLegacyCameraViewController.m */,
 			);
 			path = Legacy;
 			sourceTree = "<group>";
@@ -369,8 +367,10 @@
 		40000000000000000000000D /* Camera */ = {
 			isa = PBXGroup;
 			children = (
-				F2000000000000000000000D /* RLVLegacyCameraViewController.h */,
-				F0000000000000000000000E /* RLVLegacyCameraViewController.m */,
+				F2000000000000000000000C /* RLVBaseCameraViewController.h */,
+				F0000000000000000000000D /* RLVBaseCameraViewController.m */,
+				F2000000000000000000000B /* RLVShutterButton.h */,
+				F0000000000000000000000C /* RLVShutterButton.m */,
 			);
 			path = Camera;
 			sourceTree = "<group>";
@@ -393,18 +393,10 @@
 		40000000000000000000000F /* Classic */ = {
 			isa = PBXGroup;
 			children = (
-				400000000000000000000010 /* Camera */,
-			);
-			path = Classic;
-			sourceTree = "<group>";
-		};
-		400000000000000000000010 /* Camera */ = {
-			isa = PBXGroup;
-			children = (
 				F2000000000000000000000E /* RLVClassicCameraViewController.h */,
 				F0000000000000000000000F /* RLVClassicCameraViewController.m */,
 			);
-			path = Camera;
+			path = Classic;
 			sourceTree = "<group>";
 		};
 		400000000000000000000011 /* Configuration */ = {
@@ -754,7 +746,8 @@
 					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Library",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Onboarding",
-					"$(SRCROOT)/RetroLiveCamera/Legacy/Camera",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Camera",
+					"$(SRCROOT)/RetroLiveCamera/Legacy",
 				);
 				INFOPLIST_FILE = RetroLiveCamera/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
@@ -783,7 +776,8 @@
 					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Library",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Onboarding",
-					"$(SRCROOT)/RetroLiveCamera/Legacy/Camera",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Camera",
+					"$(SRCROOT)/RetroLiveCamera/Legacy",
 				);
 				INFOPLIST_FILE = RetroLiveCamera/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
@@ -816,7 +810,8 @@
 					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Library",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Onboarding",
-					"$(SRCROOT)/RetroLiveCamera/Classic/Camera",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Camera",
+					"$(SRCROOT)/RetroLiveCamera/Classic",
 				);
 				INFOPLIST_FILE = "RetroLiveCamera/Classic-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
@@ -849,7 +844,8 @@
 					"$(SRCROOT)/RetroLiveCamera/Shared/Transfer",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Library",
 					"$(SRCROOT)/RetroLiveCamera/Shared/Onboarding",
-					"$(SRCROOT)/RetroLiveCamera/Classic/Camera",
+					"$(SRCROOT)/RetroLiveCamera/Shared/Camera",
+					"$(SRCROOT)/RetroLiveCamera/Classic",
 				);
 				INFOPLIST_FILE = "RetroLiveCamera/Classic-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
