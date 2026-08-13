@@ -12,7 +12,7 @@
 @end
 
 @protocol RLVFocusPreviewViewDelegate <NSObject>
-- (void)focusPreviewViewDidRequestCenterFocus:(RLVFocusPreviewView *)previewView;
+- (BOOL)focusPreviewViewDidRequestCenterFocus:(RLVFocusPreviewView *)previewView;
 @end
 
 @interface RLVBaseCameraViewController : UIViewController <RLVCaptureControllerDelegate,

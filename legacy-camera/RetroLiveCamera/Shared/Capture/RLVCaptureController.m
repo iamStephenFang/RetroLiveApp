@@ -34,6 +34,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 - (void)subjectAreaDidChange:(NSNotification *)notification;
 - (void)finishPointOfInterestRequest:(void (^)(RLVPointOfInterestResult result))completion
                               result:(RLVPointOfInterestResult)result;
+- (void)removeAbandonedRollingFilesBeforeDate:(NSDate *)cutoffDate;
 @end
 
 @implementation RLVCaptureController
@@ -48,7 +49,12 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
         _motionCaptureEnabled = YES;
         _rollingOrientation = AVCaptureVideoOrientationPortrait;
         _sessionQueue = dispatch_queue_create("com.retrolive.capture.session", DISPATCH_QUEUE_SERIAL);
-        [self removeAbandonedRollingFiles];
+        NSDate *cleanupCutoffDate = [NSDate date];
+        __weak RLVCaptureController *controller = self;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)),
+                       dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+            [controller removeAbandonedRollingFilesBeforeDate:cleanupCutoffDate];
+        });
     }
     return self;
 }
@@ -535,11 +541,19 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
     return [[self rollingDirectoryURL] URLByAppendingPathComponent:filename];
 }
 
-- (void)removeAbandonedRollingFiles
+- (void)removeAbandonedRollingFilesBeforeDate:(NSDate *)cutoffDate
 {
-    NSURL *directory = [self rollingDirectoryURL];
-    NSArray *children = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:directory includingPropertiesForKeys:nil options:0 error:NULL];
-    for (NSURL *url in children) [[NSFileManager defaultManager] removeItemAtURL:url error:NULL];
+    @autoreleasepool {
+        NSURL *directory = [self rollingDirectoryURL];
+        NSFileManager *manager = [NSFileManager defaultManager];
+        NSArray *children = [manager contentsOfDirectoryAtURL:directory includingPropertiesForKeys:nil options:0 error:NULL];
+        for (NSURL *url in children) {
+            NSDictionary *attributes = [manager attributesOfItemAtPath:[url path] error:NULL];
+            NSDate *modifiedAt = [attributes objectForKey:NSFileModificationDate];
+            if (modifiedAt && [modifiedAt compare:cutoffDate] == NSOrderedDescending) continue;
+            [manager removeItemAtURL:url error:NULL];
+        }
+    }
 }
 
 - (void)setFlashMode:(AVCaptureFlashMode)flashMode

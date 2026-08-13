@@ -238,10 +238,12 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
     cell.imageView.image = cachedImage;
     if (!cachedImage) {
         NSString *assetId = [asset.assetId copy];
+        NSURL *thumbnailURL = asset.thumbnailURL;
         NSURL *photoURL = asset.photoURL;
         __weak RLVLibraryViewController *controller = self;
         [self.thumbnailQueue addOperationWithBlock:^{
-            UIImage *image = [controller thumbnailAtURL:photoURL maximumSize:240];
+            UIImage *image = thumbnailURL ? [controller thumbnailAtURL:thumbnailURL maximumSize:240] : nil;
+            if (!image) image = [controller thumbnailAtURL:photoURL maximumSize:240];
             if (image) {
                 CGImageRef imageRef = image.CGImage;
                 NSUInteger cost = imageRef ? CGImageGetBytesPerRow(imageRef) * CGImageGetHeight(imageRef) : 0;

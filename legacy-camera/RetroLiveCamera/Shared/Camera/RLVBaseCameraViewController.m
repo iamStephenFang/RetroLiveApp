@@ -16,8 +16,7 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 - (BOOL)accessibilityActivate
 {
     if (!self.focusDelegate) return NO;
-    [self.focusDelegate focusPreviewViewDidRequestCenterFocus:self];
-    return YES;
+    return [self.focusDelegate focusPreviewViewDidRequestCenterFocus:self];
 }
 
 @synthesize focusDelegate = _focusDelegate;
@@ -35,15 +34,21 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 @property (nonatomic, assign, getter=isViewVisible) BOOL viewVisible;
 @property (nonatomic, assign) NSUInteger focusRequestGeneration;
 @property (nonatomic, copy) NSString *thumbnailRequestAssetId;
+@property (nonatomic, assign) NSUInteger thumbnailRequestGeneration;
 @property (nonatomic, copy) NSString *activeAspectRatio;
+@property (nonatomic, assign, getter=isSavingAsset) BOOL savingAsset;
+@property (nonatomic, strong) UITapGestureRecognizer *focusTapGestureRecognizer;
 - (void)attachPreviewLayerIfNeeded;
 - (void)updatePreviewFrame;
 - (void)configureCameraActions;
+- (BOOL)isCameraInteractionAvailable;
+- (void)updateCameraControls;
 - (void)configureFocusReticle;
 - (void)requestFocusAtPreviewPoint:(CGPoint)point;
 - (void)showFocusReticleAtPreviewPoint:(CGPoint)point;
 - (void)hideFocusReticle;
 - (void)updateThumbnail;
+- (void)loadThumbnailForAsset:(RLVAsset *)asset generation:(NSUInteger)generation retry:(BOOL)retry;
 @end
 
 @implementation RLVBaseCameraViewController
@@ -60,6 +65,7 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
     if (![@[@"4:3", @"1:1", @"16:9"] containsObject:savedAspectRatio]) savedAspectRatio = @"4:3";
     self.activeAspectRatio = savedAspectRatio;
     [self configureCameraActions];
+    [self updateCameraControls];
 
     self.shutterOverlay = [[UIView alloc] initWithFrame:self.previewView.bounds];
     self.shutterOverlay.backgroundColor = [UIColor blackColor];
@@ -189,8 +195,8 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
     [self updateFlashButton];
     [self updateLivePhotoButton];
     [self updateAspectRatioButton];
-    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(previewTapped:)];
-    [self.previewView addGestureRecognizer:tap];
+    self.focusTapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(previewTapped:)];
+    [self.previewView addGestureRecognizer:self.focusTapGestureRecognizer];
     self.previewView.isAccessibilityElement = YES;
     self.previewView.accessibilityTraits = UIAccessibilityTraitButton;
     self.previewView.accessibilityLabel = NSLocalizedString(@"camera.preview", nil);
@@ -198,6 +204,26 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
     if ([self.previewView isKindOfClass:[RLVFocusPreviewView class]]) {
         [(RLVFocusPreviewView *)self.previewView setFocusDelegate:self];
     }
+}
+
+- (BOOL)isCameraInteractionAvailable
+{
+    return self.captureController.state == RLVCaptureStateRunning && !self.isSavingAsset;
+}
+
+- (void)updateCameraControls
+{
+    BOOL available = [self isCameraInteractionAvailable];
+    self.shutterButton.enabled = available;
+    self.thumbnailButton.enabled = available &&
+        [self.thumbnailButton imageForState:UIControlStateNormal] != nil;
+    self.livePhotoButton.enabled = available;
+    self.cameraSwitchButton.enabled = available;
+    self.flashButton.enabled = available;
+    self.aspectRatioButton.enabled = available;
+    self.focusTapGestureRecognizer.enabled = available;
+    self.previewView.accessibilityTraits = UIAccessibilityTraitButton |
+        (available ? 0 : UIAccessibilityTraitNotEnabled);
 }
 
 - (void)configureFocusReticle
@@ -276,6 +302,7 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 - (void)shutterPressed:(id)sender
 {
     (void)sender;
+    if (![self isCameraInteractionAvailable]) return;
     [self.captureController capturePhotoWithOrientation:self.orientationCoordinator.captureOrientation
                                       videoOrientation:self.orientationCoordinator.videoOrientation
                                             aspectRatio:self.activeAspectRatio];
@@ -284,6 +311,7 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 - (void)aspectRatioPressed:(id)sender
 {
     (void)sender;
+    if (![self isCameraInteractionAvailable]) return;
     UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"camera.aspect.title", nil)
         delegate:self cancelButtonTitle:NSLocalizedString(@"common.cancel", nil) destructiveButtonTitle:nil
         otherButtonTitles:@"4:3", @"1:1", @"16:9", nil];
@@ -293,7 +321,8 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 
 - (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex
 {
-    if (actionSheet.tag != RLVAspectRatioActionSheetTag || buttonIndex < 0 || buttonIndex > 2) return;
+    if (actionSheet.tag != RLVAspectRatioActionSheetTag || buttonIndex < 0 || buttonIndex > 2 ||
+        ![self isCameraInteractionAvailable]) return;
     self.activeAspectRatio = [@[@"4:3", @"1:1", @"16:9"] objectAtIndex:buttonIndex];
     [[NSUserDefaults standardUserDefaults] setObject:self.activeAspectRatio forKey:RLVAspectRatioDefaultsKey];
     [[NSUserDefaults standardUserDefaults] synchronize];
@@ -313,13 +342,15 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 - (void)thumbnailPressed:(id)sender
 {
     (void)sender;
+    if (![self isCameraInteractionAvailable]) return;
     self.thumbnailButton.enabled = NO;
     __weak RLVBaseCameraViewController *controller = self;
     [[RLVAssetStore sharedStore] loadAssetsWithCompletion:^(NSArray *assets, NSError *error) {
         (void)error;
         if (!controller) return;
-        controller.thumbnailButton.enabled = [assets count] > 0;
-        if ([assets count] == 0 || controller.presentedViewController || !controller.view.window) return;
+        [controller updateCameraControls];
+        if ([assets count] == 0 || ![controller isCameraInteractionAvailable] ||
+            controller.presentedViewController || !controller.view.window) return;
         RLVLibraryTabBarController *library = [[RLVLibraryTabBarController alloc]
             initWithAssets:assets selectedIndex:0];
         library.modalPresentationStyle = UIModalPresentationFullScreen;
@@ -330,6 +361,7 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 - (void)livePhotoTogglePressed:(id)sender
 {
     (void)sender;
+    if (![self isCameraInteractionAvailable]) return;
     self.captureController.motionCaptureEnabled = !self.captureController.isMotionCaptureEnabled;
     [self updateLivePhotoButton];
 }
@@ -353,6 +385,7 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 - (void)cameraSwitchPressed:(id)sender
 {
     (void)sender;
+    if (![self isCameraInteractionAvailable]) return;
     self.focusRequestGeneration += 1;
     [self hideFocusReticle];
     [self.captureController switchCamera];
@@ -361,6 +394,7 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 - (void)flashPressed:(id)sender
 {
     (void)sender;
+    if (![self isCameraInteractionAvailable]) return;
     AVCaptureFlashMode next = AVCaptureFlashModeAuto;
     if (self.captureController.flashMode == AVCaptureFlashModeAuto) next = AVCaptureFlashModeOn;
     else if (self.captureController.flashMode == AVCaptureFlashModeOn) next = AVCaptureFlashModeOff;
@@ -397,18 +431,20 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
     [self requestFocusAtPreviewPoint:[recognizer locationInView:self.previewView]];
 }
 
-- (void)focusPreviewViewDidRequestCenterFocus:(RLVFocusPreviewView *)previewView
+- (BOOL)focusPreviewViewDidRequestCenterFocus:(RLVFocusPreviewView *)previewView
 {
     (void)previewView;
+    if (![self isCameraInteractionAvailable]) return NO;
     [self requestFocusAtPreviewPoint:CGPointMake(
         CGRectGetMidX(self.captureController.previewLayer.frame),
         CGRectGetMidY(self.captureController.previewLayer.frame))];
+    return YES;
 }
 
 - (void)requestFocusAtPreviewPoint:(CGPoint)point
 {
     AVCaptureVideoPreviewLayer *previewLayer = self.captureController.previewLayer;
-    if (self.captureController.state != RLVCaptureStateRunning || !previewLayer ||
+    if (![self isCameraInteractionAvailable] || !previewLayer ||
         previewLayer.superlayer != self.previewView.layer ||
         !CGRectContainsPoint(previewLayer.frame, point)) return;
 
@@ -462,9 +498,8 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 
 - (void)captureController:(RLVCaptureController *)controller didChangeState:(RLVCaptureState)state
 {
-    self.shutterButton.enabled = state == RLVCaptureStateRunning;
-    self.livePhotoButton.enabled = state != RLVCaptureStateCapturing;
     self.shutterButton.capturing = state == RLVCaptureStateCapturing;
+    [self updateCameraControls];
     if (state != RLVCaptureStateRunning) {
         self.focusRequestGeneration += 1;
         [self hideFocusReticle];
@@ -481,11 +516,19 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 - (void)captureController:(RLVCaptureController *)controller didCapturePhotoData:(NSData *)photoData motionURL:(NSURL *)motionURL event:(RLVCaptureEvent *)event
 {
     (void)controller;
+    self.savingAsset = YES;
+    self.focusRequestGeneration += 1;
+    [self hideFocusReticle];
+    [self updateCameraControls];
+    __weak RLVBaseCameraViewController *cameraController = self;
     [[RLVAssetStore sharedStore] createAssetWithPhotoData:photoData motionURL:motionURL event:event capabilities:self.capabilities
                                               completion:^(RLVAsset *asset, NSError *error) {
         if (motionURL) [[NSFileManager defaultManager] removeItemAtURL:motionURL error:NULL];
-        if (asset) [self updateThumbnail];
-        if (error) [self showError:error];
+        if (!cameraController) return;
+        cameraController.savingAsset = NO;
+        if (asset) [cameraController updateThumbnail];
+        [cameraController updateCameraControls];
+        if (error) [cameraController showError:error];
     }];
 }
 
@@ -511,29 +554,52 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 
 - (void)updateThumbnail
 {
+    NSUInteger generation = ++self.thumbnailRequestGeneration;
     __weak RLVBaseCameraViewController *controller = self;
     [[RLVAssetStore sharedStore] loadAssetsWithCompletion:^(NSArray *assets, NSError *error) {
         (void)error;
+        if (!controller || generation != controller.thumbnailRequestGeneration) return;
         RLVAsset *asset = [assets count] > 0 ? [assets objectAtIndex:0] : nil;
         controller.thumbnailRequestAssetId = asset.assetId;
         if (!asset) {
             [controller.thumbnailButton setImage:nil forState:UIControlStateNormal];
-            controller.thumbnailButton.enabled = NO;
+            [controller updateCameraControls];
             return;
         }
-        NSString *assetId = [asset.assetId copy];
-        NSURL *photoURL = asset.photoURL;
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            UIImage *image = [controller thumbnailAtURL:photoURL maximumSize:120.0];
-            dispatch_async(dispatch_get_main_queue(), ^{
-                if (![controller.thumbnailRequestAssetId isEqualToString:assetId]) return;
-                [controller.thumbnailButton setImage:image forState:UIControlStateNormal];
-                controller.thumbnailButton.layer.contentsGravity = kCAGravityResizeAspectFill;
-                controller.thumbnailButton.clipsToBounds = YES;
-                controller.thumbnailButton.enabled = image != nil;
-            });
-        });
+        [controller updateCameraControls];
+        [controller loadThumbnailForAsset:asset generation:generation retry:NO];
     }];
+}
+
+- (void)loadThumbnailForAsset:(RLVAsset *)asset generation:(NSUInteger)generation retry:(BOOL)retry
+{
+    NSString *assetId = [asset.assetId copy];
+    NSURL *thumbnailURL = asset.thumbnailURL;
+    NSURL *photoURL = asset.photoURL;
+    __weak RLVBaseCameraViewController *controller = self;
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        UIImage *image = thumbnailURL ? [controller thumbnailAtURL:thumbnailURL maximumSize:120.0] : nil;
+        if (!image) image = [controller thumbnailAtURL:photoURL maximumSize:120.0];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (!controller || generation != controller.thumbnailRequestGeneration ||
+                ![controller.thumbnailRequestAssetId isEqualToString:assetId]) return;
+            if (!image && !retry) {
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)),
+                               dispatch_get_main_queue(), ^{
+                    if (generation == controller.thumbnailRequestGeneration) {
+                        [controller loadThumbnailForAsset:asset generation:generation retry:YES];
+                    }
+                });
+                return;
+            }
+            if (image) {
+                [controller.thumbnailButton setImage:image forState:UIControlStateNormal];
+                controller.thumbnailButton.imageView.contentMode = UIViewContentModeScaleAspectFill;
+                controller.thumbnailButton.clipsToBounds = YES;
+            }
+            [controller updateCameraControls];
+        });
+    });
 }
 
 - (UIImage *)thumbnailAtURL:(NSURL *)url maximumSize:(CGFloat)size
@@ -577,6 +643,9 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 @synthesize liveCaptureIndicator = _liveCaptureIndicator;
 @synthesize viewVisible = _viewVisible;
 @synthesize thumbnailRequestAssetId = _thumbnailRequestAssetId;
+@synthesize thumbnailRequestGeneration = _thumbnailRequestGeneration;
 @synthesize activeAspectRatio = _activeAspectRatio;
+@synthesize savingAsset = _savingAsset;
+@synthesize focusTapGestureRecognizer = _focusTapGestureRecognizer;
 
 @end

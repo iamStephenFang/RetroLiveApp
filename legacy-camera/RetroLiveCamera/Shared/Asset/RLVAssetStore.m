@@ -22,6 +22,20 @@ static BOOL RLVIsBoolean(id value)
     return [value isKindOfClass:[NSNumber class]] && CFGetTypeID((__bridge CFTypeRef)value) == CFBooleanGetTypeID();
 }
 
+static BOOL RLVIsSafeFilename(id value)
+{
+    if (!RLVIsNonEmptyString(value) || [value isEqualToString:@"."] || [value isEqualToString:@".."]) return NO;
+    return [value rangeOfString:@"/"].location == NSNotFound &&
+        [value rangeOfString:@"\\"].location == NSNotFound;
+}
+
+static BOOL RLVIsLowercaseSHA256(id value)
+{
+    if (![value isKindOfClass:[NSString class]] || [value length] != 64) return NO;
+    NSCharacterSet *invalid = [[NSCharacterSet characterSetWithCharactersInString:@"0123456789abcdef"] invertedSet];
+    return [value rangeOfCharacterFromSet:invalid].location == NSNotFound;
+}
+
 @interface RLVAssetStore () {
     dispatch_queue_t _fileQueue;
 }
@@ -31,6 +45,7 @@ static BOOL RLVIsBoolean(id value)
 @property (nonatomic, strong) NSArray *cachedAssets;
 - (NSArray *)cachedAssetsLoadingFromDiskIfNeeded:(NSError **)error;
 - (NSArray *)loadAssetsFromDisk:(NSError **)error;
+- (RLVAsset *)loadAssetMetadataAtURL:(NSURL *)url error:(NSError **)error;
 - (NSData *)thumbnailDataForPhotoData:(NSData *)photoData
                          maxPixelSize:(NSUInteger)maxPixelSize
                                 width:(NSUInteger *)width
@@ -60,7 +75,7 @@ static BOOL RLVIsBoolean(id value)
         _assetsURL = [_rootURL URLByAppendingPathComponent:@"Assets" isDirectory:YES];
         _temporaryURL = [_rootURL URLByAppendingPathComponent:@"Temporary" isDirectory:YES];
         [self ensureDirectories];
-        [self recoverIncompleteAssets];
+        dispatch_async(_fileQueue, ^{ [self recoverIncompleteAssets]; });
     }
     return self;
 }
@@ -202,7 +217,7 @@ static BOOL RLVIsBoolean(id value)
     if (!children) return nil;
     NSMutableArray *assets = [NSMutableArray array];
     for (NSURL *url in children) {
-        RLVAsset *asset = [self loadAssetAtURL:url error:NULL];
+        RLVAsset *asset = [self loadAssetMetadataAtURL:url error:NULL];
         if (asset) [assets addObject:asset];
     }
     [assets sortUsingComparator:^NSComparisonResult(RLVAsset *first, RLVAsset *second) {
@@ -218,7 +233,21 @@ static BOOL RLVIsBoolean(id value)
         if (error) *error = [self errorWithCode:4 description:NSLocalizedString(@"asset.error.invalid_id", nil)];
         return nil;
     }
-    return [self loadAssetAtURL:[self.assetsURL URLByAppendingPathComponent:[uuid UUIDString] isDirectory:YES] error:error];
+    __block RLVAsset *matchedAsset = nil;
+    __block NSError *loadError = nil;
+    void (^loadBlock)(void) = ^{
+        NSArray *assets = [self cachedAssetsLoadingFromDiskIfNeeded:&loadError];
+        for (RLVAsset *asset in assets) {
+            if ([asset.assetId isEqualToString:[uuid UUIDString]]) {
+                matchedAsset = asset;
+                break;
+            }
+        }
+    };
+    if (dispatch_get_specific(RLVAssetStoreFileQueueKey) == (__bridge void *)self) loadBlock();
+    else dispatch_sync(_fileQueue, loadBlock);
+    if (error) *error = loadError;
+    return matchedAsset;
 }
 
 - (BOOL)deleteAsset:(RLVAsset *)asset error:(NSError **)error
@@ -373,35 +402,114 @@ static BOOL RLVIsBoolean(id value)
 - (RLVAsset *)loadAssetAtURL:(NSURL *)url error:(NSError **)error
 {
     if (![self validateAssetAtURL:url error:error]) return nil;
+    return [self loadAssetMetadataAtURL:url error:error];
+}
+
+- (RLVAsset *)loadAssetMetadataAtURL:(NSURL *)url error:(NSError **)error
+{
     NSData *data = [NSData dataWithContentsOfURL:[url URLByAppendingPathComponent:@"manifest.json"] options:0 error:error];
     if (!data) return nil;
     NSDictionary *manifest = [NSJSONSerialization JSONObjectWithData:data options:0 error:error];
-    if (![manifest isKindOfClass:[NSDictionary class]] ||
-        ![[manifest objectForKey:@"assetId"] isEqualToString:[url lastPathComponent]] ||
-        [[manifest objectForKey:@"schemaVersion"] integerValue] != 1) return nil;
-    NSDictionary *photo = [manifest objectForKey:@"photo"];
-    NSDictionary *capture = [manifest objectForKey:@"capture"];
-    NSDictionary *device = [manifest objectForKey:@"device"];
-    NSURL *photoURL = [url URLByAppendingPathComponent:[photo objectForKey:@"filename"] ?: @""];
+    if (![manifest isKindOfClass:[NSDictionary class]]) return nil;
+    NSNumber *schemaVersion = [manifest objectForKey:@"schemaVersion"];
+    NSString *assetId = [manifest objectForKey:@"assetId"];
+    id photoValue = [manifest objectForKey:@"photo"];
+    id captureValue = [manifest objectForKey:@"capture"];
+    id deviceValue = [manifest objectForKey:@"device"];
+    NSDictionary *photo = [photoValue isKindOfClass:[NSDictionary class]] ? photoValue : nil;
+    NSDictionary *capture = [captureValue isKindOfClass:[NSDictionary class]] ? captureValue : nil;
+    NSDictionary *device = [deviceValue isKindOfClass:[NSDictionary class]] ? deviceValue : nil;
+    NSString *photoFilename = [photo objectForKey:@"filename"];
+    NSString *photoHash = [photo objectForKey:@"sha256"];
+    NSNumber *photoLength = [photo objectForKey:@"byteLength"];
+    NSDate *createdAt = [RLVManifest dateFromISO8601String:[manifest objectForKey:@"createdAt"]];
+    NSNumber *createdMilliseconds = [manifest objectForKey:@"createdAtUnixMilliseconds"];
+    double createdDifference = fabs([createdAt timeIntervalSince1970] * 1000.0 - [createdMilliseconds longLongValue]);
+    NSString *cameraPosition = [capture objectForKey:@"cameraPosition"];
+    NSNumber *orientation = [capture objectForKey:@"orientation"];
+    NSNumber *mirrored = [capture objectForKey:@"mirrored"];
+    NSString *flashMode = [capture objectForKey:@"flashMode"];
+    NSString *timeAccuracy = [capture objectForKey:@"stillImageTimeAccuracy"];
+    NSString *aspectRatio = [capture objectForKey:@"aspectRatio"];
+    NSNumber *stillTime = [capture objectForKey:@"stillImageTimeSeconds"];
+    NSNumber *preRoll = [capture objectForKey:@"preRollSeconds"];
+    NSNumber *postRoll = [capture objectForKey:@"postRollSeconds"];
+    BOOL captureValid = ([cameraPosition isEqualToString:@"front"] || [cameraPosition isEqualToString:@"back"]) &&
+        RLVIsNumber(orientation) && [orientation integerValue] >= 1 && [orientation integerValue] <= 8 &&
+        RLVIsBoolean(mirrored) && ([flashMode isEqualToString:@"off"] || [flashMode isEqualToString:@"on"] ||
+        [flashMode isEqualToString:@"auto"]) && (aspectRatio == nil || [aspectRatio isEqualToString:@"4:3"] ||
+        [aspectRatio isEqualToString:@"1:1"] || [aspectRatio isEqualToString:@"16:9"]) &&
+        ([timeAccuracy isEqualToString:@"measured"] || [timeAccuracy isEqualToString:@"estimated"]) &&
+        RLVIsNumber(stillTime) && [stillTime doubleValue] >= 0.0 && RLVIsNumber(preRoll) && [preRoll doubleValue] >= 0.0 &&
+        RLVIsNumber(postRoll) && [postRoll doubleValue] >= 0.0;
+    BOOL deviceValid = RLVIsNonEmptyString([device objectForKey:@"modelIdentifier"]) &&
+        RLVIsNonEmptyString([device objectForKey:@"systemVersion"]) &&
+        RLVIsNonEmptyString([device objectForKey:@"appVersion"]);
+    if (!RLVIsNumber(schemaVersion) || [schemaVersion integerValue] != 1 || !RLVIsNonEmptyString(assetId) ||
+        [[NSUUID alloc] initWithUUIDString:assetId] == nil || ![assetId isEqualToString:[url lastPathComponent]] ||
+        !createdAt || !RLVIsNumber(createdMilliseconds) || [createdMilliseconds longLongValue] < 0 || createdDifference > 1.0 ||
+        !photo || !capture || !device || !captureValid || !deviceValid ||
+        ![photoFilename isEqualToString:@"photo.jpg"] || !RLVIsSafeFilename(photoFilename) ||
+        ![[photo objectForKey:@"mimeType"] isEqualToString:@"image/jpeg"] ||
+        !RLVIsNumber(photoLength) || [photoLength unsignedLongLongValue] == 0 ||
+        !RLVIsLowercaseSHA256(photoHash) || !RLVIsNumber([photo objectForKey:@"width"]) ||
+        !RLVIsNumber([photo objectForKey:@"height"]) || [[photo objectForKey:@"width"] unsignedIntegerValue] == 0 ||
+        [[photo objectForKey:@"height"] unsignedIntegerValue] == 0 || ![capture isKindOfClass:[NSDictionary class]] ||
+        ![device isKindOfClass:[NSDictionary class]]) return nil;
+
+    NSURL *photoURL = [url URLByAppendingPathComponent:photoFilename];
     NSDictionary *attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:[photoURL path] error:error];
-    if (![photo isKindOfClass:[NSDictionary class]] || !attributes ||
-        [[attributes objectForKey:NSFileSize] unsignedLongLongValue] != [[photo objectForKey:@"byteLength"] unsignedLongLongValue]) return nil;
-    RLVAsset *asset = [[RLVAsset alloc] init];
-    asset.assetId = [manifest objectForKey:@"assetId"];
-    asset.createdAt = [RLVManifest dateFromISO8601String:[manifest objectForKey:@"createdAt"]];
-    asset.captureTimestamp = [NSDate dateWithTimeIntervalSince1970:[[manifest objectForKey:@"createdAtUnixMilliseconds"] longLongValue] / 1000.0];
-    asset.photoURL = photoURL;
+    if (!attributes || [[attributes objectForKey:NSFileSize] unsignedLongLongValue] != [photoLength unsignedLongLongValue]) return nil;
+
     NSDictionary *thumbnail = [[manifest objectForKey:@"thumbnail"] isKindOfClass:[NSDictionary class]] ?
         [manifest objectForKey:@"thumbnail"] : nil;
-    NSURL *thumbnailURL = thumbnail ? [url URLByAppendingPathComponent:[thumbnail objectForKey:@"filename"] ?: @""] : nil;
-    if (thumbnailURL && [[NSFileManager defaultManager] fileExistsAtPath:[thumbnailURL path]]) asset.thumbnailURL = thumbnailURL;
-    NSURL *motionURL = [url URLByAppendingPathComponent:@"motion.mov"];
-    if ([[NSFileManager defaultManager] fileExistsAtPath:[motionURL path]]) asset.motionURL = motionURL;
+    NSURL *thumbnailURL = nil;
+    if (thumbnail) {
+        NSString *filename = [thumbnail objectForKey:@"filename"];
+        NSNumber *length = [thumbnail objectForKey:@"byteLength"];
+        thumbnailURL = [url URLByAppendingPathComponent:RLVIsSafeFilename(filename) ? filename : @""];
+        NSDictionary *thumbnailAttributes = [[NSFileManager defaultManager] attributesOfItemAtPath:[thumbnailURL path] error:NULL];
+        if (![filename isEqualToString:@"thumbnail.jpg"] || ![[thumbnail objectForKey:@"mimeType"] isEqualToString:@"image/jpeg"] ||
+            !RLVIsNumber(length) || [length unsignedLongLongValue] == 0 || !RLVIsLowercaseSHA256([thumbnail objectForKey:@"sha256"]) ||
+            !RLVIsNumber([thumbnail objectForKey:@"width"]) || [[thumbnail objectForKey:@"width"] unsignedIntegerValue] == 0 ||
+            !RLVIsNumber([thumbnail objectForKey:@"height"]) || [[thumbnail objectForKey:@"height"] unsignedIntegerValue] == 0 ||
+            !thumbnailAttributes || [[thumbnailAttributes objectForKey:NSFileSize] unsignedLongLongValue] != [length unsignedLongLongValue]) return nil;
+    } else if ([manifest objectForKey:@"thumbnail"] != nil) {
+        return nil;
+    }
+
+    NSDictionary *motion = [[manifest objectForKey:@"motion"] isKindOfClass:[NSDictionary class]] ?
+        [manifest objectForKey:@"motion"] : nil;
+    NSURL *motionURL = nil;
+    if (motion) {
+        NSString *filename = [motion objectForKey:@"filename"];
+        NSNumber *length = [motion objectForKey:@"byteLength"];
+        motionURL = [url URLByAppendingPathComponent:RLVIsSafeFilename(filename) ? filename : @""];
+        NSDictionary *motionAttributes = [[NSFileManager defaultManager] attributesOfItemAtPath:[motionURL path] error:NULL];
+        if (![filename isEqualToString:@"motion.mov"] || ![[motion objectForKey:@"mimeType"] isEqualToString:@"video/quicktime"] ||
+            !RLVIsNumber(length) || [length unsignedLongLongValue] == 0 || !RLVIsLowercaseSHA256([motion objectForKey:@"sha256"]) ||
+            !RLVIsNumber([motion objectForKey:@"durationSeconds"]) || [[motion objectForKey:@"durationSeconds"] doubleValue] <= 0.0 ||
+            !RLVIsNumber([motion objectForKey:@"width"]) || [[motion objectForKey:@"width"] unsignedIntegerValue] == 0 ||
+            !RLVIsNumber([motion objectForKey:@"height"]) || [[motion objectForKey:@"height"] unsignedIntegerValue] == 0 ||
+            !RLVIsNumber([motion objectForKey:@"frameRate"]) || [[motion objectForKey:@"frameRate"] doubleValue] <= 0.0 ||
+            !RLVIsBoolean([motion objectForKey:@"hasAudio"]) || [stillTime doubleValue] >= [[motion objectForKey:@"durationSeconds"] doubleValue] ||
+            !motionAttributes || [[motionAttributes objectForKey:NSFileSize] unsignedLongLongValue] != [length unsignedLongLongValue]) return nil;
+    } else if ([manifest objectForKey:@"motion"] != [NSNull null]) {
+        return nil;
+    } else if ([stillTime doubleValue] != 0.0 || [preRoll doubleValue] != 0.0 || [postRoll doubleValue] != 0.0) {
+        return nil;
+    }
+
+    RLVAsset *asset = [[RLVAsset alloc] init];
+    asset.assetId = assetId;
+    asset.createdAt = createdAt;
+    asset.captureTimestamp = [NSDate dateWithTimeIntervalSince1970:[[manifest objectForKey:@"createdAtUnixMilliseconds"] longLongValue] / 1000.0];
+    asset.photoURL = photoURL;
+    asset.thumbnailURL = thumbnailURL;
+    asset.motionURL = motionURL;
     asset.manifestURL = [url URLByAppendingPathComponent:@"manifest.json"];
     asset.width = [[photo objectForKey:@"width"] unsignedIntegerValue];
     asset.height = [[photo objectForKey:@"height"] unsignedIntegerValue];
-    NSDictionary *motion = [[manifest objectForKey:@"motion"] isKindOfClass:[NSDictionary class]] ?
-        [manifest objectForKey:@"motion"] : nil;
     asset.motionWidth = [[motion objectForKey:@"width"] unsignedIntegerValue];
     asset.motionHeight = [[motion objectForKey:@"height"] unsignedIntegerValue];
     asset.orientation = [[capture objectForKey:@"orientation"] integerValue];

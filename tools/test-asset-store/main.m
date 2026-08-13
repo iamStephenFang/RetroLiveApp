@@ -139,6 +139,9 @@ int main(void)
         [[NSFileManager defaultManager] createDirectoryAtURL:partial withIntermediateDirectories:NO attributes:nil error:NULL];
         [@"partial" writeToURL:[partial URLByAppendingPathComponent:@"photo.jpg"] atomically:YES encoding:NSUTF8StringEncoding error:NULL];
         RLVAssetStore *restartedStore = [[RLVAssetStore alloc] initWithDocumentsURL:documentsURL];
+        // The store now schedules recovery on its serial file queue so startup
+        // is not blocked. The first catalog read is ordered after recovery.
+        [restartedStore loadAssets:&commitError];
         if ([[NSFileManager defaultManager] fileExistsAtPath:[partial path]]) {
             fprintf(stderr, "FAIL recovery left partial staging directory\n");
             return 1;
