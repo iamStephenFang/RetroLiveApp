@@ -74,3 +74,16 @@
 "transfer.error.listen" = "Unable to listen for transfer clients.";
 "camera.aspect.title" = "Aspect Ratio";
 "camera.aspect.value" = "Aspect ratio, %@";
+"settings.title" = "Settings";
+"settings.section.library" = "Library";
+"settings.section.live" = "Live Photos";
+"settings.section.about" = "About";
+"settings.library.original_ratio" = "Show Full Photo in Grid";
+"settings.library.original_ratio.footer" = "Shows each photo at its original aspect ratio. Photos that do not fill the square thumbnail will have black margins.";
+"settings.live.autoplay" = "Auto-Play Live Photos";
+"settings.live.autoplay.footer" = "When off, press and hold a Live Photo to play it.";
+"settings.about.changes" = "What's New";
+"settings.about.changes.detail" = "Release notes will be available here in a future update.";
+"settings.about.privacy" = "Privacy Policy";
+"settings.about.privacy.detail" = "Photos and motion clips are stored locally inside RetroLive. RetroLive does not upload them. Local Wi-Fi transfer runs only when you start sharing, and stopping sharing invalidates the current session.";
+"settings.about.version" = "RetroLive %@ (%@)";

@@ -2,6 +2,7 @@
 #import "RLVAsset.h"
 #import "RLVAssetStore.h"
 #import "RLVLayout.h"
+#import "RLVSettingsViewController.h"
 #import <AVFoundation/AVFoundation.h>
 #import <ImageIO/ImageIO.h>
 #import <QuartzCore/QuartzCore.h>
@@ -930,7 +931,7 @@ static UIImage *RLVInformationImage(void)
 
 - (void)startAutomaticPlaybackIfNeeded
 {
-    if (![self.asset hasMotion] || self.playbackRequested) return;
+    if (![self.asset hasMotion] || self.playbackRequested || !RLVLibraryAutomaticallyPlaysLivePhotos()) return;
     if (self.playbackMode == RLVLivePlaybackModeLoop || self.playbackMode == RLVLivePlaybackModeBounce) {
         [self startPlayback];
     } else if (self.playbackMode == RLVLivePlaybackModeLive && !self.didAutoPlay) {

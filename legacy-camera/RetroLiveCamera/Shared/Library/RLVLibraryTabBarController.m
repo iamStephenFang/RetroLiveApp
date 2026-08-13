@@ -1,7 +1,9 @@
 #import "RLVLibraryTabBarController.h"
 #import "RLVAssetDetailViewController.h"
 #import "RLVLibraryViewController.h"
+#import "RLVSettingsViewController.h"
 #import "RLVTransferViewController.h"
+#import <math.h>
 
 static UIImage *RLVTemplateTabImage(void (^drawing)(CGContextRef context))
 {
@@ -48,6 +50,21 @@ static UIImage *RLVTransferTabImage(void)
     });
 }
 
+static UIImage *RLVSettingsTabImage(void)
+{
+    return RLVTemplateTabImage(^(CGContextRef context) {
+        CGContextSetLineWidth(context, 2.2);
+        CGContextStrokeEllipseInRect(context, CGRectMake(7.0, 7.0, 12.0, 12.0));
+        CGContextFillEllipseInRect(context, CGRectMake(11.0, 11.0, 4.0, 4.0));
+        for (NSUInteger index = 0; index < 8; index++) {
+            CGFloat angle = (CGFloat)index * (CGFloat)M_PI / 4.0;
+            CGContextMoveToPoint(context, 13.0 + cos(angle) * 7.0, 13.0 + sin(angle) * 7.0);
+            CGContextAddLineToPoint(context, 13.0 + cos(angle) * 10.0, 13.0 + sin(angle) * 10.0);
+        }
+        CGContextStrokePath(context);
+    });
+}
+
 @interface RLVLibraryTabBarController () <RLVLibraryViewControllerDelegate,
     RLVAssetDetailViewControllerDelegate>
 @property (nonatomic, assign, getter=isTabBarManuallyHidden) BOOL tabBarManuallyHidden;
@@ -72,23 +89,31 @@ static UIImage *RLVTransferTabImage(void)
         RLVLibraryViewController *library = [[RLVLibraryViewController alloc] init];
         library.delegate = self;
         RLVTransferViewController *transfer = [[RLVTransferViewController alloc] init];
+        RLVSettingsViewController *settings = [[RLVSettingsViewController alloc] init];
         library.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"library.title", nil)
             image:RLVLibraryTabImage() tag:0];
         transfer.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"transfer.title", nil)
             image:RLVTransferTabImage() tag:1];
+        settings.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"settings.title", nil)
+            image:RLVSettingsTabImage() tag:2];
 
         UINavigationController *libraryNavigation = [[UINavigationController alloc]
             initWithRootViewController:library];
         UINavigationController *transferNavigation = [[UINavigationController alloc]
             initWithRootViewController:transfer];
+        UINavigationController *settingsNavigation = [[UINavigationController alloc]
+            initWithRootViewController:settings];
         libraryNavigation.navigationBar.barStyle = UIBarStyleBlack;
         transferNavigation.navigationBar.barStyle = UIBarStyleBlack;
+        settingsNavigation.navigationBar.barStyle = UIBarStyleBlack;
 
         library.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
             initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close:)];
         transfer.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
             initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close:)];
-        self.viewControllers = @[libraryNavigation, transferNavigation];
+        settings.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+            initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close:)];
+        self.viewControllers = @[libraryNavigation, transferNavigation, settingsNavigation];
         self.libraryNavigationController = libraryNavigation;
         self.initialAssets = [assets copy];
         self.initialSelectedIndex = selectedIndex;

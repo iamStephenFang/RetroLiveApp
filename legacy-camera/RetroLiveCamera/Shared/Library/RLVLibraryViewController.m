@@ -1,6 +1,7 @@
 #import "RLVLibraryViewController.h"
 #import "RLVAssetStore.h"
 #import "RLVLayout.h"
+#import "RLVSettingsViewController.h"
 #import <ImageIO/ImageIO.h>
 
 @interface RLVAssetCell : UICollectionViewCell
@@ -223,6 +224,9 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
 {
     RLVAssetCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"AssetCell" forIndexPath:indexPath];
     RLVAsset *asset = [self.assets objectAtIndex:indexPath.item];
+    BOOL preservesAspectRatio = RLVLibraryPreservesThumbnailAspectRatio();
+    cell.imageView.contentMode = preservesAspectRatio ? UIViewContentModeScaleAspectFit : UIViewContentModeScaleAspectFill;
+    cell.imageView.backgroundColor = preservesAspectRatio ? [UIColor blackColor] : [UIColor clearColor];
     UIImage *cachedImage = [self.thumbnailCache objectForKey:asset.assetId];
     cell.imageView.image = cachedImage;
     if (!cachedImage) {
