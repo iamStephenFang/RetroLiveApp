@@ -48,6 +48,7 @@ static BOOL RLVContentLengthFromHeaders(NSDictionary *headers, NSUInteger *resul
 @property (nonatomic, assign, readwrite) NSUInteger port;
 @property (nonatomic, copy, readwrite) NSString *pairingCode;
 @property (nonatomic, copy, readwrite) NSString *localAddress;
+@property (nonatomic, copy, readwrite) NSString *pairedClientName;
 @property (nonatomic, strong) NSNetService *netService;
 @property (nonatomic, strong) RLVTransferRouter *router;
 @end
@@ -106,6 +107,8 @@ static BOOL RLVContentLengthFromHeaders(NSDictionary *headers, NSUInteger *resul
     self.router = [[RLVTransferRouter alloc] initWithAssetStore:[RLVAssetStore sharedStore]
                                                     deviceInfo:deviceInfo
                                                    pairingCode:self.pairingCode];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(routerDidPair:)
+        name:RLVTransferRouterDidPairNotification object:self.router];
     _listenSocket = listener;
     __unsafe_unretained RLVTransferService *service = self;
     _acceptSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_READ, (uintptr_t)listener, 0, _acceptQueue);
@@ -134,12 +137,25 @@ static BOOL RLVContentLengthFromHeaders(NSDictionary *headers, NSUInteger *resul
         close(_listenSocket);
         _listenSocket = -1;
     }
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:RLVTransferRouterDidPairNotification object:self.router];
     self.router = nil;
     self.pairingCode = nil;
     self.localAddress = nil;
+    self.pairedClientName = nil;
     self.port = 0;
     self.running = NO;
     [[NSNotificationCenter defaultCenter] postNotificationName:RLVTransferServiceDidChangeNotification object:self];
+}
+
+- (void)routerDidPair:(NSNotification *)notification
+{
+    NSString *clientName = [[notification userInfo] objectForKey:RLVTransferRouterPairedClientNameKey];
+    if (![clientName isKindOfClass:[NSString class]] || [clientName length] == 0) return;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!self.running || [notification object] != self.router) return;
+        self.pairedClientName = clientName;
+        [[NSNotificationCenter defaultCenter] postNotificationName:RLVTransferServiceDidChangeNotification object:self];
+    });
 }
 
 - (void)acceptPendingConnections
@@ -364,6 +380,7 @@ static BOOL RLVContentLengthFromHeaders(NSDictionary *headers, NSUInteger *resul
 @synthesize port = _port;
 @synthesize pairingCode = _pairingCode;
 @synthesize localAddress = _localAddress;
+@synthesize pairedClientName = _pairedClientName;
 @synthesize netService = _netService;
 @synthesize router = _router;
 

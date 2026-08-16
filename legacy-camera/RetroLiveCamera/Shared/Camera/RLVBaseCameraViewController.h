@@ -16,7 +16,7 @@
 @end
 
 @interface RLVBaseCameraViewController : UIViewController <RLVCaptureControllerDelegate,
-    RLVCameraOrientationCoordinatorDelegate, RLVFocusPreviewViewDelegate, UIActionSheetDelegate>
+    RLVCameraOrientationCoordinatorDelegate, RLVFocusPreviewViewDelegate>
 
 @property (nonatomic, strong) UIView *previewView;
 @property (nonatomic, strong) UIView *topChromeView;

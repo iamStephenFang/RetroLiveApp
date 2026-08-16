@@ -114,7 +114,7 @@
 "preview.loading" = "Loading Preview…";
 "preview.preparing_live" = "Preparing Live Photo…";
 "preview.unavailable" = "Preview Unavailable";
-"preview.import" = "Import to Photos";
+"preview.import" = "Import";
 "library.loading" = "Loading Imported Photos…";
 "library.empty" = "No Imported Photos";
 "library.empty.note" = "Photos and Live Photos imported by RetroLive will appear here.";

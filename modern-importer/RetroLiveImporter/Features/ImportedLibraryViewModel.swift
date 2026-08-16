@@ -23,6 +23,11 @@ struct ImportedAssetDetails: Equatable, Sendable {
     let longitude: Double?
 }
 
+struct ImportedShareResource: Sendable {
+    let url: URL
+    let typeIdentifier: String
+}
+
 enum ImportedLibraryAccess {
     case notDetermined
     case available
@@ -130,6 +135,9 @@ final class ImportedLibraryViewModel: ObservableObject {
             result.enumerateObjects { asset, _, _ in
                 fetchedAssets[asset.localIdentifier] = asset
             }
+            for record in records where fetchedAssets[record.localIdentifier] == nil {
+                try await history.removeRecord(for: record.assetId)
+            }
             assetsByIdentifier = fetchedAssets
             items = records.compactMap { record in
                 guard let asset = fetchedAssets[record.localIdentifier] else { return nil }
@@ -231,6 +239,58 @@ final class ImportedLibraryViewModel: ObservableObject {
         )
     }
 
+    func shareResources(for item: ImportedLibraryItem) async throws -> [ImportedShareResource] {
+        try await Self.exportShareResources(
+            localIdentifier: item.localIdentifier,
+            kind: item.kind
+        )
+    }
+
+    func removeSharedResources(_ resources: [ImportedShareResource]) {
+        guard let directory = resources.first?.url.deletingLastPathComponent(),
+              directory.deletingLastPathComponent().lastPathComponent == "RetroLiveShare" else {
+            return
+        }
+        try? FileManager.default.removeItem(at: directory)
+    }
+
+    private nonisolated static func exportShareResources(
+        localIdentifier: String,
+        kind: ImportedAssetKind
+    ) async throws -> [ImportedShareResource] {
+        let result = PHAsset.fetchAssets(
+            withLocalIdentifiers: [localIdentifier],
+            options: nil
+        )
+        guard let asset = result.firstObject else { throw ImportedLibraryError.assetUnavailable }
+        let resources = primaryResources(for: asset, kind: kind)
+        guard !resources.isEmpty else { throw ImportedLibraryError.assetUnavailable }
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("RetroLiveShare", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+        do {
+            var exported: [ImportedShareResource] = []
+            for (index, resource) in resources.enumerated() {
+                let filename = shareFilename(for: resource, index: index)
+                let url = directory.appendingPathComponent(filename)
+                try await write(resource, to: url)
+                exported.append(
+                    ImportedShareResource(
+                        url: url,
+                        typeIdentifier: resource.uniformTypeIdentifier
+                    )
+                )
+            }
+            return exported
+        } catch {
+            try? FileManager.default.removeItem(at: directory)
+            throw error
+        }
+    }
+
     private nonisolated static func loadDetails(
         localIdentifier: String,
         kind: ImportedAssetKind
@@ -329,6 +389,37 @@ final class ImportedLibraryViewModel: ObservableObject {
             }
         }
         return counter.value
+    }
+
+    private nonisolated static func write(
+        _ resource: PHAssetResource,
+        to url: URL
+    ) async throws {
+        let options = PHAssetResourceRequestOptions()
+        options.isNetworkAccessAllowed = true
+        try await withCheckedThrowingContinuation {
+            (continuation: CheckedContinuation<Void, Error>) in
+            PHAssetResourceManager.default().writeData(
+                for: resource,
+                toFile: url,
+                options: options
+            ) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: ())
+                }
+            }
+        }
+    }
+
+    private nonisolated static func shareFilename(
+        for resource: PHAssetResource,
+        index: Int
+    ) -> String {
+        let original = URL(fileURLWithPath: resource.originalFilename).lastPathComponent
+        guard !original.isEmpty else { return "RetroLive-\(index + 1)" }
+        return index == 0 ? original : "\(index + 1)-\(original)"
     }
 
     private static func mapAuthorization(_ status: PHAuthorizationStatus) -> ImportedLibraryAccess {

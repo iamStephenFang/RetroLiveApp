@@ -238,14 +238,13 @@ static CGFloat RLVLiveBadgeWidth(UIFont *font)
     ];
     CGFloat maximumTitleWidth = 0.0;
     for (NSString *title in titles) {
-        maximumTitleWidth = MAX(maximumTitleWidth, [title sizeWithFont:font].width);
+        maximumTitleWidth = MAX(maximumTitleWidth, RLVTextSizeWithFont(title, font).width);
     }
-    CGFloat disclosureWidth = [@"\u203a" sizeWithFont:[UIFont boldSystemFontOfSize:18.0]].width;
-    // 24pt icon + 4pt gap + measured title + 4pt gap + disclosure + 5pt padding per side.
-    return ceil(24.0 + 4.0 + maximumTitleWidth + 4.0 + disclosureWidth + 10.0);
+    // 24pt icon + 4pt gap + measured title + 5pt padding per side.
+    return ceil(24.0 + 4.0 + maximumTitleWidth + 10.0);
 }
 
-@interface RLVAssetDetailViewController () <UIActionSheetDelegate, UIAlertViewDelegate, UIScrollViewDelegate, RLVZoomingImagePageDelegate>
+@interface RLVAssetDetailViewController () <UIAlertViewDelegate, UIScrollViewDelegate, RLVZoomingImagePageDelegate>
 @property (nonatomic, strong) NSArray *assets;
 @property (nonatomic, assign) NSUInteger selectedIndex;
 @property (nonatomic, strong) RLVAsset *asset;
@@ -365,7 +364,7 @@ static CGFloat RLVLiveBadgeWidth(UIFont *font)
     [root addSubview:self.metadataLabel];
 
     self.liveBadge = [UIButton buttonWithType:UIButtonTypeCustom];
-    self.liveBadge.titleLabel.font = [UIFont boldSystemFontOfSize:RLVUsesFlatInterfaceStyle() ? 12.0 : 13.0];
+    self.liveBadge.titleLabel.font = [UIFont boldSystemFontOfSize: 13.0];
     self.liveBadge.contentEdgeInsets = UIEdgeInsetsMake(0.0, 5.0, 0.0, 5.0);
     self.liveBadge.imageEdgeInsets = UIEdgeInsetsMake(0.0, 0.0, 0.0, 2.0);
     self.liveBadge.titleEdgeInsets = UIEdgeInsetsMake(0.0, 2.0, 0.0, 0.0);
@@ -378,7 +377,7 @@ static CGFloat RLVLiveBadgeWidth(UIFont *font)
         self.liveBadge.layer.shadowRadius = 1.5;
         self.liveBadge.layer.shadowOffset = CGSizeMake(0.0, 1.0);
     }
-    [self.liveBadge addTarget:self action:@selector(showPlaybackModes:) forControlEvents:UIControlEventTouchUpInside];
+    [self.liveBadge addTarget:self action:@selector(cyclePlaybackMode:) forControlEvents:UIControlEventTouchUpInside];
     [root addSubview:self.liveBadge];
 
     self.toolbar = [[UIToolbar alloc] initWithFrame:CGRectZero];
@@ -1218,30 +1217,18 @@ static CGFloat RLVLiveBadgeWidth(UIFont *font)
     }
 }
 
-- (void)showPlaybackModes:(id)sender
+- (void)cyclePlaybackMode:(id)sender
 {
     (void)sender;
-    UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"asset.live.effect.title", nil)
-        delegate:self cancelButtonTitle:NSLocalizedString(@"common.cancel", nil) destructiveButtonTitle:nil
-        otherButtonTitles:NSLocalizedString(@"asset.live.mode.live", nil),
-            NSLocalizedString(@"asset.live.mode.loop", nil),
-            NSLocalizedString(@"asset.live.mode.bounce", nil),
-            NSLocalizedString(@"asset.live.mode.still", nil), nil];
-    [sheet showInView:self.view];
-}
-
-- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex
-{
-    (void)actionSheet;
-    if (buttonIndex < RLVLivePlaybackModeLive || buttonIndex > RLVLivePlaybackModeStill) return;
+    RLVLivePlaybackMode nextMode = (RLVLivePlaybackMode)((self.playbackMode + 1) %
+        (RLVLivePlaybackModeStill + 1));
     AVPlayerItem *item = self.player.currentItem;
-    if (buttonIndex == RLVLivePlaybackModeBounce &&
+    if (nextMode == RLVLivePlaybackModeBounce &&
         ((item.status == AVPlayerItemStatusReadyToPlay && !item.canPlayReverse) ||
          item.status == AVPlayerItemStatusFailed)) {
-        [self showBounceUnsupported];
-        return;
+        nextMode = RLVLivePlaybackModeStill;
     }
-    self.playbackMode = (RLVLivePlaybackMode)buttonIndex;
+    self.playbackMode = nextMode;
     [self savePlaybackMode];
     [self updatePlaybackModeUI];
     [self returnToStillPhoto];
@@ -1257,12 +1244,10 @@ static CGFloat RLVLiveBadgeWidth(UIFont *font)
         case RLVLivePlaybackModeStill: title = NSLocalizedString(@"asset.live.badge.still", nil); break;
         default: title = NSLocalizedString(@"asset.live.badge.live", nil); break;
     }
-    NSString *displayTitle = [NSString stringWithFormat:@"%@  \u203a", title];
+    NSString *displayTitle = title;
     NSMutableAttributedString *attributedTitle = [[NSMutableAttributedString alloc]
         initWithString:displayTitle attributes:@{NSFontAttributeName: self.liveBadge.titleLabel.font,
             NSForegroundColorAttributeName: [UIColor whiteColor]}];
-    [attributedTitle addAttribute:NSFontAttributeName value:[UIFont boldSystemFontOfSize:18.0]
-                            range:NSMakeRange([displayTitle length] - 1, 1)];
     [self.liveBadge setAttributedTitle:attributedTitle forState:UIControlStateNormal];
     self.liveBadge.accessibilityLabel = NSLocalizedString(@"asset.live.effect.title", nil);
     self.liveBadge.accessibilityValue = title;

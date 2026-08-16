@@ -1,10 +1,125 @@
 import Photos
 import PhotosUI
 import SwiftUI
-import UniformTypeIdentifiers
 
-struct SystemLivePhotoView: UIViewRepresentable {
+private struct AssetSharePayload: Identifiable {
+    let id = UUID()
+    let resources: [ImportedShareResource]
+    let previewImage: UIImage
+}
+
+private class ZoomableMediaContainerView: UIView, UIScrollViewDelegate {
+    let scrollView = UIScrollView()
+    let mediaView: UIView
+    var mediaSize: CGSize = .zero {
+        didSet { setNeedsLayout() }
+    }
+
+    private var lastViewportSize: CGSize = .zero
+    private var lastMediaSize: CGSize = .zero
+
+    init(mediaView: UIView) {
+        self.mediaView = mediaView
+        super.init(frame: .zero)
+
+        scrollView.minimumZoomScale = 1
+        scrollView.maximumZoomScale = 4
+        scrollView.bouncesZoom = true
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.delegate = self
+        addSubview(scrollView)
+        scrollView.addSubview(mediaView)
+
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(toggleZoom(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        scrollView.addGestureRecognizer(doubleTap)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        scrollView.frame = bounds
+        guard bounds.width > 0, bounds.height > 0, mediaSize.width > 0, mediaSize.height > 0,
+              bounds.size != lastViewportSize || mediaSize != lastMediaSize else {
+            centerMedia()
+            return
+        }
+        lastViewportSize = bounds.size
+        lastMediaSize = mediaSize
+        scrollView.zoomScale = scrollView.minimumZoomScale
+        let fittedSize = aspectFitSize(mediaSize, inside: bounds.size)
+        mediaView.frame = CGRect(origin: .zero, size: fittedSize)
+        scrollView.contentSize = fittedSize
+        centerMedia()
+    }
+
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? { mediaView }
+
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        centerMedia()
+    }
+
+    private func aspectFitSize(_ size: CGSize, inside viewport: CGSize) -> CGSize {
+        let scale = min(viewport.width / size.width, viewport.height / size.height)
+        return CGSize(width: size.width * scale, height: size.height * scale)
+    }
+
+    private func centerMedia() {
+        let horizontal = max(0, (scrollView.bounds.width - scrollView.contentSize.width) / 2)
+        let vertical = max(0, (scrollView.bounds.height - scrollView.contentSize.height) / 2)
+        scrollView.contentInset = UIEdgeInsets(
+            top: vertical,
+            left: horizontal,
+            bottom: vertical,
+            right: horizontal
+        )
+    }
+
+    @objc private func toggleZoom(_ recognizer: UITapGestureRecognizer) {
+        if scrollView.zoomScale > scrollView.minimumZoomScale {
+            scrollView.setZoomScale(scrollView.minimumZoomScale, animated: true)
+        } else {
+            let point = recognizer.location(in: mediaView)
+            let scale = min(2, scrollView.maximumZoomScale)
+            let size = CGSize(
+                width: scrollView.bounds.width / scale,
+                height: scrollView.bounds.height / scale
+            )
+            scrollView.zoom(
+                to: CGRect(
+                    x: point.x - size.width / 2,
+                    y: point.y - size.height / 2,
+                    width: size.width,
+                    height: size.height
+                ),
+                animated: true
+            )
+        }
+    }
+}
+
+private final class ZoomableLivePhotoContainerView: ZoomableMediaContainerView {
+    let livePhotoView: PHLivePhotoView
+
+    init() {
+        let livePhotoView = PHLivePhotoView()
+        self.livePhotoView = livePhotoView
+        super.init(mediaView: livePhotoView)
+        livePhotoView.contentMode = .scaleAspectFit
+        livePhotoView.clipsToBounds = true
+        livePhotoView.backgroundColor = .clear
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+}
+
+private struct ZoomableLivePhotoView: UIViewRepresentable {
     let livePhoto: PHLivePhoto
+    let aspectSize: CGSize
 
     final class Coordinator {
         var displayedLivePhoto: PHLivePhoto?
@@ -12,20 +127,46 @@ struct SystemLivePhotoView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    func makeUIView(context: Context) -> PHLivePhotoView {
-        let view = PHLivePhotoView()
-        view.contentMode = .scaleAspectFit
-        view.backgroundColor = .clear
-        return view
+    func makeUIView(context: Context) -> ZoomableLivePhotoContainerView {
+        ZoomableLivePhotoContainerView()
     }
 
-    func updateUIView(_ view: PHLivePhotoView, context: Context) {
+    func updateUIView(_ view: ZoomableLivePhotoContainerView, context: Context) {
+        view.mediaSize = aspectSize
         guard context.coordinator.displayedLivePhoto != livePhoto else { return }
         context.coordinator.displayedLivePhoto = livePhoto
-        view.livePhoto = livePhoto
+        view.livePhotoView.livePhoto = livePhoto
         DispatchQueue.main.async {
-            view.startPlayback(with: .hint)
+            view.livePhotoView.startPlayback(with: .hint)
         }
+    }
+}
+
+private final class ZoomableImageContainerView: ZoomableMediaContainerView {
+    let imageView: UIImageView
+
+    init() {
+        let imageView = UIImageView()
+        self.imageView = imageView
+        super.init(mediaView: imageView)
+        imageView.contentMode = .scaleAspectFit
+        imageView.clipsToBounds = true
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+}
+
+private struct ZoomableImageView: UIViewRepresentable {
+    let image: UIImage
+
+    func makeUIView(context: Context) -> ZoomableImageContainerView {
+        ZoomableImageContainerView()
+    }
+
+    func updateUIView(_ view: ZoomableImageContainerView, context: Context) {
+        view.mediaSize = image.size
+        view.imageView.image = image
     }
 }
 
@@ -67,25 +208,26 @@ struct RemoteAssetPreviewView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color(uiColor: .systemBackground).ignoresSafeArea()
             if let livePhoto {
-                SystemLivePhotoView(livePhoto: livePhoto)
-                    .ignoresSafeArea(edges: .horizontal)
+                ZoomableLivePhotoView(
+                    livePhoto: livePhoto,
+                    aspectSize: displayedImage?.size ?? livePhoto.size
+                )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .ignoresSafeArea()
             } else if let displayedImage {
-                Image(uiImage: displayedImage)
-                    .resizable()
-                    .scaledToFit()
+                ZoomableImageView(image: displayedImage)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .ignoresSafeArea()
             } else if let previewError {
                 ContentUnavailableView(
                     L10n.text("preview.unavailable"),
                     systemImage: "exclamationmark.triangle",
                     description: Text(previewError)
                 )
-                .foregroundStyle(.white)
             } else {
                 ProgressView(L10n.text("preview.loading"))
-                    .tint(.white)
-                    .foregroundStyle(.white)
             }
 
             if isPreparingLivePhoto, displayedImage != nil, livePhoto == nil {
@@ -116,7 +258,6 @@ struct RemoteAssetPreviewView: View {
         }
         .navigationTitle(previewDate)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -145,7 +286,6 @@ struct RemoteAssetPreviewView: View {
             )
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
-            .background(.regularMaterial)
         }
         .task(id: asset.assetId) {
             await loadPreview()
@@ -186,8 +326,8 @@ struct ImportedAssetPreviewView: View {
     @State private var livePhoto: PHLivePhoto?
     @State private var errorMessage: String?
     @State private var actionError: String?
-    @State private var shareItemProvider: NSItemProvider?
-    @State private var showsShareSheet = false
+    @State private var sharePayload: AssetSharePayload?
+    @State private var sharedResourcesPendingCleanup: [ImportedShareResource] = []
     @State private var showsInfo = false
     @State private var isPreparingShare = false
     @State private var isDeleting = false
@@ -198,17 +338,16 @@ struct ImportedAssetPreviewView: View {
         ZStack {
             Color(uiColor: .systemBackground).ignoresSafeArea()
             if let livePhoto {
-                SystemLivePhotoView(livePhoto: livePhoto)
+                ZoomableLivePhotoView(
+                    livePhoto: livePhoto,
+                    aspectSize: image?.size ?? livePhoto.size
+                )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .ignoresSafeArea()
             } else if let image {
-                GeometryReader { proxy in
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(image.size.width / image.size.height, contentMode: .fit)
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                }
-                .ignoresSafeArea()
+                ZoomableImageView(image: image)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .ignoresSafeArea()
             } else if let errorMessage {
                 ContentUnavailableView(
                     L10n.text("preview.unavailable"),
@@ -221,7 +360,7 @@ struct ImportedAssetPreviewView: View {
         }
         .navigationTitle(displayDate)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarBackground(.hidden, for: .navigationBar, .bottomBar)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItemGroup(placement: .bottomBar) {
@@ -237,7 +376,11 @@ struct ImportedAssetPreviewView: View {
                             .imageScale(.medium)
                     }
                 }
-                .disabled(image == nil || isPreparingShare || isDeleting)
+                .disabled(
+                    image == nil
+                        || isPreparingShare
+                        || isDeleting
+                )
                 .tint(Color.primary)
                 .accessibilityLabel(L10n.text("library.preview.share"))
 
@@ -274,95 +417,25 @@ struct ImportedAssetPreviewView: View {
                 .accessibilityLabel(L10n.text("library.preview.delete"))
             }
         }
-        .sheet(isPresented: $showsShareSheet) {
-            if let shareItemProvider {
-                ActivityViewController(itemProvider: shareItemProvider)
-            }
+        .sheet(item: $sharePayload, onDismiss: removeSharedResources) { payload in
+            AssetActivityViewController(payload: payload)
         }
         .sheet(isPresented: $showsInfo) {
-            NavigationStack {
-                List {
-                    Section {
-                        LabeledContent(
-                            L10n.text("library.preview.info.type"),
-                            value: L10n.text(
-                                item.kind == .livePhoto ? "asset.kind.live_photo" : "asset.kind.photo"
-                            )
-                        )
-                        LabeledContent(
-                            L10n.text("library.preview.info.captured"),
-                            value: (item.creationDate ?? item.importedAt)
-                                .formatted(date: .abbreviated, time: .shortened)
-                        )
-                        LabeledContent(
-                            L10n.text("library.preview.info.imported"),
-                            value: item.importedAt.formatted(date: .abbreviated, time: .shortened)
-                        )
-                    }
-
-                    Section(L10n.text("library.preview.info.file")) {
-                        if let details {
-                            LabeledContent(
-                                L10n.text("library.preview.info.filename"),
-                                value: details.filename
-                            )
-                            LabeledContent(
-                                L10n.text("library.preview.info.format"),
-                                value: details.format
-                            )
-                            LabeledContent(
-                                L10n.text("library.preview.info.dimensions"),
-                                value: "\(details.pixelWidth) × \(details.pixelHeight)"
-                            )
-                            LabeledContent(
-                                L10n.text("library.preview.info.size"),
-                                value: ByteCountFormatter.string(
-                                    fromByteCount: details.byteCount,
-                                    countStyle: .file
-                                )
-                            )
-                            if let latitude = details.latitude,
-                               let longitude = details.longitude {
-                                LabeledContent(
-                                    L10n.text("library.preview.info.location"),
-                                    value: coordinateDescription(
-                                        latitude: latitude,
-                                        longitude: longitude
-                                    )
-                                )
-                            }
-                        } else if let detailsError {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Label(detailsError, systemImage: "exclamationmark.triangle")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                                Button(L10n.text("common.retry")) {
-                                    loadDetails()
-                                }
-                            }
-                        } else {
-                            HStack(spacing: 10) {
-                                ProgressView()
-                                Text(L10n.text("library.preview.info.size_loading"))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-                .navigationTitle(L10n.text("library.preview.info"))
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(L10n.text("common.done")) { showsInfo = false }
-                    }
-                }
-                .task(id: item.id) {
-                    if details == nil && detailsError == nil {
-                        await fetchDetails()
-                    }
+            ImportedAssetInfoSheet(
+                item: item,
+                details: details,
+                detailsError: detailsError,
+                onRetry: {
+                    detailsError = nil
+                    Task { await fetchDetails() }
+                },
+                onDone: { showsInfo = false }
+            )
+            .task(id: item.id) {
+                if details == nil && detailsError == nil {
+                    await fetchDetails()
                 }
             }
-            .presentationDetents([.medium, .large])
         }
         .alert(
             L10n.text("error.operation_failed"),
@@ -395,16 +468,24 @@ struct ImportedAssetPreviewView: View {
     private func prepareShare() {
         guard !isPreparingShare, let image else { return }
         isPreparingShare = true
-        if let livePhoto {
-            shareItemProvider = NSItemProvider(
-                item: livePhoto,
-                typeIdentifier: UTType.livePhoto.identifier
-            )
-        } else {
-            shareItemProvider = NSItemProvider(object: image)
+        Task {
+            defer { isPreparingShare = false }
+            do {
+                let resources = try await model.shareResources(for: item)
+                sharedResourcesPendingCleanup = resources
+                sharePayload = AssetSharePayload(
+                    resources: resources,
+                    previewImage: image
+                )
+            } catch {
+                actionError = error.localizedDescription
+            }
         }
-        showsShareSheet = true
-        isPreparingShare = false
+    }
+
+    private func removeSharedResources() {
+        model.removeSharedResources(sharedResourcesPendingCleanup)
+        sharedResourcesPendingCleanup = []
     }
 
     private func deleteItem() {
@@ -421,11 +502,6 @@ struct ImportedAssetPreviewView: View {
         }
     }
 
-    private func loadDetails() {
-        detailsError = nil
-        Task { await fetchDetails() }
-    }
-
     private func fetchDetails() async {
         do {
             details = try await model.details(for: item)
@@ -436,6 +512,96 @@ struct ImportedAssetPreviewView: View {
         }
     }
 
+}
+
+private struct ImportedAssetInfoSheet: View {
+    let item: ImportedLibraryItem
+    let details: ImportedAssetDetails?
+    let detailsError: String?
+    let onRetry: () -> Void
+    let onDone: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    LabeledContent(
+                        L10n.text("library.preview.info.type"),
+                        value: L10n.text(
+                            item.kind == .livePhoto ? "asset.kind.live_photo" : "asset.kind.photo"
+                        )
+                    )
+                    LabeledContent(
+                        L10n.text("library.preview.info.captured"),
+                        value: (item.creationDate ?? item.importedAt)
+                            .formatted(date: .abbreviated, time: .shortened)
+                    )
+                    LabeledContent(
+                        L10n.text("library.preview.info.imported"),
+                        value: item.importedAt.formatted(date: .abbreviated, time: .shortened)
+                    )
+                }
+
+                Section(L10n.text("library.preview.info.file")) {
+                    fileDetails
+                }
+            }
+            .navigationTitle(L10n.text("library.preview.info"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.text("common.done"), action: onDone)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    @ViewBuilder
+    private var fileDetails: some View {
+        if let details {
+            LabeledContent(
+                L10n.text("library.preview.info.filename"),
+                value: details.filename
+            )
+            LabeledContent(
+                L10n.text("library.preview.info.format"),
+                value: details.format
+            )
+            LabeledContent(
+                L10n.text("library.preview.info.dimensions"),
+                value: "\(details.pixelWidth) × \(details.pixelHeight)"
+            )
+            LabeledContent(
+                L10n.text("library.preview.info.size"),
+                value: ByteCountFormatter.string(
+                    fromByteCount: details.byteCount,
+                    countStyle: .file
+                )
+            )
+            if let latitude = details.latitude,
+               let longitude = details.longitude {
+                LabeledContent(
+                    L10n.text("library.preview.info.location"),
+                    value: coordinateDescription(latitude: latitude, longitude: longitude)
+                )
+            }
+        } else if let detailsError {
+            VStack(alignment: .leading, spacing: 10) {
+                Label(detailsError, systemImage: "exclamationmark.triangle")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button(L10n.text("common.retry"), action: onRetry)
+            }
+        } else {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text(L10n.text("library.preview.info.size_loading"))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
     private func coordinateDescription(latitude: Double, longitude: Double) -> String {
         let latitudeText = latitude.formatted(.number.precision(.fractionLength(5)))
         let longitudeText = longitude.formatted(.number.precision(.fractionLength(5)))
@@ -443,11 +609,27 @@ struct ImportedAssetPreviewView: View {
     }
 }
 
-private struct ActivityViewController: UIViewControllerRepresentable {
-    let itemProvider: NSItemProvider
+private struct AssetActivityViewController: UIViewControllerRepresentable {
+    let payload: AssetSharePayload
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        let configuration = UIActivityItemsConfiguration(itemProviders: [itemProvider])
+        let itemProviders = payload.resources.map { resource in
+            let provider = NSItemProvider()
+            provider.suggestedName = resource.url.lastPathComponent
+            provider.registerFileRepresentation(
+                forTypeIdentifier: resource.typeIdentifier,
+                fileOptions: [],
+                visibility: .all
+            ) { completion in
+                completion(resource.url, false, nil)
+                return nil
+            }
+            return provider
+        }
+        let configuration = UIActivityItemsConfiguration(itemProviders: itemProviders)
+        configuration.previewProvider = { _, _, _ in
+            NSItemProvider(object: payload.previewImage)
+        }
         return UIActivityViewController(activityItemsConfiguration: configuration)
     }
 

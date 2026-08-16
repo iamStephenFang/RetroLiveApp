@@ -12,7 +12,6 @@
 		A10000000000000000000003 /* ManifestV1.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* ManifestV1.swift */; };
 		A10000000000000000000004 /* ManifestParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* ManifestParser.swift */; };
 		A10000000000000000000005 /* ManifestParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* ManifestParserTests.swift */; };
-		A10000000000000000000006 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* XCTest.framework */; };
 		A10000000000000000000007 /* fixtures in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* fixtures */; };
 		A10000000000000000000008 /* CameraAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000A /* CameraAPI.swift */; };
 		A10000000000000000000009 /* DeviceDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000B /* DeviceDiscovery.swift */; };
@@ -51,7 +50,6 @@
 		A20000000000000000000005 /* ManifestParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManifestParserTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000006 /* RetroLiveImporter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RetroLiveImporter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000007 /* RetroLiveImporterTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RetroLiveImporterTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A20000000000000000000008 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Developer/Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 		A20000000000000000000009 /* fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = fixtures; path = ../protocol/fixtures; sourceTree = SOURCE_ROOT; };
 		A2000000000000000000000A /* CameraAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraAPI.swift; sourceTree = "<group>"; };
 		A2000000000000000000000B /* DeviceDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDiscovery.swift; sourceTree = "<group>"; };
@@ -88,7 +86,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10000000000000000000006 /* XCTest.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -164,7 +161,6 @@
 		A40000000000000000000016 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				A20000000000000000000008 /* XCTest.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";

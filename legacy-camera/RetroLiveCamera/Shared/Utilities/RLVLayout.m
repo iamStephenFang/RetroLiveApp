@@ -84,6 +84,18 @@ void RLVAlignViews(UIView *container, UIView *firstView, NSLayoutAttribute first
         relatedBy:NSLayoutRelationEqual toItem:secondView attribute:secondAttribute multiplier:1 constant:0]];
 }
 
+CGSize RLVTextSizeWithFont(NSString *text, UIFont *font)
+{
+    if ([text respondsToSelector:@selector(sizeWithAttributes:)]) {
+        return [text sizeWithAttributes:@{NSFontAttributeName: font}];
+    }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    CGSize size = [text sizeWithFont:font];
+#pragma clang diagnostic pop
+    return size;
+}
+
 BOOL RLVUsesFlatInterfaceStyle(void)
 {
     return [[UIToolbar class] instancesRespondToSelector:@selector(setBarTintColor:)];

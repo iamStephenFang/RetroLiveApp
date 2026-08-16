@@ -98,7 +98,7 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
     self.thumbnailQueue.maxConcurrentOperationCount = 2;
     self.collectionView.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1];
     [self.collectionView registerClass:[RLVAssetCell class] forCellWithReuseIdentifier:@"AssetCell"];
-    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
         initWithTitle:NSLocalizedString(@"library.select", nil) style:UIBarButtonItemStylePlain
         target:self action:@selector(toggleAssetSelection:)];
     self.shareButton = [[UIBarButtonItem alloc]
@@ -130,7 +130,7 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
     if (!self.isSelectingAssets) self.normalContentInset = self.collectionView.contentInset;
     self.selectingAssets = !self.isSelectingAssets;
     self.collectionView.allowsMultipleSelection = self.isSelectingAssets;
-    self.navigationItem.rightBarButtonItem.title = self.isSelectingAssets
+    self.navigationItem.leftBarButtonItem.title = self.isSelectingAssets
         ? NSLocalizedString(@"common.cancel", nil) : NSLocalizedString(@"library.select", nil);
     if (!self.isSelectingAssets) {
         for (NSIndexPath *indexPath in [self.collectionView indexPathsForSelectedItems]) {
@@ -210,7 +210,7 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
         if (!controller || generation != controller.reloadGeneration) return;
         controller.assets = assets ?: [NSArray array];
         [controller.collectionView reloadData];
-        controller.navigationItem.rightBarButtonItem.enabled = [controller.assets count] > 0;
+        controller.navigationItem.leftBarButtonItem.enabled = [controller.assets count] > 0;
         [controller updateSelectionActions];
     }];
 }

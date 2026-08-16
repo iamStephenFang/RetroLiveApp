@@ -4,7 +4,7 @@
 
 @interface RLVTransferViewController ()
 @property (nonatomic, strong) UILabel *statusLabel;
-@property (nonatomic, strong) UILabel *addressLabel;
+@property (nonatomic, strong) UILabel *deviceLabel;
 @property (nonatomic, strong) UILabel *codeLabel;
 @property (nonatomic, strong) UILabel *noteLabel;
 @property (nonatomic, strong) UIButton *actionButton;
@@ -23,7 +23,7 @@
     self.title = NSLocalizedString(@"transfer.title", nil);
     self.view.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1.0];
     self.statusLabel = [self labelWithFontSize:18.0];
-    self.addressLabel = [self labelWithFontSize:15.0];
+    self.deviceLabel = [self labelWithFontSize:15.0];
     self.codeLabel = [self labelWithFontSize:42.0];
     self.codeLabel.font = [UIFont boldSystemFontOfSize:42.0];
     self.noteLabel = [self labelWithFontSize:14.0];
@@ -42,12 +42,12 @@
     [self.view addSubview:self.scrollView];
     [self.scrollView addSubview:self.contentView];
     [self.contentView addSubview:self.statusLabel];
-    [self.contentView addSubview:self.addressLabel];
+    [self.contentView addSubview:self.deviceLabel];
     [self.contentView addSubview:self.codeLabel];
     [self.contentView addSubview:self.noteLabel];
     [self.contentView addSubview:self.actionButton];
 
-    RLVPrepareViewsForAutoLayout(@[self.scrollView, self.contentView, self.statusLabel, self.addressLabel,
+    RLVPrepareViewsForAutoLayout(@[self.scrollView, self.contentView, self.statusLabel, self.deviceLabel,
         self.codeLabel, self.noteLabel, self.actionButton]);
     RLVPinViewToEdges(self.scrollView, self.view);
     RLVAddVisualConstraints(self.scrollView, @{@"content": self.contentView},
@@ -56,11 +56,11 @@
         attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:self.view
         attribute:NSLayoutAttributeWidth multiplier:1.0 constant:-32.0]];
     RLVAddVisualConstraints(self.contentView,
-        @{@"status": self.statusLabel, @"address": self.addressLabel, @"code": self.codeLabel,
+        @{@"status": self.statusLabel, @"device": self.deviceLabel, @"code": self.codeLabel,
           @"note": self.noteLabel, @"action": self.actionButton},
-        @[@"H:|[status]|", @"H:|[address]|", @"H:|[code]|", @"H:|-8-[note]-8-|",
+        @[@"H:|[status]|", @"H:|[device]|", @"H:|[code]|", @"H:|-8-[note]-8-|",
           @"H:|-24-[action]-24-|",
-          @"V:|[status(28)]-14-[address(24)]-20-[code(58)]-20-[note(82)]-18-[action(48)]|"]);
+          @"V:|[status(28)]-14-[device(24)]-20-[code(58)]-20-[note(82)]-18-[action(48)]|"]);
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateContent)
         name:RLVTransferServiceDidChangeNotification object:nil];
     [self updateContent];
@@ -105,13 +105,15 @@
     RLVTransferService *service = [RLVTransferService sharedService];
     if (service.running) {
         self.statusLabel.text = NSLocalizedString(@"transfer.status.on", nil);
-        self.addressLabel.text = [NSString stringWithFormat:@"http://%@:%lu", service.localAddress, (unsigned long)service.port];
+        self.deviceLabel.text = service.pairedClientName
+            ? [NSString stringWithFormat:NSLocalizedString(@"transfer.paired_device", nil), service.pairedClientName]
+            : NSLocalizedString(@"transfer.waiting_for_device", nil);
         self.codeLabel.text = service.pairingCode;
-        self.noteLabel.text = NSLocalizedString(@"transfer.note.on", nil);
+        self.noteLabel.text = NSLocalizedString(service.pairedClientName ? @"transfer.note.paired" : @"transfer.note.on", nil);
         [self.actionButton setTitle:NSLocalizedString(@"transfer.stop", nil) forState:UIControlStateNormal];
     } else {
         self.statusLabel.text = NSLocalizedString(@"transfer.status.off", nil);
-        self.addressLabel.text = NSLocalizedString(@"transfer.no_server", nil);
+        self.deviceLabel.text = NSLocalizedString(@"transfer.no_device", nil);
         self.codeLabel.text = @"------";
         self.noteLabel.text = NSLocalizedString(@"transfer.note.off", nil);
         [self.actionButton setTitle:NSLocalizedString(@"transfer.start", nil) forState:UIControlStateNormal];
@@ -124,7 +126,7 @@
 }
 
 @synthesize statusLabel = _statusLabel;
-@synthesize addressLabel = _addressLabel;
+@synthesize deviceLabel = _deviceLabel;
 @synthesize codeLabel = _codeLabel;
 @synthesize noteLabel = _noteLabel;
 @synthesize actionButton = _actionButton;

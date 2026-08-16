@@ -45,8 +45,14 @@
 "transfer.status.on" = "Sharing on Local Network";
 "transfer.status.off" = "Sharing is Off";
 "transfer.no_server" = "No local server is running";
+"transfer.paired_device" = "Paired with %@";
+"transfer.waiting_for_device" = "Waiting for a device to pair";
+"transfer.no_device" = "No device is connected";
 "transfer.note.on" = "Enter this one-time pairing code on the modern device. Keep RetroLive open and connected to the same Wi-Fi network.";
+"transfer.note.paired" = "Keep RetroLive open and both devices connected to the same Wi-Fi network while importing.";
 "transfer.note.off" = "Start sharing when both devices are on the same Wi-Fi network. Stopping sharing invalidates the current session.";
+"transfer.background_stopped.title" = "Sharing Stopped";
+"transfer.background_stopped.message" = "RetroLive stopped local network sharing when the app moved to the background. Start sharing again to reconnect.";
 "transfer.start" = "Start Sharing";
 "transfer.stop" = "Stop Sharing";
 "capture.error.rear_camera" = "Rear camera is unavailable.";

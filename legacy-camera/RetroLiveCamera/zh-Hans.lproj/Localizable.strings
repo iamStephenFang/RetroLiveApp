@@ -45,8 +45,14 @@
 "transfer.status.on" = "正在通过局域网共享";
 "transfer.status.off" = "共享已关闭";
 "transfer.no_server" = "本地服务器未运行";
+"transfer.paired_device" = "已配对：%@";
+"transfer.waiting_for_device" = "等待设备配对";
+"transfer.no_device" = "未连接设备";
 "transfer.note.on" = "请在新设备上输入此一次性配对码。保持 RetroLive 打开，并确认两台设备连接到同一 Wi-Fi。";
+"transfer.note.paired" = "导入期间请保持 RetroLive 打开，并确认两台设备连接到同一 Wi-Fi。";
 "transfer.note.off" = "两台设备连接到同一 Wi-Fi 后即可开始共享。停止共享会使当前会话失效。";
+"transfer.background_stopped.title" = "共享已停止";
+"transfer.background_stopped.message" = "RetroLive 进入后台时已停止局域网共享。请重新开始共享并配对。";
 "transfer.start" = "开始共享";
 "transfer.stop" = "停止共享";
 "capture.error.rear_camera" = "后置相机不可用。";

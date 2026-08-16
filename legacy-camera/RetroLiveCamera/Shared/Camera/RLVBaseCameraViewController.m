@@ -9,7 +9,6 @@
 #import <math.h>
 
 static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
-static NSInteger const RLVAspectRatioActionSheetTag = 817;
 
 @implementation RLVFocusPreviewView
 
@@ -165,6 +164,12 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
     AVCaptureVideoPreviewLayer *previewLayer = self.captureController.previewLayer;
     if (!previewLayer || previewLayer.superlayer == self.previewView.layer) return;
     [self.previewView.layer insertSublayer:previewLayer atIndex:0];
+    AVCaptureConnection *previewConnection = previewLayer.connection;
+    if ([previewConnection isVideoOrientationSupported]) {
+        // The camera UI stays portrait-locked. Device orientation belongs to
+        // captured media and rotating controls, not to the preview surface.
+        previewConnection.videoOrientation = AVCaptureVideoOrientationPortrait;
+    }
     [self.view setNeedsLayout];
 }
 
@@ -267,7 +272,7 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
     RLVPrepareViewsForAutoLayout(@[self.liveCaptureIndicator, label]);
     RLVAddVisualConstraints(self.liveCaptureIndicator, @{@"label": label},
         @[@"H:|-6-[label]-6-|", @"V:|[label]|"]);
-    CGFloat indicatorWidth = ceil([label.text sizeWithFont:label.font].width + 12.0);
+    CGFloat indicatorWidth = ceil(RLVTextSizeWithFont(label.text, label.font).width + 12.0);
     RLVAddVisualConstraints(self.previewView, @{@"live": self.liveCaptureIndicator},
         @[[NSString stringWithFormat:@"H:[live(%.0f)]", indicatorWidth], @"V:|-12-[live(28)]"]);
     RLVAlignViews(self.previewView, self.liveCaptureIndicator, NSLayoutAttributeCenterX,
@@ -312,18 +317,10 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
 {
     (void)sender;
     if (![self isCameraInteractionAvailable]) return;
-    UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"camera.aspect.title", nil)
-        delegate:self cancelButtonTitle:NSLocalizedString(@"common.cancel", nil) destructiveButtonTitle:nil
-        otherButtonTitles:@"4:3", @"1:1", @"16:9", nil];
-    sheet.tag = RLVAspectRatioActionSheetTag;
-    [sheet showInView:self.view];
-}
-
-- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex
-{
-    if (actionSheet.tag != RLVAspectRatioActionSheetTag || buttonIndex < 0 || buttonIndex > 2 ||
-        ![self isCameraInteractionAvailable]) return;
-    self.activeAspectRatio = [@[@"4:3", @"1:1", @"16:9"] objectAtIndex:buttonIndex];
+    NSArray *aspectRatios = @[@"4:3", @"1:1", @"16:9"];
+    NSUInteger currentIndex = [aspectRatios indexOfObject:self.activeAspectRatio];
+    NSUInteger nextIndex = currentIndex == NSNotFound ? 0 : (currentIndex + 1) % [aspectRatios count];
+    self.activeAspectRatio = [aspectRatios objectAtIndex:nextIndex];
     [[NSUserDefaults standardUserDefaults] setObject:self.activeAspectRatio forKey:RLVAspectRatioDefaultsKey];
     [[NSUserDefaults standardUserDefaults] synchronize];
     self.focusRequestGeneration += 1;
@@ -543,12 +540,16 @@ static NSInteger const RLVAspectRatioActionSheetTag = 817;
     self.focusRequestGeneration += 1;
     [self hideFocusReticle];
     [self.captureController updateVideoOrientation:coordinator.videoOrientation];
-    AVCaptureConnection *previewConnection = self.captureController.previewLayer.connection;
-    if ([previewConnection isVideoOrientationSupported]) {
-        previewConnection.videoOrientation = coordinator.videoOrientation;
-    }
     [UIView animateWithDuration:0.22 animations:^{
-        for (UIView *control in self.rotatingControls) control.transform = transform;
+        for (UIView *control in self.rotatingControls) {
+            if ([control isKindOfClass:[UIButton class]]) {
+                UIButton *button = (UIButton *)control;
+                button.imageView.transform = transform;
+                button.titleLabel.transform = transform;
+            } else {
+                control.transform = transform;
+            }
+        }
     }];
 }
 

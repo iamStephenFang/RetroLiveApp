@@ -114,7 +114,7 @@
 "preview.loading" = "正在載入預覽…";
 "preview.preparing_live" = "正在準備原況相片…";
 "preview.unavailable" = "無法預覽";
-"preview.import" = "匯入至系統相片";
+"preview.import" = "匯入";
 "library.loading" = "正在載入已匯入相片…";
 "library.empty" = "尚無已匯入相片";
 "library.empty.note" = "透過 RetroLive 匯入的相片和原況相片會顯示在這裡。";

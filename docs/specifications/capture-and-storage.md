@@ -49,10 +49,12 @@ and Manifest fields are defined by [Protocol V1](../reference/protocol-v1.md).
 
 ## Framing and orientation
 
-`RLVCameraOrientationCoordinator` is the single source for preview, still,
-movie, Manifest, and control orientation. The selected `4:3`, `1:1`, or `16:9`
-ratio is presentation intent; original media retains the maximum recoverable
-source area. Preview hit-testing and saved composition must agree.
+`RLVCameraOrientationCoordinator` is the single source for still, movie,
+Manifest, and control orientation. Because the camera UI is portrait-locked,
+the preview connection remains portrait while control contents rotate and
+captured media records the device orientation. The selected `4:3`, `1:1`, or
+`16:9` ratio is presentation intent; original media retains the maximum
+recoverable source area. Preview hit-testing and saved composition must agree.
 
 ## Repository acceptance
 

@@ -5,6 +5,7 @@ FOUNDATION_EXPORT void RLVAddVisualConstraints(UIView *container, NSDictionary *
 FOUNDATION_EXPORT void RLVPinViewToEdges(UIView *view, UIView *container);
 FOUNDATION_EXPORT void RLVAlignViews(UIView *container, UIView *firstView, NSLayoutAttribute firstAttribute,
                                      UIView *secondView, NSLayoutAttribute secondAttribute);
+FOUNDATION_EXPORT CGSize RLVTextSizeWithFont(NSString *text, UIFont *font);
 FOUNDATION_EXPORT BOOL RLVUsesFlatInterfaceStyle(void);
 FOUNDATION_EXPORT UIImage *RLVTintedInterfaceImage(UIImage *image, UIColor *color);
 FOUNDATION_EXPORT UIImage *RLVLiveControlBackgroundImage(BOOL flatInterface, BOOL active);

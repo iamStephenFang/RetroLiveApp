@@ -1,5 +1,6 @@
 #import "RLVAppDelegate.h"
 #import "RLVOnboardingViewController.h"
+#import "RLVTransferService.h"
 #if RLV_CLASSIC
 #import "RLVClassicCameraViewController.h"
 #else
@@ -10,6 +11,7 @@ static NSString * const RLVOnboardingCompletedVersionKey = @"RLVOnboardingComple
 static NSInteger const RLVCurrentOnboardingVersion = 1;
 
 @interface RLVAppDelegate () <RLVOnboardingViewControllerDelegate>
+@property (nonatomic, assign) BOOL transferStoppedForBackground;
 - (UIViewController *)cameraViewController;
 - (void)showCameraAnimated:(BOOL)animated;
 @end
@@ -62,6 +64,28 @@ static NSInteger const RLVCurrentOnboardingVersion = 1;
     [self showCameraAnimated:YES];
 }
 
+- (void)applicationDidEnterBackground:(UIApplication *)application
+{
+    (void)application;
+    RLVTransferService *service = [RLVTransferService sharedService];
+    if (service.running) {
+        [service stop];
+        self.transferStoppedForBackground = YES;
+    }
+}
+
+- (void)applicationDidBecomeActive:(UIApplication *)application
+{
+    (void)application;
+    if (!self.transferStoppedForBackground) return;
+    self.transferStoppedForBackground = NO;
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"transfer.background_stopped.title", nil)
+        message:NSLocalizedString(@"transfer.background_stopped.message", nil) delegate:nil
+        cancelButtonTitle:NSLocalizedString(@"common.ok", nil) otherButtonTitles:nil];
+    [alert show];
+}
+
 @synthesize window = _window;
+@synthesize transferStoppedForBackground = _transferStoppedForBackground;
 
 @end

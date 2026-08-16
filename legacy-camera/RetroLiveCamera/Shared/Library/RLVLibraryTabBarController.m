@@ -107,11 +107,11 @@ static UIImage *RLVSettingsTabImage(void)
         transferNavigation.navigationBar.barStyle = UIBarStyleBlack;
         settingsNavigation.navigationBar.barStyle = UIBarStyleBlack;
 
-        library.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+        library.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
             initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close:)];
-        transfer.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+        transfer.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
             initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close:)];
-        settings.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+        settings.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
             initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close:)];
         self.viewControllers = @[libraryNavigation, transferNavigation, settingsNavigation];
         self.libraryNavigationController = libraryNavigation;

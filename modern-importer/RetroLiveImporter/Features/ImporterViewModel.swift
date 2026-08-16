@@ -377,7 +377,7 @@ final class ImporterViewModel: ObservableObject {
             thumbnailImages = thumbnailImages.filter { loadedIds.contains($0.key) }
             failedThumbnailIds.removeAll()
             for summary in loaded {
-                if try await history.record(for: summary.assetId) != nil {
+                if try await existingImportRecord(for: summary.assetId) != nil {
                     guard generation == connectionGeneration, self.api === api else { return }
                     assetStates[summary.assetId] = .imported
                 } else if try await history.hasUnconfirmedSubmission(for: summary.assetId) {
@@ -826,6 +826,7 @@ final class ImporterViewModel: ObservableObject {
                 return
             }
             submissionStarted = false
+            assetStates[summary.assetId] = .imported
             try await setQueueStatus(id, .imported, progress: 1)
         } catch is CancellationError {
             if submissionStarted {
@@ -921,7 +922,7 @@ final class ImporterViewModel: ObservableObject {
             case .importing: assetStates[item.summary.assetId] = .importing
             case .paused: assetStates[item.summary.assetId] = .paused
             case .cancelled: assetStates[item.summary.assetId] = .cancelled
-            case .imported: assetStates[item.summary.assetId] = .imported
+            case .imported: break
             case .needsConfirmation: assetStates[item.summary.assetId] = .needsConfirmation
             case .failed: assetStates[item.summary.assetId] = .failed(item.errorMessage ?? L10n.text("queue.unknown_error"))
             }
@@ -983,7 +984,7 @@ final class ImporterViewModel: ObservableObject {
 
     private func refreshLocalAssetStates() async {
         for asset in assets where !activeQueueAssetIds.contains(asset.assetId) {
-            if (try? await history.record(for: asset.assetId)) != nil {
+            if (try? await existingImportRecord(for: asset.assetId)) != nil {
                 assetStates[asset.assetId] = .imported
             } else if (try? await history.hasUnconfirmedSubmission(for: asset.assetId)) == true {
                 assetStates[asset.assetId] = .needsConfirmation
@@ -994,6 +995,23 @@ final class ImporterViewModel: ObservableObject {
             }
         }
         overlayQueueStates()
+    }
+
+    func refreshImportStatuses() async {
+        await refreshLocalAssetStates()
+    }
+
+    private func existingImportRecord(for assetId: String) async throws -> ImportRecord? {
+        guard let record = try await history.record(for: assetId) else { return nil }
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard status == .authorized || status == .limited else { return record }
+        let result = PHAsset.fetchAssets(
+            withLocalIdentifiers: [record.localIdentifier],
+            options: nil
+        )
+        guard result.firstObject == nil else { return record }
+        try await history.removeRecord(for: assetId)
+        return nil
     }
 
     func disconnect() {

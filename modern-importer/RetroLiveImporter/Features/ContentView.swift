@@ -43,8 +43,14 @@ struct ContentView: View {
         .sensoryFeedback(.error, trigger: model.pairingFailureCount)
         .task { model.startDiscovery() }
         .onChange(of: selectedTab) { _, tab in
-            guard tab == .library else { return }
-            Task { await libraryModel.refresh() }
+            switch tab {
+            case .library:
+                Task { await libraryModel.refresh() }
+            case .devices:
+                Task { await model.refreshImportStatuses() }
+            case .settings:
+                break
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -82,9 +88,9 @@ struct ContentView: View {
             deviceList
                 .navigationDestination(isPresented: cameraIsSelected) {
                     selectedCameraView
-                }
-                .navigationDestination(item: $previewAsset) { asset in
-                    RemoteAssetPreviewView(model: model, asset: asset)
+                        .navigationDestination(item: $previewAsset) { asset in
+                            RemoteAssetPreviewView(model: model, asset: asset)
+                        }
                 }
         }
     }

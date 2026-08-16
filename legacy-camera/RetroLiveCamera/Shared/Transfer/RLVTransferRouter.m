@@ -3,12 +3,16 @@
 #import "RLVAssetStore.h"
 #import "RLVHTTPResponse.h"
 
+NSString * const RLVTransferRouterDidPairNotification = @"RLVTransferRouterDidPairNotification";
+NSString * const RLVTransferRouterPairedClientNameKey = @"RLVTransferRouterPairedClientName";
+
 @interface RLVTransferRouter ()
 @property (nonatomic, strong) RLVAssetStore *assetStore;
 @property (nonatomic, copy) NSDictionary *deviceInfo;
 @property (nonatomic, copy, readwrite) NSString *pairingCode;
 @property (nonatomic, copy) NSString *sessionToken;
 @property (nonatomic, strong) NSDate *sessionExpiration;
+@property (nonatomic, copy, readwrite) NSString *pairedClientName;
 @property (nonatomic, assign) NSUInteger failedPairingAttempts;
 @property (nonatomic, strong) NSDate *pairingLockoutUntil;
 @end
@@ -104,7 +108,10 @@ static NSString *RLVPercentDecodedString(NSString *value)
         self.pairingLockoutUntil = nil;
         self.sessionToken = [NSString stringWithFormat:@"%@%@", [[NSUUID UUID] UUIDString], [[NSUUID UUID] UUIDString]];
         self.sessionExpiration = [NSDate dateWithTimeIntervalSinceNow:900.0];
+        self.pairedClientName = clientName;
     }
+    [[NSNotificationCenter defaultCenter] postNotificationName:RLVTransferRouterDidPairNotification object:self
+        userInfo:[NSDictionary dictionaryWithObject:clientName forKey:RLVTransferRouterPairedClientNameKey]];
     return [RLVHTTPResponse JSONResponseWithStatusCode:200 object:[NSDictionary dictionaryWithObjectsAndKeys:
         self.sessionToken, @"token", [NSNumber numberWithInteger:900], @"expiresInSeconds", nil]];
 }
@@ -283,6 +290,7 @@ static NSString *RLVPercentDecodedString(NSString *value)
 @synthesize pairingCode = _pairingCode;
 @synthesize sessionToken = _sessionToken;
 @synthesize sessionExpiration = _sessionExpiration;
+@synthesize pairedClientName = _pairedClientName;
 @synthesize failedPairingAttempts = _failedPairingAttempts;
 @synthesize pairingLockoutUntil = _pairingLockoutUntil;
 

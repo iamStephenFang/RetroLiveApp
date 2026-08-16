@@ -114,7 +114,7 @@
 "preview.loading" = "正在加载预览…";
 "preview.preparing_live" = "正在准备 Live Photo…";
 "preview.unavailable" = "无法预览";
-"preview.import" = "导入到系统照片";
+"preview.import" = "导入";
 "library.loading" = "正在加载已导入照片…";
 "library.empty" = "暂无已导入照片";
 "library.empty.note" = "通过 RetroLive 导入的照片和 Live Photo 会显示在这里。";
