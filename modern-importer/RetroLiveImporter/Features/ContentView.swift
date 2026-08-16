@@ -4,6 +4,8 @@ enum RetroPalette {
     static let ink = Color.primary
     static let secondaryInk = Color.secondary
     static let surface = Color(uiColor: .secondarySystemBackground)
+    static let groupedCanvas = Color(uiColor: .systemGroupedBackground)
+    static let groupedSurface = Color(uiColor: .secondarySystemGroupedBackground)
     static let destructive = Color(uiColor: .systemRed)
     static let success = Color(uiColor: .systemGreen)
     static let mustard = Color(red: 0.95, green: 0.65, blue: 0.12)
@@ -206,14 +208,17 @@ struct ContentView: View {
         return Button {
             model.select(camera)
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 Image(systemName: "iphone.gen2")
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(Color.accentColor)
-                    .frame(width: 36, height: 36)
-                    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+                    .frame(width: 44, height: 44)
+                    .background(
+                        Color.accentColor.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    )
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 5) {
                     Text(camera.name)
                         .font(.headline)
                         .foregroundStyle(RetroPalette.ink)
@@ -226,7 +231,7 @@ struct ContentView: View {
                         .truncationMode(.middle)
 
                     if remembered {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 3) {
                             Image(systemName: "checkmark.circle.fill")
                             Text(L10n.text("device.remembered"))
                         }
@@ -241,7 +246,7 @@ struct ContentView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color(uiColor: .tertiaryLabel))
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
@@ -394,7 +399,10 @@ struct ContentView: View {
                         .foregroundStyle(RetroPalette.secondaryInk)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 44)
-                        .background(RetroPalette.surface, in: RoundedRectangle(cornerRadius: 24))
+                        .background(
+                            RetroPalette.groupedSurface,
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        )
                 }
 
                 LazyVGrid(columns: assetGridColumns, spacing: 4) {
@@ -407,6 +415,7 @@ struct ContentView: View {
             .padding(.top, 16)
             .padding(.bottom, 34)
         }
+        .background(RetroPalette.groupedCanvas.ignoresSafeArea())
         .refreshable { await model.refreshAssets() }
         .overlay {
             if model.isLoadingAssets && model.assets.isEmpty {
@@ -464,74 +473,73 @@ struct ContentView: View {
             }
         }
         .padding(16)
-        .background(RetroPalette.surface, in: RoundedRectangle(cornerRadius: 22))
+        .background(
+            RetroPalette.groupedSurface,
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+        )
     }
 
     private func deviceSummary(_ device: CameraDeviceInfo) -> some View {
-        ViewThatFits(in: .horizontal) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 14) {
-                deviceIdentity(device)
+                Image(systemName: "iphone.gen2")
+                    .font(.system(size: 21, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 46, height: 46)
+                    .background(
+                        Color.accentColor.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(device.deviceName)
+                        .font(.headline)
+                        .foregroundStyle(RetroPalette.ink)
+                        .lineLimit(1)
+
+                    Label(L10n.text("device.connected"), systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(RetroPalette.success)
+                }
+
                 Spacer(minLength: 12)
                 deviceAssetCount(device.assetCount)
             }
 
-            VStack(alignment: .leading, spacing: 14) {
-                deviceIdentity(device)
-                Divider()
-                HStack {
-                    Label(L10n.text("device.connected"), systemImage: "checkmark.circle.fill")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(RetroPalette.success)
-                    Spacer()
-                    deviceAssetCount(device.assetCount)
+            Divider()
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 20) {
+                    deviceMetadata(device.modelIdentifier, systemImage: "cpu")
+                    Spacer(minLength: 8)
+                    deviceMetadata("iOS \(device.systemVersion)", systemImage: "gearshape")
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    deviceMetadata(device.modelIdentifier, systemImage: "cpu")
+                    deviceMetadata("iOS \(device.systemVersion)", systemImage: "gearshape")
                 }
             }
         }
-        .padding(16)
-        .background(RetroPalette.surface, in: RoundedRectangle(cornerRadius: 20))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20)
-                .strokeBorder(Color.primary.opacity(0.06))
-        }
+        .padding(18)
+        .background(
+            RetroPalette.groupedSurface,
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+        )
     }
 
-    private func deviceIdentity(_ device: CameraDeviceInfo) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "iphone.gen2")
-                .font(.system(size: 21, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 44, height: 44)
-                .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(device.deviceName)
-                    .font(.headline)
-                    .foregroundStyle(RetroPalette.ink)
-                    .lineLimit(1)
-
-                HStack(spacing: 6) {
-                    deviceMetadataChip(device.modelIdentifier, systemImage: "cpu")
-                    deviceMetadataChip("iOS \(device.systemVersion)", systemImage: "gearshape")
-                }
-            }
-        }
-    }
-
-    private func deviceMetadataChip(_ title: String, systemImage: String) -> some View {
+    private func deviceMetadata(_ title: String, systemImage: String) -> some View {
         Label(title, systemImage: systemImage)
-            .font(.caption2.weight(.medium))
+            .font(.caption)
             .foregroundStyle(RetroPalette.secondaryInk)
             .lineLimit(1)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(Color(uiColor: .systemBackground).opacity(0.72), in: Capsule())
     }
 
     private func deviceAssetCount(_ count: Int) -> some View {
         VStack(alignment: .trailing, spacing: 1) {
             Text(String(count))
                 .font(.title2.bold().monospacedDigit())
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(RetroPalette.ink)
             Text(L10n.text("asset.count"))
                 .font(.caption2)
                 .foregroundStyle(RetroPalette.secondaryInk)
