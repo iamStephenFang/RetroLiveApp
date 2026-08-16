@@ -206,10 +206,8 @@ struct ContentView: View {
 
     private var deviceList: some View {
         List {
-            Section(L10n.text("device.nearby")) {
-                if model.cameras.isEmpty {
-                    emptyDeviceView
-                } else {
+            if !model.cameras.isEmpty {
+                Section(L10n.text("device.nearby")) {
                     ForEach(model.cameras) { camera in
                         deviceRow(camera)
                     }
@@ -217,6 +215,11 @@ struct ContentView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .overlay {
+            if model.cameras.isEmpty {
+                emptyDeviceView
+            }
+        }
         .navigationTitle(L10n.text("tab.devices"))
     }
 
@@ -274,17 +277,23 @@ struct ContentView: View {
 
     private var emptyDeviceView: some View {
         ContentUnavailableView {
-            Label(
-                L10n.text("device.none.title"),
-                systemImage: "dot.radiowaves.left.and.right"
-            )
+            Label {
+                Text(L10n.text("device.none.title"))
+                    .font(.title3.weight(.semibold))
+            } icon: {
+                Image(systemName: "dot.radiowaves.left.and.right")
+                    .font(.largeTitle)
+            }
         } description: {
             Text(L10n.text("device.none.description"))
+                .font(.subheadline)
+                .foregroundStyle(RetroPalette.secondaryInk)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity, minHeight: 240)
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var restoringView: some View {
