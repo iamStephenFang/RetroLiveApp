@@ -331,9 +331,7 @@ final class ImportedLibraryViewModel: ObservableObject {
 
     func delete(_ item: ImportedLibraryItem) async throws {
         guard let asset = asset(for: item) else { throw ImportedLibraryError.assetUnavailable }
-        try await PHPhotoLibrary.shared().performChanges {
-            PHAssetChangeRequest.deleteAssets([asset] as NSArray)
-        }
+        try await Self.deleteAssetFromPhotoLibrary(asset)
         try await history.removeRecord(for: item.assetId)
         items.removeAll { $0.id == item.id }
         thumbnails[item.id] = nil
@@ -343,6 +341,12 @@ final class ImportedLibraryViewModel: ObservableObject {
 
     private func asset(for item: ImportedLibraryItem) -> PHAsset? {
         assetsByIdentifier[item.localIdentifier]
+    }
+
+    private nonisolated static func deleteAssetFromPhotoLibrary(_ asset: PHAsset) async throws {
+        try await PHPhotoLibrary.shared().performChanges {
+            PHAssetChangeRequest.deleteAssets([asset] as NSArray)
+        }
     }
 
     private func assetFetchOptions(prefetchExtendedMetadata: Bool) -> PHFetchOptions {

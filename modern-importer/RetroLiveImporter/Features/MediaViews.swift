@@ -664,44 +664,58 @@ struct ImportedLibraryView: View {
     }
 
     private var libraryContent: some View {
-        ScrollView {
-            if model.isLoading && model.items.isEmpty {
-                ProgressView(L10n.text("library.loading"))
-                    .padding(.top, 60)
-            } else if model.items.isEmpty {
-                ContentUnavailableView(
-                    L10n.text("library.empty"),
-                    systemImage: "photo.stack",
-                    description: Text(L10n.text("library.empty.note"))
-                )
-                .padding(.top, 44)
-            } else {
-                LazyVStack(spacing: 10) {
-                    HStack {
-                        Text(L10n.format("library.imported_count", model.items.count))
-                            .font(.subheadline.weight(.semibold))
+        GeometryReader { proxy in
+            ScrollView {
+                if model.isLoading && model.items.isEmpty {
+                    ProgressView(L10n.text("library.loading"))
+                        .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+                } else if model.items.isEmpty {
+                    ContentUnavailableView {
+                        Label {
+                            Text(L10n.text("library.empty"))
+                                .font(.title3.weight(.semibold))
+                        } icon: {
+                            Image(systemName: "photo.stack")
+                                .font(.largeTitle)
+                        }
+                    } description: {
+                        Text(L10n.text("library.empty.note"))
+                            .font(.subheadline)
                             .foregroundStyle(RetroPalette.secondaryInk)
-                        Spacer()
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.top, 4)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                    .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+                } else {
+                    LazyVStack(spacing: 10) {
+                        HStack {
+                            Text(L10n.format("library.imported_count", model.items.count))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(RetroPalette.secondaryInk)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.top, 4)
 
-                    LazyVGrid(columns: columns, spacing: 4) {
-                        ForEach(model.items) { item in
-                            NavigationLink {
-                                ImportedAssetPreviewView(model: model, item: item)
-                            } label: {
-                                libraryTile(item)
+                        LazyVGrid(columns: columns, spacing: 4) {
+                            ForEach(model.items) { item in
+                                NavigationLink {
+                                    ImportedAssetPreviewView(model: model, item: item)
+                                } label: {
+                                    libraryTile(item)
+                                }
+                                .buttonStyle(.plain)
+                                .task(id: item.id) { model.loadThumbnail(for: item) }
                             }
-                            .buttonStyle(.plain)
-                            .task(id: item.id) { model.loadThumbnail(for: item) }
                         }
                     }
+                    .padding(4)
                 }
-                .padding(4)
             }
+            .refreshable { await model.refresh() }
         }
-        .refreshable { await model.refresh() }
     }
 
     private func libraryTile(_ item: ImportedLibraryItem) -> some View {
@@ -825,7 +839,7 @@ struct ImportedLibraryView: View {
 
     private var accessBadgeColor: Color {
         switch model.access {
-        case .notDetermined: RetroPalette.sage
+        case .notDetermined: Color.accentColor
         case .restricted: RetroPalette.mustard
         default: RetroPalette.destructive
         }

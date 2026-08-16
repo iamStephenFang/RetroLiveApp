@@ -5,8 +5,8 @@ enum RetroPalette {
     static let secondaryInk = Color.secondary
     static let surface = Color(uiColor: .secondarySystemBackground)
     static let destructive = Color(uiColor: .systemRed)
+    static let success = Color(uiColor: .systemGreen)
     static let mustard = Color(red: 0.95, green: 0.65, blue: 0.12)
-    static let sage = Color(red: 0.45, green: 0.53, blue: 0.41)
 }
 
 struct ContentView: View {
@@ -186,96 +186,82 @@ struct ContentView: View {
     }
 
     private var deviceList: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                Text(L10n.text("device.nearby"))
-                    .font(.title3.bold())
-                    .foregroundStyle(RetroPalette.ink)
-
+        List {
+            Section(L10n.text("device.nearby")) {
                 if model.cameras.isEmpty {
-                    emptyDeviceCard
+                    emptyDeviceView
                 } else {
                     ForEach(model.cameras) { camera in
-                        deviceCard(camera)
+                        deviceRow(camera)
                     }
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .padding(.bottom, 32)
         }
-        .background(Color(uiColor: .systemBackground))
+        .listStyle(.insetGrouped)
         .navigationTitle(L10n.text("tab.devices"))
     }
 
-    private func deviceCard(_ camera: DiscoveredCamera) -> some View {
+    private func deviceRow(_ camera: DiscoveredCamera) -> some View {
         let remembered = model.isRemembered(camera)
         return Button {
             model.select(camera)
         } label: {
-            HStack(spacing: 15) {
+            HStack(spacing: 12) {
                 Image(systemName: "iphone.gen2")
-                    .font(.system(size: 24, weight: .medium))
-                    .foregroundStyle(RetroPalette.ink)
-                    .frame(width: 50, height: 50)
-                    .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 16))
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 36, height: 36)
+                    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
 
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 7) {
-                        Text(camera.name)
-                            .font(.headline)
-                            .foregroundStyle(RetroPalette.ink)
-                            .lineLimit(1)
-                        if remembered {
-                            Label(L10n.text("device.remembered"), systemImage: "checkmark.circle.fill")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(RetroPalette.sage)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(camera.name)
+                        .font(.headline)
+                        .foregroundStyle(RetroPalette.ink)
+                        .lineLimit(1)
+
+                    Text(verbatim: camera.hostDescription)
+                        .font(.caption)
+                        .foregroundStyle(RetroPalette.secondaryInk)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+
+                    if remembered {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text(L10n.text("device.remembered"))
                         }
-                    }
-                    HStack(spacing: 6) {
-                        Text(verbatim: camera.hostDescription)
-                            .font(.caption)
-                            .foregroundStyle(RetroPalette.secondaryInk)
-                            .lineLimit(1)
-                        Text(verbatim: String(camera.port))
-                            .font(.caption2.monospacedDigit().weight(.semibold))
-                            .foregroundStyle(RetroPalette.ink)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Color(uiColor: .systemBackground), in: Capsule())
+                        .font(.caption)
+                        .foregroundStyle(RetroPalette.success)
                     }
                 }
+
                 Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.accentColor)
+
+                Image(systemName: "chevron.forward")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color(uiColor: .tertiaryLabel))
             }
-            .padding(16)
+            .padding(.vertical, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RetroPalette.surface, in: RoundedRectangle(cornerRadius: 24))
-            .contentShape(RoundedRectangle(cornerRadius: 24))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityHint(remembered ? L10n.text("device.remembered.hint") : L10n.text("device.connect.hint"))
     }
 
-    private var emptyDeviceCard: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "dot.radiowaves.left.and.right")
-                .font(.system(size: 30, weight: .medium))
-                .foregroundStyle(Color.accentColor)
-            Text(L10n.text("device.none.title"))
-                .font(.headline)
-                .foregroundStyle(RetroPalette.ink)
+    private var emptyDeviceView: some View {
+        ContentUnavailableView {
+            Label(
+                L10n.text("device.none.title"),
+                systemImage: "dot.radiowaves.left.and.right"
+            )
+        } description: {
             Text(L10n.text("device.none.description"))
-                .font(.subheadline)
-                .foregroundStyle(RetroPalette.secondaryInk)
-                .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 24)
-        .padding(.vertical, 38)
-        .background(RetroPalette.surface, in: RoundedRectangle(cornerRadius: 24))
+        .frame(maxWidth: .infinity, minHeight: 240)
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
     private var restoringView: some View {
@@ -495,7 +481,7 @@ struct ContentView: View {
                 HStack {
                     Label(L10n.text("device.connected"), systemImage: "checkmark.circle.fill")
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(RetroPalette.sage)
+                        .foregroundStyle(RetroPalette.success)
                     Spacer()
                     deviceAssetCount(device.assetCount)
                 }
@@ -690,7 +676,7 @@ struct ContentView: View {
 
     private func assetStateColor(_ state: ImporterAssetState) -> Color {
         switch state {
-        case .imported: RetroPalette.sage
+        case .imported: RetroPalette.success
         case .failed, .cancelled: RetroPalette.destructive
         case .needsConfirmation, .paused: RetroPalette.mustard
         default: Color.accentColor
@@ -699,7 +685,7 @@ struct ContentView: View {
 
     private func queueStatusColor(_ status: ImportQueueItemStatus) -> Color {
         switch status {
-        case .imported: RetroPalette.sage
+        case .imported: RetroPalette.success
         case .failed, .cancelled: RetroPalette.destructive
         case .needsConfirmation, .paused: RetroPalette.mustard
         default: Color.accentColor
