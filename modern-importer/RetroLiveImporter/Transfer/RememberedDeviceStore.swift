@@ -13,6 +13,7 @@ protocol RememberedDeviceStoring: AnyObject {
     func record(for serviceName: String) -> RememberedDeviceRecord?
     func save(_ record: RememberedDeviceRecord) throws
     func remove(serviceName: String) throws
+    func removeAll() throws
 }
 
 enum RememberedDeviceStoreError: Error, LocalizedError {
@@ -66,6 +67,17 @@ final class KeychainRememberedDeviceStore: RememberedDeviceStoring {
 
     func remove(serviceName: String) throws {
         let status = SecItemDelete(baseQuery(serviceName: serviceName) as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw RememberedDeviceStoreError.keychain(status)
+        }
+    }
+
+    func removeAll() throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service
+        ]
+        let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw RememberedDeviceStoreError.keychain(status)
         }

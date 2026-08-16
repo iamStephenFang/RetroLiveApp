@@ -95,6 +95,7 @@ final class ImporterViewModel: ObservableObject {
     @Published private(set) var isPreparingBatch = false
     @Published private(set) var storageOverview: ImportStorageOverview?
     @Published private(set) var lastPreflight: ImportStoragePreflight?
+    @Published private var rememberedDevicesRevision = 0
 
     private let discovery: DeviceDiscovery
     private let downloadStore: DownloadStore
@@ -976,6 +977,15 @@ final class ImporterViewModel: ObservableObject {
             try await downloadStore.removeTemporaryData(excluding: activeQueueAssetIds)
             try await assembler.removeTemporaryData()
         } }
+    }
+
+    func forgetAllRememberedDevices() {
+        do {
+            try rememberedDeviceStore.removeAll()
+            rememberedDevicesRevision &+= 1
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func performCleanup(_ operation: () async throws -> Void) async {

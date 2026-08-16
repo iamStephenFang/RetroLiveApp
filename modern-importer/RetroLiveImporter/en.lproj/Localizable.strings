@@ -64,11 +64,17 @@
 "storage.title" = "Storage";
 "storage.usage" = "Usage";
 "storage.cache" = "RetroLive Cache";
-"storage.cache.note" = "Downloaded and prepared files used for previews and imports across all paired devices. Clearing the cache does not delete camera originals or items in Photos.";
+"storage.cache.note" = "Downloaded and prepared files used for previews and imports. Clearing the cache keeps paired devices and does not delete camera originals or items in Photos.";
 "storage.cleanup.action" = "Clear Cache";
 "storage.cleanup.confirm.title" = "Clear RetroLive Cache?";
 "storage.cleanup.confirm.message" = "Downloaded, prepared, and temporary files that are not in use will be removed. Active imports, camera originals, and items in Photos are not affected.";
 "storage.cleanup.confirm.action" = "Clear Cache";
+"devices.remembered.title" = "Paired Devices";
+"devices.remembered.note" = "Saved pairing sessions are kept separately from the cache. Forgetting them does not remove downloaded files, camera originals, or items in Photos.";
+"devices.forget_all.action" = "Forget All Paired Devices";
+"devices.forget_all.confirm.title" = "Forget All Paired Devices?";
+"devices.forget_all.confirm.message" = "Saved pairing sessions will be removed. You will need the six-digit code to pair with each device again. The cache is not affected.";
+"devices.forget_all.confirm.action" = "Forget Devices";
 "storage.insufficient" = "RetroLive estimates that this import needs %@ of additional space, but only %@ is currently available. Free space or clear the RetroLive cache before retrying.";
 "discovery.search_failed" = "Could not search for devices on the local network (%@).";
 "discovery.resolve_failed" = "Could not resolve %@ (%@).";
@@ -118,7 +124,7 @@
 "library.loading" = "Loading Imported Photos…";
 "library.empty" = "No Imported Photos";
 "library.empty.note" = "Photos and Live Photos imported by RetroLive will appear here.";
-"library.imported_count" = "Imported: %d";
+"library.imported_count" = "%d Items";
 "library.access.title" = "Photos Access Required";
 "library.access.note" = "Allow access so RetroLive can locate items it previously imported. This page only lists assets recorded in RetroLive import history.";
 "library.access.action" = "Allow Photos Access";

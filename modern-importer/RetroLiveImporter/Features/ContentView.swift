@@ -18,6 +18,7 @@ struct ContentView: View {
     @FocusState private var pairingFieldFocused: Bool
     @State private var selectedTab: ImporterTab = .devices
     @State private var previewAsset: CameraAssetSummary?
+    @State private var importedPreviewItem: ImportedLibraryItem?
 
     private let assetGridColumns = [
         GridItem(.adaptive(minimum: 92, maximum: 128), spacing: 4)
@@ -93,15 +94,31 @@ struct ContentView: View {
                         .navigationDestination(item: $previewAsset) { asset in
                             RemoteAssetPreviewView(model: model, asset: asset)
                         }
+                        .navigationDestination(item: $importedPreviewItem) { item in
+                            ImportedAssetPreviewView(model: libraryModel, item: item)
+                        }
                 }
         }
     }
 
     private var libraryNavigation: some View {
         NavigationStack {
-            ImportedLibraryView(model: libraryModel)
-                .navigationTitle(L10n.text("tab.library"))
+            Group {
+                if #available(iOS 26.0, *) {
+                    ImportedLibraryView(model: libraryModel, showsCountHeader: false)
+                        .navigationTitle(L10n.text("tab.library"))
+                        .navigationSubtitle(libraryNavigationSubtitle)
+                } else {
+                    ImportedLibraryView(model: libraryModel)
+                        .navigationTitle(L10n.text("tab.library"))
+                }
+            }
         }
+    }
+
+    private var libraryNavigationSubtitle: String {
+        guard libraryModel.access.canRead, !libraryModel.items.isEmpty else { return "" }
+        return L10n.format("library.imported_count", libraryModel.items.count)
     }
 
     private var settingsNavigation: some View {
@@ -431,10 +448,12 @@ struct ContentView: View {
                 Label(L10n.text("queue.title"), systemImage: "list.number")
                     .font(.headline)
                 Spacer()
-                if model.isQueuePaused {
-                    Button(L10n.text("queue.resume")) { model.resumeQueue() }
-                } else {
-                    Button(L10n.text("queue.pause")) { model.pauseQueue() }
+                if model.visibleQueueItems.contains(where: { !$0.status.isTerminal }) {
+                    if model.isQueuePaused {
+                        Button(L10n.text("queue.resume")) { model.resumeQueue() }
+                    } else {
+                        Button(L10n.text("queue.pause")) { model.pauseQueue() }
+                    }
                 }
             }
             ForEach(model.visibleQueueItems) { item in
@@ -558,7 +577,7 @@ struct ContentView: View {
             if model.selectionMode {
                 model.toggleSelection(asset.assetId)
             } else {
-                previewAsset = asset
+                openPreview(asset, state: state)
             }
         } label: {
             ZStack(alignment: .topTrailing) {
@@ -627,6 +646,33 @@ struct ContentView: View {
         )
         .task(id: asset.assetId) {
             await model.loadThumbnail(for: asset)
+        }
+    }
+
+    private func openPreview(_ asset: CameraAssetSummary, state: ImporterAssetState) {
+        guard state == .imported else {
+            previewAsset = asset
+            return
+        }
+
+        Task {
+            if let item = libraryModel.items.first(where: { $0.assetId == asset.assetId }) {
+                importedPreviewItem = item
+                return
+            }
+
+            if libraryModel.access == .notDetermined {
+                await libraryModel.requestAccess()
+            } else {
+                await libraryModel.refresh()
+            }
+
+            if let item = libraryModel.items.first(where: { $0.assetId == asset.assetId }) {
+                importedPreviewItem = item
+            } else {
+                await model.refreshImportStatuses()
+                previewAsset = asset
+            }
         }
     }
 

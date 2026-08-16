@@ -176,6 +176,8 @@ struct RemoteAssetPreviewView: View {
 
     @State private var image: UIImage?
     @State private var livePhoto: PHLivePhoto?
+    @State private var isLoadingPreview = true
+    @State private var previewLoadingProgress = 0.0
     @State private var isPreparingLivePhoto = false
     @State private var previewError: String?
 
@@ -226,22 +228,10 @@ struct RemoteAssetPreviewView: View {
                     systemImage: "exclamationmark.triangle",
                     description: Text(previewError)
                 )
-            } else {
-                ProgressView(L10n.text("preview.loading"))
             }
 
-            if isPreparingLivePhoto, displayedImage != nil, livePhoto == nil {
-                VStack {
-                    Spacer()
-                    Label(L10n.text("preview.preparing_live"), systemImage: "livephoto")
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 9)
-                        .background(.black.opacity(0.58), in: Capsule())
-                        .padding(.bottom, 20)
-                }
-            } else if let previewError, displayedImage != nil, livePhoto == nil {
+            if let previewError, displayedImage != nil, livePhoto == nil,
+               !isLoadingPreview {
                 VStack {
                     Spacer()
                     Label(previewError, systemImage: "exclamationmark.triangle")
@@ -274,18 +264,9 @@ struct RemoteAssetPreviewView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            Button(importActionTitle) {
-                model.importAsset(asset)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .frame(maxWidth: .infinity)
-            .disabled(
-                isPreparingLivePhoto
-                    || !canImport
-            )
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
+            importButton
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
         }
         .task(id: asset.assetId) {
             await loadPreview()
@@ -297,11 +278,92 @@ struct RemoteAssetPreviewView: View {
         return date.formatted(date: .abbreviated, time: .shortened)
     }
 
+    @ViewBuilder
+    private var importButton: some View {
+        if #available(iOS 26.0, *) {
+            importButtonProgressOverlay(
+                importButtonContent.buttonStyle(.glassProminent)
+            )
+        } else {
+            importButtonProgressOverlay(
+                importButtonContent.buttonStyle(.borderedProminent)
+            )
+        }
+    }
+
+    private var importButtonContent: some View {
+        Button {
+            model.importAsset(asset)
+        } label: {
+            Text(importActionTitle)
+                .opacity(isLoadingPreview ? 0 : 1)
+            .fontWeight(.semibold)
+            .frame(maxWidth: .infinity)
+            .frame(height: 22)
+        }
+        .controlSize(.large)
+        .disabled(isLoadingPreview || !canImport)
+        .accessibilityLabel(isLoadingPreview ? previewLoadingTitle : importActionTitle)
+    }
+
+    private var previewLoadingTitle: String {
+        L10n.text(
+            isPreparingLivePhoto
+                ? "preview.preparing_live"
+                : "preview.loading"
+        )
+    }
+
+    private func importButtonProgressOverlay<Content: View>(_ content: Content) -> some View {
+        content.overlay {
+            if isLoadingPreview {
+                GeometryReader { proxy in
+                    ZStack {
+                        HStack(spacing: 0) {
+                            Rectangle()
+                                .fill(Color.primary.opacity(0.16))
+                                .frame(
+                                    width: proxy.size.width * previewLoadingProgress
+                                )
+                            Spacer(minLength: 0)
+                        }
+
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text(previewLoadingTitle)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .clipShape(Capsule())
+                }
+                .allowsHitTesting(false)
+            }
+        }
+    }
+
     private func loadPreview() async {
+        isLoadingPreview = true
+        previewLoadingProgress = 0
+        isPreparingLivePhoto = asset.hasMotion == true
+        previewError = nil
+        let simulatedProgressTask = Task { @MainActor in
+            var nextProgress = 0.12
+            while !Task.isCancelled {
+                withAnimation(.linear(duration: 0.35)) {
+                    previewLoadingProgress = nextProgress
+                }
+                try? await Task.sleep(for: .milliseconds(400))
+                nextProgress = min(0.9, nextProgress + (0.9 - nextProgress) * 0.2)
+            }
+        }
+        defer {
+            simulatedProgressTask.cancel()
+            isLoadingPreview = false
+            isPreparingLivePhoto = false
+        }
         do {
             if asset.hasMotion == true {
-                isPreparingLivePhoto = true
-                defer { isPreparingLivePhoto = false }
                 let preview = try await model.livePhotoPreview(for: asset)
                 try Task.checkCancellation()
                 image = preview.image
@@ -309,6 +371,11 @@ struct RemoteAssetPreviewView: View {
             } else {
                 image = try await model.previewImage(for: asset)
             }
+            simulatedProgressTask.cancel()
+            withAnimation(.easeOut(duration: 0.18)) {
+                previewLoadingProgress = 1
+            }
+            try? await Task.sleep(for: .milliseconds(180))
         } catch is CancellationError {
             return
         } catch {
@@ -638,8 +705,9 @@ private struct AssetActivityViewController: UIViewControllerRepresentable {
 
 struct ImportedLibraryView: View {
     @ObservedObject var model: ImportedLibraryViewModel
+    var showsCountHeader = true
 
-    private let columns = [GridItem(.adaptive(minimum: 92, maximum: 160), spacing: 4)]
+    private let columns = [GridItem(.adaptive(minimum: 92, maximum: 160), spacing: 3)]
 
     var body: some View {
         Group {
@@ -689,17 +757,25 @@ struct ImportedLibraryView: View {
                     .padding(.horizontal, 32)
                     .frame(maxWidth: .infinity, minHeight: proxy.size.height)
                 } else {
-                    LazyVStack(spacing: 10) {
-                        HStack {
-                            Text(L10n.format("library.imported_count", model.items.count))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(RetroPalette.secondaryInk)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.top, 4)
+                    LazyVStack(spacing: 8) {
+                        if showsCountHeader {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(L10n.text("asset.state.imported"))
+                                    .font(.title3.bold())
+                                    .foregroundStyle(RetroPalette.ink)
 
-                        LazyVGrid(columns: columns, spacing: 4) {
+                                Spacer()
+
+                                Text(L10n.format("library.imported_count", model.items.count))
+                                    .font(.subheadline.monospacedDigit())
+                                    .foregroundStyle(RetroPalette.secondaryInk)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.top, 6)
+                            .padding(.bottom, 2)
+                        }
+
+                        LazyVGrid(columns: columns, spacing: 3) {
                             ForEach(model.items) { item in
                                 NavigationLink {
                                     ImportedAssetPreviewView(model: model, item: item)
@@ -731,11 +807,11 @@ struct ImportedLibraryView: View {
             }
             if item.kind == .livePhoto {
                 Image(systemName: "livephoto")
-                    .font(.caption.bold())
+                    .font(.caption2.bold())
                     .foregroundStyle(.white)
-                    .padding(7)
-                    .background(.black.opacity(0.42), in: Circle())
-                    .padding(7)
+                    .padding(5)
+                    .background(.black.opacity(0.46), in: Circle())
+                    .padding(5)
             }
         }
         .aspectRatio(1, contentMode: .fit)

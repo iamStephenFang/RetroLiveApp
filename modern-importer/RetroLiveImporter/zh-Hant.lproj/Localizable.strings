@@ -64,11 +64,17 @@
 "storage.title" = "儲存空間";
 "storage.usage" = "空間用量";
 "storage.cache" = "RetroLive 快取";
-"storage.cache.note" = "用於預覽及匯入的下載檔案，包含所有已配對裝置的資料。清理快取不會刪除相機原始檔或系統相片中的內容。";
+"storage.cache.note" = "用於預覽及匯入的下載與準備檔案。清理快取會保留已配對裝置，也不會刪除相機原始檔或系統相片中的內容。";
 "storage.cleanup.action" = "清理快取";
 "storage.cleanup.confirm.title" = "清理 RetroLive 快取？";
 "storage.cleanup.confirm.message" = "將刪除目前未使用的下載、準備及暫存檔案。正在匯入的項目、相機原始檔和系統相片不受影響。";
 "storage.cleanup.confirm.action" = "清理快取";
+"devices.remembered.title" = "已配對裝置";
+"devices.remembered.note" = "儲存的配對工作階段與快取分開管理。忘記裝置不會刪除下載檔案、相機原始檔或系統相片中的內容。";
+"devices.forget_all.action" = "忘記所有已配對裝置";
+"devices.forget_all.confirm.title" = "忘記所有已配對裝置？";
+"devices.forget_all.confirm.message" = "儲存的配對工作階段將被刪除。下次連線時，需要重新輸入每部裝置上的六位數配對碼。快取不受影響。";
+"devices.forget_all.confirm.action" = "忘記裝置";
 "storage.insufficient" = "預計本次匯入還需要 %@ 空間，但目前只有 %@ 可用。請釋放空間或清理 RetroLive 快取後重試。";
 "discovery.search_failed" = "無法搜尋區域網路裝置（%@）。";
 "discovery.resolve_failed" = "無法解析 %@（%@）。";
@@ -118,7 +124,7 @@
 "library.loading" = "正在載入已匯入相片…";
 "library.empty" = "尚無已匯入相片";
 "library.empty.note" = "透過 RetroLive 匯入的相片和原況相片會顯示在這裡。";
-"library.imported_count" = "已匯入：%d";
+"library.imported_count" = "%d 項";
 "library.access.title" = "需要取用相片";
 "library.access.note" = "授權後，RetroLive 才能找到之前匯入的項目。此頁面只顯示 RetroLive 匯入記錄中的資源。";
 "library.access.action" = "允許取用相片";

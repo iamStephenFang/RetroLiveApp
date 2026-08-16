@@ -4,6 +4,7 @@ struct ImporterSettingsView: View {
     @ObservedObject var model: ImporterViewModel
 
     @State private var confirmsCacheCleanup = false
+    @State private var confirmsForgettingDevices = false
 
     var body: some View {
         List {
@@ -27,6 +28,11 @@ struct ImporterSettingsView: View {
                 Button(L10n.text("storage.cleanup.action"), role: .destructive) {
                     confirmsCacheCleanup = true
                 }
+                Button(L10n.text("devices.forget_all.action"), role: .destructive) {
+                    confirmsForgettingDevices = true
+                }
+            } footer: {
+                Text(L10n.text("devices.remembered.note"))
             }
 
             Section(L10n.text("settings.system")) {
@@ -60,6 +66,17 @@ struct ImporterSettingsView: View {
             Button(L10n.text("common.cancel"), role: .cancel) {}
         } message: {
             Text(L10n.text("storage.cleanup.confirm.message"))
+        }
+        .alert(
+            L10n.text("devices.forget_all.confirm.title"),
+            isPresented: $confirmsForgettingDevices
+        ) {
+            Button(L10n.text("devices.forget_all.confirm.action"), role: .destructive) {
+                model.forgetAllRememberedDevices()
+            }
+            Button(L10n.text("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(L10n.text("devices.forget_all.confirm.message"))
         }
     }
 

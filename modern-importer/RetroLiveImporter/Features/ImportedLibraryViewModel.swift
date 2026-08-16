@@ -3,7 +3,7 @@ import Photos
 import UIKit
 import UniformTypeIdentifiers
 
-struct ImportedLibraryItem: Identifiable, Equatable {
+struct ImportedLibraryItem: Identifiable, Equatable, Hashable {
     let assetId: String
     let localIdentifier: String
     let kind: ImportedAssetKind

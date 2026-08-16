@@ -64,11 +64,17 @@
 "storage.title" = "存储空间";
 "storage.usage" = "空间占用";
 "storage.cache" = "RetroLive 缓存";
-"storage.cache.note" = "用于预览和导入的下载文件，包含所有已配对设备的数据。清理缓存不会删除相机原件或系统照片中的内容。";
+"storage.cache.note" = "用于预览和导入的下载及准备文件。清理缓存会保留已配对设备，也不会删除相机原件或系统照片中的内容。";
 "storage.cleanup.action" = "清理缓存";
 "storage.cleanup.confirm.title" = "清理 RetroLive 缓存？";
 "storage.cleanup.confirm.message" = "将删除当前未使用的下载、准备及临时文件。正在导入的项目、相机原件和系统照片不受影响。";
 "storage.cleanup.confirm.action" = "清理缓存";
+"devices.remembered.title" = "已配对设备";
+"devices.remembered.note" = "保存的配对会话与缓存分开管理。忘记设备不会删除下载文件、相机原件或系统照片中的内容。";
+"devices.forget_all.action" = "忘记所有已配对设备";
+"devices.forget_all.confirm.title" = "忘记所有已配对设备？";
+"devices.forget_all.confirm.message" = "保存的配对会话将被删除。下次连接时，需要重新输入每台设备上的六位配对码。缓存不会受到影响。";
+"devices.forget_all.confirm.action" = "忘记设备";
 "storage.insufficient" = "预计本次导入还需要 %@ 空间，但当前只有 %@ 可用。请释放空间或清理 RetroLive 缓存后重试。";
 "discovery.search_failed" = "无法搜索局域网设备（%@）。";
 "discovery.resolve_failed" = "无法解析 %@（%@）。";
@@ -118,7 +124,7 @@
 "library.loading" = "正在加载已导入照片…";
 "library.empty" = "暂无已导入照片";
 "library.empty.note" = "通过 RetroLive 导入的照片和 Live Photo 会显示在这里。";
-"library.imported_count" = "已导入：%d";
+"library.imported_count" = "%d 项";
 "library.access.title" = "需要访问照片";
 "library.access.note" = "授权后，RetroLive 才能找到之前导入的项目。此页面只显示 RetroLive 导入记录中的资源。";
 "library.access.action" = "允许访问照片";
