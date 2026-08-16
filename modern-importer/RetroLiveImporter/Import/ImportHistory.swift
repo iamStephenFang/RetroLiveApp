@@ -110,6 +110,13 @@ actor ImportHistoryStore {
         try persist(entries)
     }
 
+    func removeRecord(for assetId: String) throws {
+        var entries = try entriesByAssetId()
+        guard entries[assetId]?.state == .imported else { return }
+        entries.removeValue(forKey: assetId)
+        try persist(entries)
+    }
+
     private func persist(_ entries: [String: ImportJournalEntry]) throws {
         try fileManager.createDirectory(
             at: fileURL.deletingLastPathComponent(),

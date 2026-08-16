@@ -6,12 +6,11 @@ final class DeviceDiscovery: NSObject, ObservableObject {
     @Published private(set) var isSearching = false
     @Published private(set) var errorMessage: String?
 
-    private let browser = NetServiceBrowser()
+    private var browser: NetServiceBrowser?
     private var services: [String: NetService] = [:]
 
     override init() {
         super.init()
-        browser.delegate = self
     }
 
     func start() {
@@ -20,13 +19,25 @@ final class DeviceDiscovery: NSObject, ObservableObject {
         cameras = []
         services = [:]
         isSearching = true
+        let browser = NetServiceBrowser()
+        browser.delegate = self
+        self.browser = browser
         browser.searchForServices(ofType: "_retrolive._tcp.", inDomain: "local.")
     }
 
     func stop() {
-        browser.stop()
-        services.values.forEach { $0.stop() }
+        let stoppedBrowser = browser
+        browser = nil
+        stoppedBrowser?.delegate = nil
+        stoppedBrowser?.stop()
+        services.values.forEach {
+            $0.delegate = nil
+            $0.stop()
+        }
+        services = [:]
+        cameras = []
         isSearching = false
+        errorMessage = nil
     }
 
     private func resolved(_ service: NetService) {
@@ -49,6 +60,7 @@ extension DeviceDiscovery: @preconcurrency NetServiceBrowserDelegate {
         didFind service: NetService,
         moreComing: Bool
     ) {
+        guard browser === self.browser else { return }
         services[service.name] = service
         service.delegate = self
         service.resolve(withTimeout: 8)
@@ -59,26 +71,31 @@ extension DeviceDiscovery: @preconcurrency NetServiceBrowserDelegate {
         didRemove service: NetService,
         moreComing: Bool
     ) {
+        guard browser === self.browser else { return }
         services.removeValue(forKey: service.name)
         cameras.removeAll { $0.name == service.name }
     }
 
     func netServiceBrowser(_ browser: NetServiceBrowser, didNotSearch errorDict: [String: NSNumber]) {
+        guard browser === self.browser else { return }
         isSearching = false
         errorMessage = L10n.format("discovery.search_failed", String(describing: errorDict))
     }
 
     func netServiceBrowserDidStopSearch(_ browser: NetServiceBrowser) {
+        guard browser === self.browser else { return }
         isSearching = false
     }
 }
 
 extension DeviceDiscovery: @preconcurrency NetServiceDelegate {
     func netServiceDidResolveAddress(_ sender: NetService) {
+        guard services[sender.name] === sender else { return }
         resolved(sender)
     }
 
     func netService(_ sender: NetService, didNotResolve errorDict: [String: NSNumber]) {
+        guard services[sender.name] === sender else { return }
         services.removeValue(forKey: sender.name)
         errorMessage = L10n.format("discovery.resolve_failed", sender.name, String(describing: errorDict))
     }

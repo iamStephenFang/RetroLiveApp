@@ -1,3 +1,4 @@
 "CFBundleDisplayName" = "RetroLive 匯入器";
 "NSLocalNetworkUsageDescription" = "RetroLive 透過區域網路尋找已配對的相機並下載素材。";
 "NSPhotoLibraryAddUsageDescription" = "RetroLive 會將驗證後的相片和 Live Photo 加入您的相片圖庫。";
+"NSPhotoLibraryUsageDescription" = "RetroLive 用於顯示之前透過此 App 匯入的相片和原況相片。";

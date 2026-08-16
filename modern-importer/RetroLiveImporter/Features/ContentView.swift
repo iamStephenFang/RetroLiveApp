@@ -1,34 +1,34 @@
 import SwiftUI
 
 enum RetroPalette {
-    static let ink = Color(red: 0.14, green: 0.13, blue: 0.12)
-    static let secondaryInk = Color(red: 0.40, green: 0.38, blue: 0.35)
-    static let paper = Color(red: 0.97, green: 0.95, blue: 0.91)
-    static let persimmon = Color(red: 0.90, green: 0.29, blue: 0.17)
+    static let ink = Color.primary
+    static let secondaryInk = Color.secondary
+    static let surface = Color(uiColor: .secondarySystemBackground)
+    static let destructive = Color(uiColor: .systemRed)
     static let mustard = Color(red: 0.95, green: 0.65, blue: 0.12)
     static let sage = Color(red: 0.45, green: 0.53, blue: 0.41)
 }
 
 struct ContentView: View {
     @StateObject private var model = ImporterViewModel()
+    @StateObject private var libraryModel = ImportedLibraryViewModel()
+    @Environment(\.scenePhase) private var scenePhase
     @FocusState private var pairingFieldFocused: Bool
-    @State private var showsStorage = false
-    @State private var cleanupTarget: CleanupTarget?
+    @State private var selectedTab: ImporterTab = .devices
+    @State private var previewAsset: CameraAssetSummary?
 
-    private enum CleanupTarget: String, Identifiable {
-        case downloads, assemblies, temporary
-        var id: String { rawValue }
+    private let assetGridColumns = [
+        GridItem(.adaptive(minimum: 92, maximum: 128), spacing: 4)
+    ]
+
+    private enum ImporterTab: Hashable {
+        case devices
+        case library
+        case settings
     }
 
     var body: some View {
-        NavigationStack {
-            deviceList
-                .navigationDestination(isPresented: cameraIsSelected) {
-                    selectedCameraView
-                }
-        }
-        .tint(RetroPalette.persimmon)
-        .preferredColorScheme(.light)
+        tabs
         .alert(
             L10n.text("error.operation_failed"),
             isPresented: Binding(
@@ -42,7 +42,64 @@ struct ContentView: View {
         }
         .sensoryFeedback(.error, trigger: model.pairingFailureCount)
         .task { model.startDiscovery() }
-        .sheet(isPresented: $showsStorage) { storageSheet }
+        .onChange(of: selectedTab) { _, tab in
+            guard tab == .library else { return }
+            Task { await libraryModel.refresh() }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .background:
+                model.disconnectForBackground()
+            case .active:
+                model.startDiscovery()
+                if selectedTab == .library {
+                    Task { await libraryModel.refresh() }
+                }
+            case .inactive:
+                break
+            @unknown default:
+                break
+            }
+        }
+    }
+
+    private var tabs: some View {
+        TabView(selection: $selectedTab) {
+            deviceNavigation
+                .tabItem { Label(L10n.text("tab.devices"), systemImage: "iphone.gen2") }
+                .tag(ImporterTab.devices)
+            libraryNavigation
+                .tabItem { Label(L10n.text("tab.library"), systemImage: "photo.stack") }
+                .tag(ImporterTab.library)
+            settingsNavigation
+                .tabItem { Label(L10n.text("tab.settings"), systemImage: "gearshape") }
+                .tag(ImporterTab.settings)
+        }
+    }
+
+    private var deviceNavigation: some View {
+        NavigationStack {
+            deviceList
+                .navigationDestination(isPresented: cameraIsSelected) {
+                    selectedCameraView
+                }
+                .navigationDestination(item: $previewAsset) { asset in
+                    RemoteAssetPreviewView(model: model, asset: asset)
+                }
+        }
+    }
+
+    private var libraryNavigation: some View {
+        NavigationStack {
+            ImportedLibraryView(model: libraryModel)
+                .navigationTitle(L10n.text("tab.library"))
+        }
+    }
+
+    private var settingsNavigation: some View {
+        NavigationStack {
+            ImporterSettingsView(model: model)
+        }
     }
 
     private var cameraIsSelected: Binding<Bool> {
@@ -66,12 +123,12 @@ struct ContentView: View {
                 assetList
             }
         }
-        .background(Color.white.ignoresSafeArea())
-        .navigationTitle(model.deviceInfo?.deviceName ?? model.selectedCamera?.name ?? "RetroLive")
+        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color.white, for: .navigationBar)
+        .toolbar(model.selectionMode ? .hidden : .automatic, for: .tabBar)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
+            ToolbarItem(placement: .topBarTrailing) {
                 if model.deviceInfo != nil {
                     Button(model.selectionMode ? L10n.text("common.cancel") : L10n.text("batch.select")) {
                         model.setSelectionMode(!model.selectionMode)
@@ -81,10 +138,6 @@ struct ContentView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 if model.deviceInfo != nil {
                     Menu {
-                        Button(L10n.text("storage.title")) {
-                            showsStorage = true
-                            Task { await model.refreshStorageOverview() }
-                        }
                         Button(L10n.text("common.disconnect")) {
                             model.disconnect()
                         }
@@ -98,62 +151,55 @@ struct ContentView: View {
                     }
                 }
             }
+            ToolbarItemGroup(placement: .bottomBar) {
+                if model.selectionMode {
+                    Button {
+                        model.selectAllAvailable()
+                    } label: {
+                        Label(L10n.text("batch.select_all"), systemImage: "checkmark.circle")
+                    }
+
+                    Spacer()
+
+                    Text(L10n.format("batch.selected_count", model.selectedCount))
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(RetroPalette.secondaryInk)
+
+                    Spacer()
+
+                    Button {
+                        model.startSelectedImports()
+                    } label: {
+                        Label(L10n.text("batch.import"), systemImage: "square.and.arrow.down")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(model.selectedCount == 0 || model.isPreparingBatch)
+                }
+            }
         }
     }
 
     private var deviceList: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 30) {
-                brandHeader
+            VStack(alignment: .leading, spacing: 14) {
+                Text(L10n.text("device.nearby"))
+                    .font(.title3.bold())
+                    .foregroundStyle(RetroPalette.ink)
 
-                VStack(alignment: .leading, spacing: 14) {
-                    Text(L10n.text("device.nearby"))
-                        .font(.title3.bold())
-                        .foregroundStyle(RetroPalette.ink)
-
-                    if model.cameras.isEmpty {
-                        emptyDeviceCard
-                    } else {
-                        ForEach(model.cameras) { camera in
-                            deviceCard(camera)
-                        }
+                if model.cameras.isEmpty {
+                    emptyDeviceCard
+                } else {
+                    ForEach(model.cameras) { camera in
+                        deviceCard(camera)
                     }
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 34)
+            .padding(.top, 8)
             .padding(.bottom, 32)
         }
-        .background(Color.white)
-        .toolbar(.hidden, for: .navigationBar)
-    }
-
-    private var brandHeader: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ZStack(alignment: .bottomTrailing) {
-                Image(systemName: "camera.aperture")
-                    .font(.system(size: 31, weight: .semibold))
-                    .foregroundStyle(Color.white)
-                    .frame(width: 62, height: 62)
-                    .background(RetroPalette.mustard, in: RoundedRectangle(cornerRadius: 20))
-                Image(systemName: "livephoto")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Color.white)
-                    .frame(width: 30, height: 30)
-                    .background(RetroPalette.persimmon, in: Circle())
-                    .overlay(Circle().stroke(Color.white, lineWidth: 3))
-                    .offset(x: 7, y: 7)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(L10n.text("app.title"))
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(RetroPalette.ink)
-                Text(L10n.text("app.subtitle"))
-                    .font(.body)
-                    .foregroundStyle(RetroPalette.secondaryInk)
-            }
-        }
+        .background(Color(uiColor: .systemBackground))
+        .navigationTitle(L10n.text("tab.devices"))
     }
 
     private func deviceCard(_ camera: DiscoveredCamera) -> some View {
@@ -166,7 +212,7 @@ struct ContentView: View {
                     .font(.system(size: 24, weight: .medium))
                     .foregroundStyle(RetroPalette.ink)
                     .frame(width: 50, height: 50)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
+                    .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 16))
 
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 7) {
@@ -190,17 +236,17 @@ struct ContentView: View {
                             .foregroundStyle(RetroPalette.ink)
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
-                            .background(Color.white, in: Capsule())
+                            .background(Color(uiColor: .systemBackground), in: Capsule())
                     }
                 }
                 Spacer(minLength: 8)
                 Image(systemName: "chevron.right")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(RetroPalette.persimmon)
+                    .foregroundStyle(Color.accentColor)
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RetroPalette.paper, in: RoundedRectangle(cornerRadius: 24))
+            .background(RetroPalette.surface, in: RoundedRectangle(cornerRadius: 24))
             .contentShape(RoundedRectangle(cornerRadius: 24))
         }
         .buttonStyle(.plain)
@@ -211,7 +257,7 @@ struct ContentView: View {
         VStack(spacing: 14) {
             Image(systemName: "dot.radiowaves.left.and.right")
                 .font(.system(size: 30, weight: .medium))
-                .foregroundStyle(RetroPalette.persimmon)
+                .foregroundStyle(Color.accentColor)
             Text(L10n.text("device.none.title"))
                 .font(.headline)
                 .foregroundStyle(RetroPalette.ink)
@@ -223,14 +269,13 @@ struct ContentView: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 24)
         .padding(.vertical, 38)
-        .background(RetroPalette.paper, in: RoundedRectangle(cornerRadius: 24))
+        .background(RetroPalette.surface, in: RoundedRectangle(cornerRadius: 24))
     }
 
     private var restoringView: some View {
         VStack(spacing: 18) {
             ProgressView()
                 .controlSize(.large)
-                .tint(RetroPalette.persimmon)
             Text(L10n.text("pairing.reconnecting"))
                 .font(.headline)
                 .foregroundStyle(RetroPalette.ink)
@@ -277,13 +322,13 @@ struct ContentView: View {
                     .focused($pairingFieldFocused)
                     .frame(height: 78)
                     .padding(.horizontal, 16)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 22))
+                    .background(RetroPalette.surface, in: RoundedRectangle(cornerRadius: 22))
                     .overlay {
                         RoundedRectangle(cornerRadius: 22)
                             .stroke(
                                 model.pairingErrorMessage == nil
                                     ? RetroPalette.ink.opacity(0.12)
-                                    : RetroPalette.persimmon,
+                                    : RetroPalette.destructive,
                                 lineWidth: model.pairingErrorMessage == nil ? 1 : 2
                             )
                     }
@@ -295,7 +340,6 @@ struct ContentView: View {
                     if model.isPairing {
                         HStack(spacing: 9) {
                             ProgressView()
-                                .tint(RetroPalette.persimmon)
                             Text(L10n.text("pairing.in_progress"))
                         }
                         .font(.subheadline.weight(.medium))
@@ -304,7 +348,7 @@ struct ContentView: View {
                         VStack(spacing: 10) {
                             Label(message, systemImage: "exclamationmark.circle.fill")
                                 .font(.subheadline)
-                                .foregroundStyle(RetroPalette.persimmon)
+                                .foregroundStyle(RetroPalette.destructive)
                                 .multilineTextAlignment(.center)
                             if model.pairingCode.count == 6 {
                                 Button(L10n.text("common.retry")) {
@@ -313,14 +357,8 @@ struct ContentView: View {
                                 .font(.subheadline.bold())
                             }
                         }
-                    } else {
-                        Text(L10n.text("pairing.auto_note"))
-                            .font(.caption)
-                            .foregroundStyle(RetroPalette.secondaryInk)
                     }
                 }
-                .padding(18)
-                .background(RetroPalette.paper, in: RoundedRectangle(cornerRadius: 26))
 
                 Toggle(isOn: $model.rememberDevice) {
                     VStack(alignment: .leading, spacing: 3) {
@@ -332,9 +370,8 @@ struct ContentView: View {
                             .foregroundStyle(RetroPalette.secondaryInk)
                     }
                 }
-                .tint(RetroPalette.sage)
-                .padding(18)
-                .background(RetroPalette.paper, in: RoundedRectangle(cornerRadius: 22))
+                .padding(.horizontal, 4)
+                .padding(.vertical, 8)
 
                 Text(L10n.text("pairing.note"))
                     .font(.footnote)
@@ -365,11 +402,13 @@ struct ContentView: View {
                         .foregroundStyle(RetroPalette.secondaryInk)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 44)
-                        .background(RetroPalette.paper, in: RoundedRectangle(cornerRadius: 24))
+                        .background(RetroPalette.surface, in: RoundedRectangle(cornerRadius: 24))
                 }
 
-                ForEach(model.assets) { asset in
-                    assetRow(asset)
+                LazyVGrid(columns: assetGridColumns, spacing: 4) {
+                    ForEach(model.assets) { asset in
+                        assetGridItem(asset)
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -380,31 +419,8 @@ struct ContentView: View {
         .overlay {
             if model.isLoadingAssets && model.assets.isEmpty {
                 ProgressView(L10n.text("asset.loading"))
-                    .tint(RetroPalette.persimmon)
             }
         }
-        .safeAreaInset(edge: .bottom) {
-            if model.selectionMode {
-                batchSelectionBar
-            }
-        }
-    }
-
-    private var batchSelectionBar: some View {
-        HStack(spacing: 12) {
-            Button(L10n.text("batch.select_all")) { model.selectAllAvailable() }
-                .font(.subheadline.bold())
-            Spacer()
-            Text(L10n.format("batch.selected_count", model.selectedCount))
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(RetroPalette.secondaryInk)
-            Button(L10n.text("batch.import")) { model.startSelectedImports() }
-                .buttonStyle(.borderedProminent)
-                .disabled(model.selectedCount == 0 || model.isPreparingBatch)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(.ultraThinMaterial)
     }
 
     private var queueSummary: some View {
@@ -422,7 +438,7 @@ struct ContentView: View {
             ForEach(model.visibleQueueItems) { item in
                 HStack(spacing: 10) {
                     Image(systemName: queueIcon(item.status))
-                        .foregroundStyle(item.status == .imported ? RetroPalette.sage : RetroPalette.persimmon)
+                        .foregroundStyle(queueStatusColor(item.status))
                     VStack(alignment: .leading, spacing: 3) {
                         Text(formattedDate(item.summary.createdAt))
                             .font(.subheadline)
@@ -430,7 +446,7 @@ struct ContentView: View {
                             .font(.caption)
                             .foregroundStyle(RetroPalette.secondaryInk)
                         if item.status == .downloading {
-                            ProgressView(value: item.progress).tint(RetroPalette.persimmon)
+                            ProgressView(value: item.progress)
                         }
                     }
                     Spacer()
@@ -456,103 +472,158 @@ struct ContentView: View {
             }
         }
         .padding(16)
-        .background(RetroPalette.paper, in: RoundedRectangle(cornerRadius: 22))
+        .background(RetroPalette.surface, in: RoundedRectangle(cornerRadius: 22))
     }
 
     private func deviceSummary(_ device: CameraDeviceInfo) -> some View {
-        HStack(spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 14) {
+                deviceIdentity(device)
+                Spacer(minLength: 12)
+                deviceAssetCount(device.assetCount)
+            }
+
+            VStack(alignment: .leading, spacing: 14) {
+                deviceIdentity(device)
+                Divider()
+                HStack {
+                    Label(L10n.text("device.connected"), systemImage: "checkmark.circle.fill")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(RetroPalette.sage)
+                    Spacer()
+                    deviceAssetCount(device.assetCount)
+                }
+            }
+        }
+        .padding(16)
+        .background(RetroPalette.surface, in: RoundedRectangle(cornerRadius: 20))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(Color.primary.opacity(0.06))
+        }
+    }
+
+    private func deviceIdentity(_ device: CameraDeviceInfo) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "iphone.gen2")
+                .font(.system(size: 21, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 44, height: 44)
+                .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+
+            VStack(alignment: .leading, spacing: 6) {
                 Text(device.deviceName)
                     .font(.headline)
                     .foregroundStyle(RetroPalette.ink)
-                Text("\(device.modelIdentifier) · iOS \(device.systemVersion)")
-                    .font(.caption)
-                    .foregroundStyle(RetroPalette.secondaryInk)
-            }
-            Spacer()
-            VStack(spacing: 2) {
-                Text(String(device.assetCount))
-                    .font(.title2.bold().monospacedDigit())
-                    .foregroundStyle(RetroPalette.persimmon)
-                Text(L10n.text("asset.count"))
-                    .font(.caption2)
-                    .foregroundStyle(RetroPalette.secondaryInk)
+                    .lineLimit(1)
+
+                HStack(spacing: 6) {
+                    deviceMetadataChip(device.modelIdentifier, systemImage: "cpu")
+                    deviceMetadataChip("iOS \(device.systemVersion)", systemImage: "gearshape")
+                }
             }
         }
-        .padding(18)
-        .background(RetroPalette.paper, in: RoundedRectangle(cornerRadius: 22))
     }
 
-    private func assetRow(_ asset: CameraAssetSummary) -> some View {
-        let state = model.assetStates[asset.assetId] ?? .available
-        return HStack(alignment: .top, spacing: 14) {
-            if model.selectionMode {
-                Button { model.toggleSelection(asset.assetId) } label: {
-                    Image(systemName: model.selectedAssetIds.contains(asset.assetId)
-                        ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
-                        .foregroundStyle(model.canSelect(asset.assetId)
-                            ? RetroPalette.persimmon : RetroPalette.secondaryInk.opacity(0.35))
-                }
-                .disabled(!model.canSelect(asset.assetId))
-            }
-            assetThumbnail(asset)
+    private func deviceMetadataChip(_ title: String, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(RetroPalette.secondaryInk)
+            .lineLimit(1)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(Color(uiColor: .systemBackground).opacity(0.72), in: Capsule())
+    }
 
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label(
-                            asset.hasMotion == true
-                                ? L10n.text("asset.kind.live_photo")
-                                : L10n.text("asset.kind.photo"),
-                            systemImage: asset.hasMotion == true ? "livephoto" : "photo"
-                        )
-                        .font(.subheadline.bold())
-                        .foregroundStyle(RetroPalette.ink)
-                        Text(formattedDate(asset.createdAt))
-                            .font(.caption)
-                            .foregroundStyle(RetroPalette.secondaryInk)
-                    }
-                    Spacer(minLength: 6)
-                    if state == .imported {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(RetroPalette.sage)
-                    }
-                }
-
-                if case .downloading(let progress) = state {
-                    ProgressView(value: progress)
-                        .tint(RetroPalette.persimmon)
-                }
-                if case .failed(let message) = state {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundStyle(RetroPalette.persimmon)
-                        .lineLimit(2)
-                }
-                if state == .needsConfirmation {
-                    Text(L10n.text("asset.needs_confirmation.note"))
-                        .font(.caption)
-                        .foregroundStyle(RetroPalette.mustard)
-                        .lineLimit(3)
-                }
-
-                if !model.selectionMode {
-                    Button(state.title) { model.importAsset(asset) }
-                        .font(.subheadline.bold())
-                        .foregroundStyle(state == .imported ? RetroPalette.sage : Color.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(
-                            state == .imported ? RetroPalette.sage.opacity(0.13) : RetroPalette.persimmon,
-                            in: RoundedRectangle(cornerRadius: 13)
-                        )
-                        .disabled(state.isBusy || state == .imported || state == .needsConfirmation)
-                }
-            }
+    private func deviceAssetCount(_ count: Int) -> some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            Text(String(count))
+                .font(.title2.bold().monospacedDigit())
+                .foregroundStyle(Color.accentColor)
+            Text(L10n.text("asset.count"))
+                .font(.caption2)
+                .foregroundStyle(RetroPalette.secondaryInk)
         }
-        .padding(12)
-        .background(RetroPalette.paper, in: RoundedRectangle(cornerRadius: 22))
+        .accessibilityElement(children: .combine)
+    }
+
+    private func assetGridItem(_ asset: CameraAssetSummary) -> some View {
+        let state = model.assetStates[asset.assetId] ?? .available
+        let canSelect = model.canSelect(asset.assetId)
+        let isSelected = model.selectedAssetIds.contains(asset.assetId)
+        let isEnabled = !model.selectionMode || canSelect
+
+        return Button {
+            if model.selectionMode {
+                model.toggleSelection(asset.assetId)
+            } else {
+                previewAsset = asset
+            }
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                assetThumbnail(asset)
+
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.72)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+
+                VStack {
+                    HStack(alignment: .top) {
+                        if asset.hasMotion == true {
+                            Image(systemName: "livephoto")
+                                .font(.caption.bold())
+                                .foregroundStyle(.white)
+                                .padding(6)
+                                .background(.black.opacity(0.45), in: Circle())
+                        }
+                        Spacer(minLength: 0)
+                        assetStatusBadge(
+                            state: state,
+                            isSelected: isSelected,
+                            canSelect: canSelect
+                        )
+                    }
+                    Spacer(minLength: 4)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(formattedGridDate(asset.createdAt))
+                            .font(.caption2.weight(.medium))
+                            .lineLimit(1)
+                        Text(state.title)
+                            .font(.caption.bold())
+                            .lineLimit(1)
+                        if case .downloading(let progress) = state {
+                            ProgressView(value: progress)
+                                .tint(.white)
+                        }
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(8)
+            }
+            .aspectRatio(1, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(
+                        isSelected ? Color.accentColor : Color.white.opacity(0.16),
+                        lineWidth: isSelected ? 3 : 1
+                    )
+            }
+            .opacity(isEnabled ? 1 : 0.62)
+            .contentShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(assetAccessibilityLabel(asset, state: state))
+        .accessibilityAddTraits(model.selectionMode && isSelected ? .isSelected : [])
+        .accessibilityHint(
+            model.selectionMode
+                ? L10n.text(isSelected ? "batch.deselect_item" : "batch.select_item")
+                : L10n.text("preview.open")
+        )
         .task(id: asset.assetId) {
             await model.loadThumbnail(for: asset)
         }
@@ -561,7 +632,7 @@ struct ContentView: View {
     private func assetThumbnail(_ asset: CameraAssetSummary) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16)
-                .fill(RetroPalette.mustard.opacity(0.16))
+                .fill(Color(uiColor: .tertiarySystemFill))
             if let image = model.thumbnailImages[asset.assetId] {
                 Image(uiImage: image)
                     .resizable()
@@ -569,16 +640,84 @@ struct ContentView: View {
             } else {
                 Image(systemName: asset.hasMotion == true ? "livephoto" : "photo")
                     .font(.system(size: 26, weight: .medium))
-                    .foregroundStyle(RetroPalette.mustard)
+                    .foregroundStyle(RetroPalette.secondaryInk)
             }
         }
-        .frame(width: 104, height: 104)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
+    }
+
+    @ViewBuilder
+    private func assetStatusBadge(
+        state: ImporterAssetState,
+        isSelected: Bool,
+        canSelect: Bool
+    ) -> some View {
+        if model.selectionMode {
+            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                .font(.title3)
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(
+                    isSelected ? Color.white : Color.white.opacity(canSelect ? 0.92 : 0.48),
+                    isSelected ? Color.accentColor : Color.black.opacity(0.42)
+                )
+        } else if let icon = assetStateIcon(state) {
+            Image(systemName: icon)
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .padding(6)
+                .background(assetStateColor(state), in: Circle())
+        }
+    }
+
+    private func assetStateIcon(_ state: ImporterAssetState) -> String? {
+        switch state {
+        case .available: nil
+        case .imported: "checkmark"
+        case .failed: "exclamationmark"
+        case .needsConfirmation: "questionmark"
+        case .paused: "pause.fill"
+        case .cancelled: "xmark"
+        default: "arrow.triangle.2.circlepath"
+        }
+    }
+
+    private func assetStateColor(_ state: ImporterAssetState) -> Color {
+        switch state {
+        case .imported: RetroPalette.sage
+        case .failed, .cancelled: RetroPalette.destructive
+        case .needsConfirmation, .paused: RetroPalette.mustard
+        default: Color.accentColor
+        }
+    }
+
+    private func queueStatusColor(_ status: ImportQueueItemStatus) -> Color {
+        switch status {
+        case .imported: RetroPalette.sage
+        case .failed, .cancelled: RetroPalette.destructive
+        case .needsConfirmation, .paused: RetroPalette.mustard
+        default: Color.accentColor
+        }
+    }
+
+    private func assetAccessibilityLabel(
+        _ asset: CameraAssetSummary,
+        state: ImporterAssetState
+    ) -> String {
+        let kind = asset.hasMotion == true
+            ? L10n.text("asset.kind.live_photo")
+            : L10n.text("asset.kind.photo")
+        return "\(kind), \(formattedDate(asset.createdAt)), \(state.title)"
     }
 
     private func formattedDate(_ value: String) -> String {
         guard let date = RetroLiveISO8601.date(from: value) else { return value }
         return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private func formattedGridDate(_ value: String) -> String {
+        guard let date = RetroLiveISO8601.date(from: value) else { return value }
+        return date.formatted(date: .numeric, time: .omitted)
     }
 
     private func queueStatusTitle(_ item: ImportQueueItem) -> String {
@@ -609,71 +748,4 @@ struct ContentView: View {
         }
     }
 
-    private var storageSheet: some View {
-        NavigationStack {
-            List {
-                if let storage = model.storageOverview {
-                    Section(L10n.text("storage.usage")) {
-                        storageRow("storage.downloads", bytes: storage.verifiedDownloadsBytes)
-                        storageRow("storage.assembly", bytes: storage.assemblyBytes)
-                        storageRow("storage.temporary", bytes: storage.temporaryBytes)
-                        storageRow("storage.available", bytes: storage.availableBytes)
-                    }
-                }
-                Section {
-                    Button(L10n.text("storage.cleanup.downloads"), role: .destructive) {
-                        cleanupTarget = .downloads
-                    }
-                    Button(L10n.text("storage.cleanup.assembly"), role: .destructive) {
-                        cleanupTarget = .assemblies
-                    }
-                    Button(L10n.text("storage.cleanup.temporary"), role: .destructive) {
-                        cleanupTarget = .temporary
-                    }
-                } header: {
-                    Text(L10n.text("storage.cleanup"))
-                } footer: {
-                    Text(L10n.text("storage.cleanup.note"))
-                }
-            }
-            .navigationTitle(L10n.text("storage.title"))
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("common.done")) { showsStorage = false }
-                }
-            }
-            .task { await model.refreshStorageOverview() }
-            .confirmationDialog(
-                L10n.text("storage.cleanup.confirm.title"),
-                isPresented: Binding(
-                    get: { cleanupTarget != nil },
-                    set: { if !$0 { cleanupTarget = nil } }
-                ),
-                titleVisibility: .visible
-            ) {
-                Button(L10n.text("storage.cleanup.confirm.action"), role: .destructive) {
-                    let target = cleanupTarget
-                    cleanupTarget = nil
-                    switch target {
-                    case .downloads: model.cleanVerifiedDownloads()
-                    case .assemblies: model.cleanAssemblies()
-                    case .temporary: model.cleanTemporaryData()
-                    case nil: break
-                    }
-                }
-                Button(L10n.text("common.cancel"), role: .cancel) { cleanupTarget = nil }
-            } message: {
-                Text(L10n.text("storage.cleanup.confirm.message"))
-            }
-        }
-    }
-
-    private func storageRow(_ key: String, bytes: Int64) -> some View {
-        HStack {
-            Text(L10n.text(key))
-            Spacer()
-            Text(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
-                .foregroundStyle(.secondary)
-        }
-    }
 }

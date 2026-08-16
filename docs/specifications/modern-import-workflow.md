@@ -23,6 +23,32 @@ Queue state is persisted independently from SwiftUI view state. Storage
 preflight, usage reporting, and cleanup remain within the download and assembly
 stores that own those directories.
 
+## Navigation, preview, and imported library
+
+The importer is a system `TabView` application with three destinations:
+
+1. **Devices** owns discovery, pairing, the remote asset grid, and the import queue.
+2. **Library** shows only Photos assets whose local identifiers are present in
+   RetroLive's successful import history.
+3. **Settings** owns preview preferences, global cache usage and cleanup, system
+   access, and version details. Release notes and privacy entries remain visible
+   but have no action until their HTML destinations are available.
+
+On iOS 26 and later, the system provides the Liquid Glass tab appearance.
+Earlier systems render the same three destinations as ordinary tabs.
+
+Outside selection mode, tapping a remote asset opens a preview and never starts
+an import. A photo preview loads the full-resolution still. A motion preview may
+show the existing thumbnail while one verified download and assembly pass creates
+the valid resource pair for `PHLivePhotoView`, retaining the system press-to-play
+interaction. Import reuses those committed resources and remains an explicit
+action in the preview.
+
+The imported library requests read access only in response to the user opening
+the library and choosing to grant access. It fetches only local identifiers from
+RetroLive's import history; deleting a Photos asset makes it disappear from this
+view without altering the history journal.
+
 ## Discover, pair, download, and verify
 
 ### Technical design
@@ -49,8 +75,12 @@ stores that own those directories.
    restores safe work after relaunch, and converts an interrupted PhotoKit write
    into `needsConfirmation` rather than retrying it.
 8. Preflight estimates additional download, committed assembly, and peak attempt
-   space with a safety margin. Cleanup can remove only canonical, inactive local
-   resources owned by `DownloadStore` or `LivePhotoAssembler`.
+   space with a safety margin. Settings presents the combined size as a single
+   RetroLive cache rather than exposing implementation-specific categories.
+9. The single cache cleanup action is global across all paired devices and import
+   sessions. It removes eligible downloaded, prepared, and temporary files,
+   protects active queue asset identifiers, and never removes camera originals
+   or assets already committed to Photos.
 
 ### Device acceptance
 
@@ -219,7 +249,18 @@ notImported -> assembling -> ready -> submitting -> imported
 
 #### P5.6 UI, cancellation, and diagnostics
 
-- Show distinct row states for assembling, awaiting Photos permission, importing,
+- Present assets in a dense, width-adaptive thumbnail grid. Keep three columns
+  on standard iPhone widths, allow four on wider iPhones, and use additional
+  columns when larger devices have enough space. In selection mode the whole
+  tile toggles selection and shows a clear checkmark; outside selection mode the
+  same tile retains the existing import or retry action.
+- Keep the main-grid selection control in the trailing navigation area. A preview
+  repeats the selection control in its trailing toolbar and keeps import as a
+  separate bottom action.
+- Use system semantic backgrounds for content surfaces and let navigation and
+  controls adopt the platform appearance. Reserve accent colors for primary
+  actions and meaningful status instead of decorative container backgrounds.
+- Show distinct tile states for assembling, awaiting Photos permission, importing,
   imported, retryable failure, and result-needs-confirmation. Download progress
   remains separate from assembly and import state.
 - Error text identifies the failed stage and provides only valid actions: retry,

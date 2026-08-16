@@ -115,14 +115,7 @@ actor ImportQueueStore {
 }
 
 struct ImportStorageOverview: Equatable, Sendable {
-    let verifiedDownloadsBytes: Int64
-    let assemblyBytes: Int64
-    let temporaryBytes: Int64
-    let availableBytes: Int64
-
-    var managedBytes: Int64 {
-        verifiedDownloadsBytes + assemblyBytes + temporaryBytes
-    }
+    let managedBytes: Int64
 }
 
 struct ImportStoragePreflight: Equatable, Sendable {

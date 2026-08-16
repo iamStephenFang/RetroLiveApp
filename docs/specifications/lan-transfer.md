@@ -14,7 +14,7 @@ It serves both photo-plus-motion assets and the supported photo-only fallback. T
 
 ## Product scope
 
-The Legacy and Classic applications provide a Transfer screen reachable from the local library. The user explicitly starts or stops sharing. While sharing is active, the screen shows the local HTTP address, Bonjour state, a six-digit pairing code, and a foreground-use reminder.
+The Legacy and Classic applications provide a Transfer screen reachable from the local library. The user explicitly starts or stops sharing. While sharing is active, the screen shows a six-digit pairing code, then the paired device name after the importer connects. The socket address remains an implementation detail because users connect through Bonjour rather than a browser. The screen also reminds the user that transfer requires RetroLive to stay in the foreground.
 
 The server is read-only. It exposes health, pairing, device information, paginated asset summaries, manifests, photos, optional motion videos, and a photo-backed thumbnail response. Only directories already committed under Assets are visible.
 
@@ -35,6 +35,7 @@ The server is read-only. It exposes health, pairing, device information, paginat
 - A successful pairing returns an opaque temporary bearer token valid for 15 minutes.
 - Five failed pairing attempts trigger a 30-second lockout.
 - Stopping or restarting sharing replaces the router and invalidates the previous token.
+- Moving the camera app to the background stops sharing, invalidates the current token, and presents an explanation when the app becomes active again.
 - Asset identifiers must be UUIDs and are resolved through RLVAssetStore; request paths are never appended directly to the filesystem.
 - There are no write, upload, mutation, or delete routes.
 - HTTP protects against accidental or unauthorized API use through pairing, but does not encrypt traffic from another observer on the same network. The feature therefore assumes a trusted local Wi-Fi network.
@@ -52,7 +53,7 @@ The server is read-only. It exposes health, pairing, device information, paginat
 - RLVTransferRouter owns protocol routing, authentication, pagination, and range decisions and is host-testable without a socket.
 - RLVTransferService owns the listening socket, Bonjour publication, request parsing, and streaming.
 - RLVAssetStore remains the only authority for discovering committed assets.
-- RLVTransferViewController owns only the start/stop UI.
+- RLVTransferViewController owns the start/stop and paired-device status UI.
 
 ## Delivery standard
 

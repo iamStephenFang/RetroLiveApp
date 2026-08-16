@@ -1,3 +1,4 @@
 "CFBundleDisplayName" = "RetroLive Importer";
 "NSLocalNetworkUsageDescription" = "RetroLive discovers and downloads assets from your paired camera on the local network.";
 "NSPhotoLibraryAddUsageDescription" = "RetroLive adds verified photos and Live Photos to your library.";
+"NSPhotoLibraryUsageDescription" = "RetroLive shows photos and Live Photos previously imported by this app.";

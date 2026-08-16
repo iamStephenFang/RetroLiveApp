@@ -166,6 +166,12 @@ actor LivePhotoAssembler {
 
     func assemble(_ cached: CachedAsset) async throws -> AssembledAsset {
         let assetId = cached.manifest.assetId
+        if let committed = committedAssembly(
+            assetId: assetId,
+            deviceModelIdentifier: cached.manifest.device.modelIdentifier
+        ) {
+            return committed
+        }
         guard activeAssetIds.insert(assetId).inserted else {
             throw LivePhotoAssemblyError.mediaValidation
         }
@@ -198,6 +204,7 @@ actor LivePhotoAssembler {
             sourceURL: cached.photoURL,
             destinationURL: pairedPhoto,
             assetId: assetId,
+            deviceModelIdentifier: cached.manifest.device.modelIdentifier,
             aspectRatio: aspectRatio,
             motionSize: motionSize
         )
@@ -265,14 +272,46 @@ actor LivePhotoAssembler {
         )
     }
 
-    func hasCommittedAssembly(assetId: String) -> Bool {
-        guard UUID(uuidString: assetId) != nil else { return false }
-        return fileManager.fileExists(
-            atPath: rootURL
-                .appendingPathComponent("Assets", isDirectory: true)
-                .appendingPathComponent(assetId, isDirectory: true)
-                .path
+    func committedAssembly(
+        assetId: String,
+        deviceModelIdentifier: String? = nil
+    ) -> AssembledAsset? {
+        guard UUID(uuidString: assetId) != nil else { return nil }
+        let directory = rootURL
+            .appendingPathComponent("Assets", isDirectory: true)
+            .appendingPathComponent(assetId, isDirectory: true)
+        let photoURL = directory.appendingPathComponent("paired-photo.jpg")
+        let videoURL = directory.appendingPathComponent("paired-video.mov")
+        guard fileManager.fileExists(atPath: photoURL.path),
+              fileManager.fileExists(atPath: videoURL.path) else { return nil }
+        if let deviceModelIdentifier,
+           Self.cameraModelName(for: deviceModelIdentifier) != nil,
+           !hasCompleteCameraMetadata(at: photoURL) {
+            return nil
+        }
+        return AssembledAsset(
+            assetId: assetId,
+            directoryURL: directory,
+            photoURL: photoURL,
+            pairedVideoURL: videoURL
         )
+    }
+
+    private func hasCompleteCameraMetadata(at photoURL: URL) -> Bool {
+        guard let source = CGImageSourceCreateWithURL(photoURL as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
+                as? [CFString: Any],
+              let tiff = properties[kCGImagePropertyTIFFDictionary] as? [String: Any] else {
+            return false
+        }
+        return ["Make", "Model"].allSatisfy { key in
+            guard let value = tiff[key] as? String else { return false }
+            return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
+    func hasCommittedAssembly(assetId: String) -> Bool {
+        committedAssembly(assetId: assetId) != nil
     }
 
     func storageUsage() throws -> (committed: Int64, temporary: Int64) {
@@ -316,6 +355,7 @@ actor LivePhotoAssembler {
         sourceURL: URL,
         destinationURL: URL,
         assetId: String,
+        deviceModelIdentifier: String,
         aspectRatio: ManifestV1.AspectRatio?,
         motionSize: CGSize?
     ) throws -> CGSize {
@@ -334,6 +374,10 @@ actor LivePhotoAssembler {
         let sourceProperties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
             as? [CFString: Any] ?? [:]
         var properties = sourceProperties
+        supplementCameraMetadata(
+            in: &properties,
+            deviceModelIdentifier: deviceModelIdentifier
+        )
         var makerApple = properties[kCGImagePropertyMakerAppleDictionary]
             as? [String: Any] ?? [:]
         makerApple["17"] = assetId
@@ -380,6 +424,38 @@ actor LivePhotoAssembler {
             throw LivePhotoAssemblyError.imageDestination
         }
         return outputSize
+    }
+
+    private func supplementCameraMetadata(
+        in properties: inout [CFString: Any],
+        deviceModelIdentifier: String
+    ) {
+        guard let model = Self.cameraModelName(for: deviceModelIdentifier) else { return }
+        var tiff = properties[kCGImagePropertyTIFFDictionary] as? [String: Any] ?? [:]
+        if (tiff["Make"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ?? true {
+            tiff["Make"] = "Apple"
+        }
+        if (tiff["Model"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ?? true {
+            tiff["Model"] = model
+        }
+        properties[kCGImagePropertyTIFFDictionary] = tiff
+    }
+
+    private static func cameraModelName(for identifier: String) -> String? {
+        switch identifier {
+        case "iPhone4,1":
+            "iPhone 4S"
+        case "iPhone5,1", "iPhone5,2":
+            "iPhone 5"
+        case "iPhone5,3", "iPhone5,4":
+            "iPhone 5c"
+        case "iPhone6,1", "iPhone6,2":
+            "iPhone 5s"
+        default:
+            nil
+        }
     }
 
     private func writeCroppedVideo(

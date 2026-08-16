@@ -14,7 +14,26 @@ enum L10n {
 struct RetroLiveImporterApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ImporterRootView()
+        }
+    }
+}
+
+private struct ImporterRootView: View {
+    @AppStorage("retrolive.importer.onboarding.completedVersion")
+    private var completedOnboardingVersion = 0
+
+    var body: some View {
+        Group {
+            if completedOnboardingVersion >= ImporterOnboardingView.currentVersion {
+                ContentView()
+            } else {
+                ImporterOnboardingView {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        completedOnboardingVersion = ImporterOnboardingView.currentVersion
+                    }
+                }
+            }
         }
     }
 }

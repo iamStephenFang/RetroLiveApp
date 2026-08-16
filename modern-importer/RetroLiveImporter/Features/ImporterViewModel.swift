@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 import ImageIO
+import Photos
 import UIKit
 
 enum ImporterAssetState: Equatable {
@@ -64,6 +65,11 @@ private enum ImportQueueProcessingError: LocalizedError {
     }
 }
 
+struct RemoteLivePhotoPreview {
+    let image: UIImage
+    let livePhoto: PHLivePhoto
+}
+
 @MainActor
 final class ImporterViewModel: ObservableObject {
     @Published private(set) var cameras: [DiscoveredCamera] = []
@@ -104,6 +110,7 @@ final class ImporterViewModel: ObservableObject {
     private var isResumingQueue = false
     private var lastAttemptedPairingCode: String?
     private var api: CameraAPIClient?
+    private var connectionGeneration = 0
     private var activeQueueTask: Task<Void, Never>?
     private var cancellables: Set<AnyCancellable> = []
 
@@ -146,10 +153,14 @@ final class ImporterViewModel: ObservableObject {
         Set(queueItems.filter { !$0.status.isTerminal }.map { $0.summary.assetId })
     }
 
-    func startDiscovery() { discovery.start() }
+    func startDiscovery() {
+        guard selectedCamera == nil else { return }
+        discovery.start()
+    }
 
     func select(_ camera: DiscoveredCamera) {
         discovery.stop()
+        connectionGeneration &+= 1
         selectedCamera = camera
         pairingCode = ""
         deviceInfo = nil
@@ -168,6 +179,7 @@ final class ImporterViewModel: ObservableObject {
         guard let api, let camera = selectedCamera, pairingCode.count == 6,
               !isPairing, lastAttemptedPairingCode != pairingCode else { return }
         let submittedCode = pairingCode
+        let generation = connectionGeneration
         lastAttemptedPairingCode = submittedCode
         isPairing = true
         pairingErrorMessage = nil
@@ -176,10 +188,14 @@ final class ImporterViewModel: ObservableObject {
             do {
                 let session = try await api.pair(
                     code: submittedCode,
-                    clientName: "RetroLive Importer",
+                    clientName: Self.clientName,
                     rememberDevice: rememberDevice
                 )
                 let info = try await api.deviceInfo()
+                guard generation == connectionGeneration, self.api === api else {
+                    await api.disconnect()
+                    return
+                }
                 if rememberDevice {
                     do {
                         try rememberedDeviceStore.save(RememberedDeviceRecord(
@@ -199,6 +215,7 @@ final class ImporterViewModel: ObservableObject {
                 await refreshAssets()
                 startQueueIfPossible()
             } catch {
+                guard generation == connectionGeneration, self.api === api else { return }
                 isPairing = false
                 pairingErrorMessage = error.localizedDescription
                 pairingFailureCount += 1
@@ -222,6 +239,11 @@ final class ImporterViewModel: ObservableObject {
 
     func isRemembered(_ camera: DiscoveredCamera) -> Bool {
         rememberedDeviceStore.record(for: camera.name) != nil
+    }
+
+    private static var clientName: String {
+        let deviceName = UIDevice.current.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return String((deviceName.isEmpty ? "RetroLive Importer" : deviceName).prefix(100))
     }
 
     func loadThumbnail(for summary: CameraAssetSummary) async {
@@ -258,6 +280,72 @@ final class ImporterViewModel: ObservableObject {
         }
     }
 
+    func previewImage(for summary: CameraAssetSummary) async throws -> UIImage {
+        if let cached = try await downloadStore.cachedAsset(assetId: summary.assetId),
+           let image = await Task.detached(priority: .userInitiated, operation: {
+               UIImage(contentsOfFile: cached.photoURL.path)
+           }).value {
+            return image
+        }
+        guard let api else { throw CameraAPIError.unauthorized }
+        let data = try await api.photoData(for: summary)
+        guard let image = await Task.detached(priority: .userInitiated, operation: {
+            UIImage(data: data)
+        }).value else {
+            throw CameraAPIError.invalidPayload("photo")
+        }
+        return image
+    }
+
+    func livePhotoPreview(for summary: CameraAssetSummary) async throws -> RemoteLivePhotoPreview {
+        guard summary.hasMotion == true else { throw LivePhotoAssemblyError.missingVideoTrack }
+        guard let api else { throw CameraAPIError.unauthorized }
+        try await requireSufficientStorage(for: [summary], api: api)
+        let cached = try await downloadStore.download(summary: summary, api: api)
+        try Task.checkCancellation()
+        let assembled = try await preparedAssembly(for: cached)
+        guard let pairedVideoURL = assembled.pairedVideoURL else {
+            throw LivePhotoAssemblyError.missingVideoTrack
+        }
+        guard let image = await Task.detached(priority: .userInitiated, operation: {
+            UIImage(contentsOfFile: assembled.photoURL.path)
+        }).value else {
+            throw LivePhotoAssemblyError.imageSource
+        }
+        if assetStates[summary.assetId] == .available {
+            assetStates[summary.assetId] = .cached
+        }
+        await refreshStorageOverview()
+        let livePhoto = try await Self.requestLivePhoto(
+            photoURL: assembled.photoURL,
+            pairedVideoURL: pairedVideoURL,
+            placeholder: image
+        )
+        return RemoteLivePhotoPreview(image: image, livePhoto: livePhoto)
+    }
+
+    private static func requestLivePhoto(
+        photoURL: URL,
+        pairedVideoURL: URL,
+        placeholder: UIImage
+    ) async throws -> PHLivePhoto {
+        try await withCheckedThrowingContinuation { continuation in
+            PHLivePhoto.request(
+                withResourceFileURLs: [photoURL, pairedVideoURL],
+                placeholderImage: placeholder,
+                targetSize: .zero,
+                contentMode: .aspectFit
+            ) { livePhoto, info in
+                if info[PHLivePhotoInfoIsDegradedKey] as? Bool == true { return }
+                if let livePhoto {
+                    continuation.resume(returning: livePhoto)
+                } else {
+                    continuation.resume(throwing: LivePhotoAssemblyError.mediaValidation)
+                }
+            }
+        }
+    }
+
     private nonisolated static func downsampledThumbnail(from data: Data) -> UIImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         let options: [CFString: Any] = [
@@ -274,28 +362,41 @@ final class ImporterViewModel: ObservableObject {
 
     func refreshAssets() async {
         guard let api else { return }
+        let generation = connectionGeneration
         isLoadingAssets = true
-        defer { isLoadingAssets = false }
+        defer {
+            if generation == connectionGeneration {
+                isLoadingAssets = false
+            }
+        }
         do {
             let loaded = try await api.allAssets()
+            guard generation == connectionGeneration, self.api === api else { return }
             assets = loaded
             let loadedIds = Set(loaded.map(\.assetId))
             thumbnailImages = thumbnailImages.filter { loadedIds.contains($0.key) }
             failedThumbnailIds.removeAll()
             for summary in loaded {
                 if try await history.record(for: summary.assetId) != nil {
+                    guard generation == connectionGeneration, self.api === api else { return }
                     assetStates[summary.assetId] = .imported
                 } else if try await history.hasUnconfirmedSubmission(for: summary.assetId) {
+                    guard generation == connectionGeneration, self.api === api else { return }
                     assetStates[summary.assetId] = .needsConfirmation
                 } else if (try? await downloadStore.cachedAsset(assetId: summary.assetId)) != nil {
+                    guard generation == connectionGeneration, self.api === api else { return }
                     assetStates[summary.assetId] = .cached
                 } else {
+                    guard generation == connectionGeneration, self.api === api else { return }
                     assetStates[summary.assetId] = .available
                 }
             }
             overlayQueueStates()
             await refreshStorageOverview()
-        } catch { errorMessage = error.localizedDescription }
+        } catch {
+            guard generation == connectionGeneration, self.api === api else { return }
+            errorMessage = error.localizedDescription
+        }
     }
 
     func setSelectionMode(_ enabled: Bool) {
@@ -659,9 +760,8 @@ final class ImporterViewModel: ObservableObject {
             let photoURL: URL
             let pairedVideoURL: URL?
             if validated.motionURL != nil {
-                try await requireSufficientAssemblyStorage(for: validated)
                 try await setQueueStatus(id, .assembling, progress: 1)
-                let assembled = try await assembler.assemble(validated)
+                let assembled = try await preparedAssembly(for: validated)
                 guard let videoURL = assembled.pairedVideoURL else {
                     throw LivePhotoAssemblyError.missingVideoTrack
                 }
@@ -776,6 +876,17 @@ final class ImporterViewModel: ObservableObject {
         }
     }
 
+    private func preparedAssembly(for cached: CachedAsset) async throws -> AssembledAsset {
+        if let committed = await assembler.committedAssembly(
+            assetId: cached.manifest.assetId,
+            deviceModelIdentifier: cached.manifest.device.modelIdentifier
+        ) {
+            return committed
+        }
+        try await requireSufficientAssemblyStorage(for: cached)
+        return try await assembler.assemble(cached)
+    }
+
     private func setQueueProgress(_ id: UUID, progress: Double) {
         guard let index = queueItems.firstIndex(where: { $0.id == id }),
               queueItems[index].status == .downloading else { return }
@@ -843,28 +954,20 @@ final class ImporterViewModel: ObservableObject {
             let downloads = try await downloadStore.storageUsage()
             let assembly = try await assembler.storageUsage()
             storageOverview = ImportStorageOverview(
-                verifiedDownloadsBytes: downloads.verified,
-                assemblyBytes: assembly.committed,
-                temporaryBytes: downloads.temporary + assembly.temporary,
-                availableBytes: try await downloadStore.availableCapacity()
+                managedBytes: ImportStoragePreflight.clampedAdd(
+                    downloads.verified,
+                    assembly.committed,
+                    downloads.temporary,
+                    assembly.temporary
+                )
             )
         } catch { errorMessage = error.localizedDescription }
     }
 
-    func cleanVerifiedDownloads() {
-        Task { await performCleanup {
-            try await downloadStore.removeAllCachedAssets(excluding: activeQueueAssetIds)
-        } }
-    }
-
-    func cleanAssemblies() {
+    func cleanCachedData() {
         Task { await performCleanup {
             try await assembler.removeAllCommittedAssemblies(excluding: activeQueueAssetIds)
-        } }
-    }
-
-    func cleanTemporaryData() {
-        Task { await performCleanup {
+            try await downloadStore.removeAllCachedAssets(excluding: activeQueueAssetIds)
             try await downloadStore.removeTemporaryData(excluding: activeQueueAssetIds)
             try await assembler.removeTemporaryData()
         } }
@@ -894,6 +997,15 @@ final class ImporterViewModel: ObservableObject {
     }
 
     func disconnect() {
+        disconnect(restartDiscovery: true)
+    }
+
+    func disconnectForBackground() {
+        disconnect(restartDiscovery: false)
+    }
+
+    private func disconnect(restartDiscovery: Bool) {
+        connectionGeneration &+= 1
         pauseQueue()
         if let api { Task { await api.disconnect() } }
         api = nil
@@ -909,8 +1021,15 @@ final class ImporterViewModel: ObservableObject {
         pairingCode = ""
         pairingErrorMessage = nil
         lastAttemptedPairingCode = nil
+        isPairing = false
+        isLoadingAssets = false
         isRestoringSession = false
-        discovery.start()
+        errorMessage = nil
+        if restartDiscovery {
+            discovery.start()
+        } else {
+            discovery.stop()
+        }
     }
 
     func forgetSelectedDevice() {
@@ -920,12 +1039,17 @@ final class ImporterViewModel: ObservableObject {
 
     private func restoreRememberedSession(for camera: DiscoveredCamera) {
         guard let api, let record = rememberedDeviceStore.record(for: camera.name) else { return }
+        let generation = connectionGeneration
         isRestoringSession = true
         Task { [weak self] in
             guard let self else { return }
             do {
                 try await api.restore(record.session)
                 let info = try await api.deviceInfo()
+                guard generation == connectionGeneration, self.api === api else {
+                    await api.disconnect()
+                    return
+                }
                 guard info.deviceId == record.deviceId else {
                     throw CameraAPIError.invalidPayload("deviceId")
                 }
@@ -934,6 +1058,7 @@ final class ImporterViewModel: ObservableObject {
                 await refreshAssets()
                 if isQueuePaused { resumeQueue() } else { startQueueIfPossible() }
             } catch {
+                guard generation == connectionGeneration, self.api === api else { return }
                 try? rememberedDeviceStore.remove(serviceName: camera.name)
                 isRestoringSession = false
                 pairingErrorMessage = L10n.text("pairing.saved_expired")

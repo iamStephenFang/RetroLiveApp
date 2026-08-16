@@ -94,15 +94,19 @@ Captured assets stay inside RetroLive. The camera app does not add them directly
 3. Tap the transfer button in the navigation bar.
 4. Tap **Start Sharing** and keep this screen open. Note the six-digit pairing code.
 
-Sharing advertises a `_retrolive._tcp.` Bonjour service and exposes only committed assets. Stopping sharing invalidates the temporary session token.
+Sharing advertises a `_retrolive._tcp.` Bonjour service and exposes only committed assets. The camera shows the paired device after it connects. Stopping sharing or sending the camera app to the background invalidates the temporary session token; when you return, RetroLive explains that sharing stopped and you must start it again.
 
 ### Import on the modern iPhone
 
 1. Open `RetroLiveImporter` and select the camera under nearby devices.
-2. Enter the six-digit code shown by the camera. The importer submits it automatically after the sixth digit.
+2. Enter the six-digit code shown by the camera.
 3. Optionally keep **Remember This Device** enabled to store the pairing session in the modern iPhone's Keychain.
-4. Choose an asset and tap **Import**. Keep both apps available until downloading and import complete.
-5. Open Photos to verify the imported photo or Live Photo.
+4. Open an asset preview, then choose **Import to Photos**. Keep both apps available until downloading and import complete.
+5. Use the **Library** tab to browse assets imported by RetroLive, or open Photos to verify the imported photo or Live Photo.
+
+The importer uses system tabs for Devices, Library, and Settings. On iOS 26 and
+later they adopt the system Liquid Glass appearance; earlier systems render them
+as ordinary tabs.
 
 If discovery fails, confirm that both devices are on the same Wi-Fi network, Local Network permission is enabled for both apps, sharing is still running, and the network does not isolate wireless clients.
 

@@ -48,7 +48,7 @@ struct CameraDeviceInfo: Codable, Equatable, Sendable {
     let capabilities: Capabilities
 }
 
-struct CameraAssetSummary: Codable, Identifiable, Equatable, Sendable {
+struct CameraAssetSummary: Codable, Identifiable, Equatable, Hashable, Sendable {
     let assetId: String
     let createdAt: String
     let thumbnailURL: String?
@@ -248,6 +248,16 @@ actor CameraAPIClient {
         try validate(response: response, data: data)
         guard !data.isEmpty, data.count <= 25 * 1_024 * 1_024 else {
             throw CameraAPIError.invalidPayload("thumbnail")
+        }
+        return data
+    }
+
+    func photoData(for summary: CameraAssetSummary) async throws -> Data {
+        let request = try authorizedRequest(assetId: summary.assetId, resource: "photo")
+        let (data, response) = try await session.data(for: request)
+        try validate(response: response, data: data)
+        guard !data.isEmpty, data.count <= 150 * 1_024 * 1_024 else {
+            throw CameraAPIError.invalidPayload("photo")
         }
         return data
     }

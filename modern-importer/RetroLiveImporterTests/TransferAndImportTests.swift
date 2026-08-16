@@ -27,7 +27,7 @@ private final class MockURLProtocol: URLProtocol {
     override func stopLoading() {}
 }
 
-final class Phase45Tests: XCTestCase {
+final class TransferAndImportTests: XCTestCase {
     func testImportQueueRecoveryRestartsSafeStagesAndQuarantinesImporting() async throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("RetroLiveTests-\(UUID().uuidString)/queue", isDirectory: true)
@@ -169,6 +169,7 @@ final class Phase45Tests: XCTestCase {
         let baseURL = URL(string: "http://camera.local:8080/api/v1")!
         let client = CameraAPIClient(baseURL: baseURL, session: session)
         let thumbnail = Data("thumbnail-payload".utf8)
+        let photo = Data("full-photo-payload".utf8)
         MockURLProtocol.handler = { request in
             let path = request.url!.path
             if path.hasSuffix("/session") {
@@ -183,6 +184,9 @@ final class Phase45Tests: XCTestCase {
             )
             if path.hasSuffix("/thumbnail") {
                 return Self.response(request, status: 200, data: thumbnail)
+            }
+            if path.hasSuffix("/photo") {
+                return Self.response(request, status: 200, data: photo)
             }
             return Self.response(request, status: 200, json: [
                 "protocolVersion": 1,
@@ -215,6 +219,8 @@ final class Phase45Tests: XCTestCase {
         )
         let loadedThumbnail = try await client.previewData(for: summary)
         XCTAssertEqual(loadedThumbnail, thumbnail)
+        let loadedPhoto = try await client.photoData(for: summary)
+        XCTAssertEqual(loadedPhoto, photo)
 
         let restoredClient = CameraAPIClient(baseURL: baseURL, session: session)
         try await restoredClient.restore(pairingSession)
@@ -417,14 +423,21 @@ final class Phase45Tests: XCTestCase {
             ],
             "device": ["modelIdentifier": "test", "systemVersion": "test", "appVersion": "1"]
         ]))
-        let assembled = try await LivePhotoAssembler(
+        let assembler = LivePhotoAssembler(
             rootURL: temporary.appendingPathComponent("assembly", isDirectory: true)
-        ).assemble(CachedAsset(
+        )
+        let cached = CachedAsset(
             manifest: manifest,
             directoryURL: temporary,
             photoURL: photoURL,
             motionURL: motionURL
-        ))
+        )
+        let assembled = try await assembler.assemble(cached)
+        try FileManager.default.removeItem(at: photoURL)
+        try FileManager.default.removeItem(at: motionURL)
+        let reused = try await assembler.assemble(cached)
+        XCTAssertEqual(reused.photoURL, assembled.photoURL)
+        XCTAssertEqual(reused.pairedVideoURL, assembled.pairedVideoURL)
 
         let photoSource = try XCTUnwrap(CGImageSourceCreateWithURL(assembled.photoURL as CFURL, nil))
         let properties = try XCTUnwrap(
@@ -451,13 +464,91 @@ final class Phase45Tests: XCTestCase {
         XCTAssertEqual(abs(bounds.height), 360, accuracy: 1)
     }
 
+    func testAssemblerSuppliesMissingCameraMakeAndModelFromManifestDevice() async throws {
+        let temporary = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
+        let photoURL = temporary.appendingPathComponent("photo.jpg")
+        let motionURL = temporary.appendingPathComponent("motion.mov")
+        try writeTestJPEG(
+            to: photoURL,
+            size: CGSize(width: 640, height: 480),
+            properties: [
+                kCGImagePropertyExifDictionary: [
+                    "LensModel": "iPhone 5c back camera 4.12mm f/2.4"
+                ]
+            ]
+        )
+        try await writeTestMovie(to: motionURL, size: CGSize(width: 640, height: 480))
+        let assetId = UUID().uuidString.uppercased()
+        let manifest = try ManifestParser().parse(try JSONSerialization.data(withJSONObject: [
+            "schemaVersion": 1,
+            "assetId": assetId,
+            "createdAt": "2026-08-16T00:00:00.000Z",
+            "createdAtUnixMilliseconds": 1_786_838_400_000,
+            "capture": [
+                "cameraPosition": "back", "orientation": 1, "mirrored": false,
+                "flashMode": "off", "stillImageTimeSeconds": 0.5,
+                "stillImageTimeAccuracy": "measured", "preRollSeconds": 0.5,
+                "postRollSeconds": 0.5
+            ],
+            "photo": [
+                "filename": "photo.jpg", "mimeType": "image/jpeg", "width": 640,
+                "height": 480, "byteLength": 1, "sha256": String(repeating: "0", count: 64)
+            ],
+            "motion": [
+                "filename": "motion.mov", "mimeType": "video/quicktime", "durationSeconds": 1.0,
+                "width": 640, "height": 480, "frameRate": 30, "hasAudio": false,
+                "byteLength": 1, "sha256": String(repeating: "0", count: 64)
+            ],
+            "device": [
+                "modelIdentifier": "iPhone5,3", "systemVersion": "7.1.2", "appVersion": "1"
+            ]
+        ]))
+        let assembler = LivePhotoAssembler(
+            rootURL: temporary.appendingPathComponent("assembly", isDirectory: true)
+        )
+        let cached = CachedAsset(
+            manifest: manifest,
+            directoryURL: temporary,
+            photoURL: photoURL,
+            motionURL: motionURL
+        )
+        let firstAssembly = try await assembler.assemble(cached)
+        try writeTestJPEG(
+            to: firstAssembly.photoURL,
+            size: CGSize(width: 640, height: 480),
+            properties: [
+                kCGImagePropertyExifDictionary: [
+                    "LensModel": "iPhone 5c back camera 4.12mm f/2.4"
+                ]
+            ]
+        )
+        let assembled = try await assembler.assemble(cached)
+
+        let source = try XCTUnwrap(CGImageSourceCreateWithURL(assembled.photoURL as CFURL, nil))
+        let properties = try XCTUnwrap(
+            CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        )
+        let tiff = try XCTUnwrap(properties[kCGImagePropertyTIFFDictionary] as? [String: Any])
+        XCTAssertEqual(tiff["Make"] as? String, "Apple")
+        XCTAssertEqual(tiff["Model"] as? String, "iPhone 5c")
+        let exif = try XCTUnwrap(properties[kCGImagePropertyExifDictionary] as? [String: Any])
+        XCTAssertEqual(exif["LensModel"] as? String, "iPhone 5c back camera 4.12mm f/2.4")
+    }
+
     private func mockSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
         return URLSession(configuration: configuration)
     }
 
-    private func writeTestJPEG(to url: URL, size: CGSize) throws {
+    private func writeTestJPEG(
+        to url: URL,
+        size: CGSize,
+        properties: [CFString: Any]? = nil
+    ) throws {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let context = try XCTUnwrap(CGContext(
             data: nil,
@@ -476,7 +567,7 @@ final class Phase45Tests: XCTestCase {
             1,
             nil
         ))
-        let properties: [CFString: Any] = [
+        let defaultProperties: [CFString: Any] = [
             kCGImagePropertyTIFFDictionary: [
                 "Make": "RetroLive",
                 "Model": "Test Camera"
@@ -489,7 +580,7 @@ final class Phase45Tests: XCTestCase {
         CGImageDestinationAddImage(
             destination,
             try XCTUnwrap(context.makeImage()),
-            properties as CFDictionary
+            (properties ?? defaultProperties) as CFDictionary
         )
         XCTAssertTrue(CGImageDestinationFinalize(destination))
     }

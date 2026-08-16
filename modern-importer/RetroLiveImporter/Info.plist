@@ -33,6 +33,8 @@
 	<string>RetroLive discovers and downloads assets from your paired camera on the local network.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>RetroLive adds verified photos and Live Photos to your library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>RetroLive shows photos and Live Photos previously imported by this app.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -76,7 +76,8 @@ int main(void)
             @"123456", @"pairingCode", @"Importer", @"clientName", nil] options:0 error:NULL];
         response = [router responseForMethod:@"POST" path:@"/api/v1/session" headers:[NSDictionary dictionary] body:pairing];
         NSString *token = [RLVJSONObject(response) objectForKey:@"token"];
-        RLVAssert(response.statusCode == 200 && [token length] >= 32, @"pairing token");
+        RLVAssert(response.statusCode == 200 && [token length] >= 32 &&
+            [router.pairedClientName isEqualToString:@"Importer"], @"pairing token and client identity");
         NSDictionary *headers = [NSDictionary dictionaryWithObject:[@"Bearer " stringByAppendingString:token] forKey:@"authorization"];
 
         response = [router responseForMethod:@"GET" path:@"/api/v1/device" headers:headers body:nil];

@@ -1,0 +1,92 @@
+import SwiftUI
+
+struct ImporterSettingsView: View {
+    @ObservedObject var model: ImporterViewModel
+
+    @State private var confirmsCacheCleanup = false
+
+    var body: some View {
+        List {
+            Section {
+                if let storage = model.storageOverview {
+                    storageRow("storage.cache", bytes: storage.managedBytes)
+                } else {
+                    HStack {
+                        Text(L10n.text("storage.usage"))
+                        Spacer()
+                        ProgressView()
+                    }
+                }
+            } header: {
+                Text(L10n.text("storage.title"))
+            } footer: {
+                Text(L10n.text("storage.cache.note"))
+            }
+
+            Section {
+                Button(L10n.text("storage.cleanup.action"), role: .destructive) {
+                    confirmsCacheCleanup = true
+                }
+            }
+
+            Section(L10n.text("settings.system")) {
+                Button(L10n.text("settings.open_system")) {
+                    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                    UIApplication.shared.open(url)
+                }
+            }
+
+            Section(L10n.text("settings.about")) {
+                placeholderLinkRow("settings.whats_new")
+                placeholderLinkRow("settings.privacy")
+                HStack {
+                    Text(L10n.text("settings.version"))
+                    Spacer()
+                    Text(versionDescription)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .navigationTitle(L10n.text("tab.settings"))
+        .task { await model.refreshStorageOverview() }
+        .refreshable { await model.refreshStorageOverview() }
+        .alert(
+            L10n.text("storage.cleanup.confirm.title"),
+            isPresented: $confirmsCacheCleanup
+        ) {
+            Button(L10n.text("storage.cleanup.confirm.action"), role: .destructive) {
+                model.cleanCachedData()
+            }
+            Button(L10n.text("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(L10n.text("storage.cleanup.confirm.message"))
+        }
+    }
+
+    private var versionDescription: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
+            as? String ?? "—"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion")
+            as? String ?? "—"
+        return "\(version) (\(build))"
+    }
+
+    private func storageRow(_ key: String, bytes: Int64) -> some View {
+        HStack {
+            Text(L10n.text(key))
+            Spacer()
+            Text(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func placeholderLinkRow(_ key: String) -> some View {
+        HStack {
+            Text(L10n.text(key))
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+    }
+}
