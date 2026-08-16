@@ -241,6 +241,10 @@ final class ImporterViewModel: ObservableObject {
         rememberedDeviceStore.record(for: camera.name) != nil
     }
 
+    func rememberedDeviceName(for camera: DiscoveredCamera) -> String? {
+        rememberedDeviceStore.record(for: camera.name)?.deviceName
+    }
+
     private static var clientName: String {
         let deviceName = UIDevice.current.name.trimmingCharacters(in: .whitespacesAndNewlines)
         return String((deviceName.isEmpty ? "RetroLive Importer" : deviceName).prefix(100))

@@ -204,7 +204,8 @@ struct ContentView: View {
     }
 
     private func deviceRow(_ camera: DiscoveredCamera) -> some View {
-        let remembered = model.isRemembered(camera)
+        let rememberedName = model.rememberedDeviceName(for: camera)
+        let remembered = rememberedName != nil
         return Button {
             model.select(camera)
         } label: {
@@ -219,7 +220,7 @@ struct ContentView: View {
                     )
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(camera.name)
+                    Text(rememberedName ?? camera.name)
                         .font(.headline)
                         .foregroundStyle(RetroPalette.ink)
                         .lineLimit(1)
