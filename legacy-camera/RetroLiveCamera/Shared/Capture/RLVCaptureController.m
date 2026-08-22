@@ -89,6 +89,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
         movieOutput.maxRecordedDuration = CMTimeMakeWithSeconds(RLVMaximumRollingSegmentSeconds, 600);
         AVCaptureDevice *audioDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeAudio];
         AVCaptureDeviceInput *audioInput = audioDevice ? [AVCaptureDeviceInput deviceInputWithDevice:audioDevice error:NULL] : nil;
+        BOOL motionCaptureAvailable = NO;
 
         [session beginConfiguration];
         if (input && [session canAddInput:input]) {
@@ -103,8 +104,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
         }
         if (error == nil && [session canAddOutput:movieOutput]) {
             [session addOutput:movieOutput];
-        } else if (error == nil) {
-            error = [self errorWithCode:7 description:NSLocalizedString(@"capture.error.motion_output", nil)];
+            motionCaptureAvailable = YES;
         }
         if (error == nil && audioInput && [session canAddInput:audioInput]) {
             [session addInput:audioInput];
@@ -115,8 +115,9 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
             self.session = session;
             self.videoInput = input;
             self.stillImageOutput = output;
-            self.movieFileOutput = movieOutput;
+            self.movieFileOutput = motionCaptureAvailable ? movieOutput : nil;
             self.audioInput = audioInput;
+            _motionCaptureEnabled = motionCaptureAvailable;
             self.cameraPosition = [device position];
             self.previewLayer = [AVCaptureVideoPreviewLayer layerWithSession:session];
             self.previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
@@ -134,6 +135,10 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
                 [self notifyError:error];
             } else {
                 [self updateState:RLVCaptureStateIdle];
+                if (!motionCaptureAvailable &&
+                    [self.delegate respondsToSelector:@selector(captureController:didChangeMotionCaptureEnabled:)]) {
+                    [self.delegate captureController:self didChangeMotionCaptureEnabled:NO];
+                }
             }
             if (completion) {
                 completion(error);
@@ -348,8 +353,12 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
         self.pendingEvent || [self.movieFileOutput isRecording]) return;
     AVCaptureConnection *connection = [self.movieFileOutput connectionWithMediaType:AVMediaTypeVideo];
     if (connection == nil || ![connection isEnabled] || ![connection isActive]) {
+        _motionCaptureEnabled = NO;
+        NSLog(@"RetroLive: disabling motion capture because the movie output connection is unavailable");
         dispatch_async(dispatch_get_main_queue(), ^{
-            [self notifyError:[self errorWithCode:7 description:NSLocalizedString(@"capture.error.motion_output", nil)]];
+            if ([self.delegate respondsToSelector:@selector(captureController:didChangeMotionCaptureEnabled:)]) {
+                [self.delegate captureController:self didChangeMotionCaptureEnabled:NO];
+            }
         });
         return;
     }
@@ -503,13 +512,16 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
 
 - (void)finishMotionWithError:(NSError *)error
 {
+    if (error) {
+        NSLog(@"RetroLive: saving capture without motion (%@/%ld): %@", [error domain],
+              (long)[error code], [error localizedDescription]);
+    }
     if (self.pendingEvent) {
         self.pendingEvent.stillImageTimeSeconds = 0.0;
         self.pendingEvent.preRollSeconds = 0.0;
         self.pendingEvent.postRollSeconds = 0.0;
         [self completePendingCaptureWithMotionURL:nil];
     }
-    dispatch_async(dispatch_get_main_queue(), ^{ [self notifyError:error]; });
 }
 
 - (void)failPendingCapture:(NSError *)error
@@ -568,7 +580,8 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
         [device unlockForConfiguration];
         _flashMode = flashMode;
     } else {
-        [self notifyError:error];
+        NSLog(@"RetroLive: unable to change flash mode (%@/%ld): %@", [error domain],
+              (long)[error code], [error localizedDescription]);
     }
 }
 
@@ -689,9 +702,32 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
 - (void)sessionRuntimeError:(NSNotification *)notification
 {
     NSError *error = [[notification userInfo] objectForKey:AVCaptureSessionErrorKey];
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self updateState:RLVCaptureStateFailed];
-        [self notifyError:error ?: [self errorWithCode:5 description:NSLocalizedString(@"capture.error.session_failed", nil)]];
+    NSLog(@"RetroLive: capture session runtime error (%@/%ld): %@", [error domain],
+          (long)[error code], [error localizedDescription]);
+
+    // Runtime errors are frequently transient while the app is moving between
+    // foreground and background. They are not, by themselves, a failed user
+    // operation. Keep them out of the modal error path and recover the session
+    // when the camera still wants to be running.
+    dispatch_async(_sessionQueue, ^{
+        BOOL shouldRun = self.wantsSessionRunning;
+        if (shouldRun && self.session && ![self.session isRunning]) {
+            [self.session startRunning];
+        }
+        BOOL recovered = shouldRun && [self.session isRunning];
+        if (recovered) [self startRollingRecording];
+        RLVCaptureState recoveredState = self.pendingEvent ? RLVCaptureStateCapturing : RLVCaptureStateRunning;
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (recovered) {
+                [self updateState:recoveredState];
+            } else if (shouldRun) {
+                [self updateState:RLVCaptureStateFailed];
+                [self notifyError:error ?: [self errorWithCode:5 description:NSLocalizedString(@"capture.error.session_failed", nil)]];
+            } else {
+                [self updateState:RLVCaptureStateInterrupted];
+            }
+        });
     });
 }
 

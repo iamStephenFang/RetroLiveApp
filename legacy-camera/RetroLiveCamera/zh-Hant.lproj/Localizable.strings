@@ -51,13 +51,10 @@
 "transfer.note.on" = "請在新裝置上輸入此一次性配對碼。保持 RetroLive 開啟，並確認兩部裝置連接至同一 Wi-Fi。";
 "transfer.note.paired" = "匯入期間請保持 RetroLive 開啟，並確認兩部裝置連接至同一 Wi-Fi。";
 "transfer.note.off" = "兩部裝置連接至同一 Wi-Fi 後即可開始共享。停止共享會使目前的工作階段失效。";
-"transfer.background_stopped.title" = "共享已停止";
-"transfer.background_stopped.message" = "RetroLive 進入背景時已停止區域網路共享。請重新開始共享並配對。";
 "transfer.start" = "開始共享";
 "transfer.stop" = "停止共享";
 "capture.error.rear_camera" = "後置相機無法使用。";
 "capture.error.still_output" = "相片輸出無法使用。";
-"capture.error.motion_output" = "動態影片輸出無法使用。";
 "capture.error.still_connection" = "相片連線無法使用。";
 "capture.error.no_jpeg" = "相機沒有傳回 JPEG 資料。";
 "capture.error.unavailable" = "相機無法使用。";

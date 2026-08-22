@@ -51,13 +51,10 @@
 "transfer.note.on" = "请在新设备上输入此一次性配对码。保持 RetroLive 打开，并确认两台设备连接到同一 Wi-Fi。";
 "transfer.note.paired" = "导入期间请保持 RetroLive 打开，并确认两台设备连接到同一 Wi-Fi。";
 "transfer.note.off" = "两台设备连接到同一 Wi-Fi 后即可开始共享。停止共享会使当前会话失效。";
-"transfer.background_stopped.title" = "共享已停止";
-"transfer.background_stopped.message" = "RetroLive 进入后台时已停止局域网共享。请重新开始共享并配对。";
 "transfer.start" = "开始共享";
 "transfer.stop" = "停止共享";
 "capture.error.rear_camera" = "后置相机不可用。";
 "capture.error.still_output" = "照片输出不可用。";
-"capture.error.motion_output" = "动态视频输出不可用。";
 "capture.error.still_connection" = "照片连接不可用。";
 "capture.error.no_jpeg" = "相机没有返回 JPEG 数据。";
 "capture.error.unavailable" = "相机不可用。";

@@ -22,7 +22,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 
 @end
 
-@interface RLVBaseCameraViewController ()
+@interface RLVBaseCameraViewController () <UIAlertViewDelegate>
 @property (nonatomic, strong) RLVCaptureController *captureController;
 @property (nonatomic, strong) RLVCameraOrientationCoordinator *orientationCoordinator;
 @property (nonatomic, strong, readwrite) RLVDeviceCapabilities *capabilities;
@@ -36,6 +36,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 @property (nonatomic, assign) NSUInteger thumbnailRequestGeneration;
 @property (nonatomic, copy) NSString *activeAspectRatio;
 @property (nonatomic, assign, getter=isSavingAsset) BOOL savingAsset;
+@property (nonatomic, strong) UIAlertView *errorAlertView;
 @property (nonatomic, strong) UITapGestureRecognizer *focusTapGestureRecognizer;
 - (void)attachPreviewLayerIfNeeded;
 - (void)updatePreviewFrame;
@@ -406,6 +407,13 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     [self updateFlashButton];
 }
 
+- (void)captureController:(RLVCaptureController *)controller didChangeMotionCaptureEnabled:(BOOL)enabled
+{
+    (void)controller;
+    (void)enabled;
+    [self updateLivePhotoButton];
+}
+
 - (void)updateFlashButton
 {
     AVCaptureFlashMode mode = self.captureController.flashMode;
@@ -621,10 +629,28 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 - (void)showError:(NSError *)error
 {
     if (!error) return;
+    if (!self.isViewVisible ||
+        [[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) {
+        NSLog(@"RetroLive: suppressing camera alert while inactive (%@/%ld): %@", [error domain],
+              (long)[error code], [error localizedDescription]);
+        return;
+    }
+    if (self.errorAlertView) {
+        NSLog(@"RetroLive: suppressing duplicate camera alert (%@/%ld): %@", [error domain],
+              (long)[error code], [error localizedDescription]);
+        return;
+    }
     UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"camera.error.title", nil)
-        message:[error localizedDescription] delegate:nil cancelButtonTitle:NSLocalizedString(@"common.ok", nil)
+        message:[error localizedDescription] delegate:self cancelButtonTitle:NSLocalizedString(@"common.ok", nil)
         otherButtonTitles:nil];
+    self.errorAlertView = alert;
     [alert show];
+}
+
+- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex
+{
+    (void)buttonIndex;
+    if (alertView == self.errorAlertView) self.errorAlertView = nil;
 }
 
 @synthesize previewView = _previewView;

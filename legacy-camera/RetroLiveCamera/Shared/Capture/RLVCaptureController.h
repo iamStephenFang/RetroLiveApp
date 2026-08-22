@@ -49,6 +49,7 @@ typedef NS_OPTIONS(NSUInteger, RLVPointOfInterestResult) {
 @optional
 - (void)captureController:(RLVCaptureController *)controller didChangeState:(RLVCaptureState)state;
 - (void)captureController:(RLVCaptureController *)controller didChangeCameraPosition:(AVCaptureDevicePosition)position;
+- (void)captureController:(RLVCaptureController *)controller didChangeMotionCaptureEnabled:(BOOL)enabled;
 - (void)captureController:(RLVCaptureController *)controller
       didCapturePhotoData:(NSData *)photoData
                 motionURL:(NSURL *)motionURL
