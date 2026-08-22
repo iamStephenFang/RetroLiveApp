@@ -1,26 +1,35 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <rect width="1024" height="1024" fill="#FAF8F3"/>
+  <defs>
+    <radialGradient id="background" cx="50%" cy="46%" r="72%">
+      <stop offset="0" stop-color="#27292C"/>
+      <stop offset="1" stop-color="#1C1E21"/>
+    </radialGradient>
+    <linearGradient id="aperture" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F4F1EA"/>
+    </linearGradient>
+    <radialGradient id="status" cx="42%" cy="38%" r="70%">
+      <stop offset="0" stop-color="#FFC33A"/>
+      <stop offset="1" stop-color="#F4A70D"/>
+    </radialGradient>
+  </defs>
 
-  <!-- Live Photo motion: mathematically exact concentric circles. -->
-  <g fill="none" stroke="#232527" stroke-linecap="round">
-    <circle cx="512" cy="512" r="326" stroke-width="36"
-            stroke-dasharray="866 158" transform="rotate(-45 512 512)"/>
-    <circle cx="512" cy="512" r="247" stroke-width="30"
-            stroke-dasharray="650 126" transform="rotate(135 512 512)"/>
+  <rect width="1024" height="1024" fill="url(#background)"/>
+
+  <!-- Shared six-part RetroLive aperture. -->
+  <circle cx="512" cy="512" r="306"
+          fill="none" stroke="url(#aperture)" stroke-width="116"
+          stroke-dasharray="280.46 40" stroke-dashoffset="-20"
+          transform="rotate(-90 512 512)"/>
+
+  <circle cx="894" cy="126" r="48" fill="url(#status)"/>
+
+  <!-- Selected importer mark: a photo entering the aperture. -->
+  <g fill="none" stroke="url(#aperture)" stroke-width="22"
+     stroke-linecap="round" stroke-linejoin="round">
+    <rect x="426" y="400" width="172" height="152" rx="22"/>
+    <path d="M448 528 L482 490 L510 518 L548 470 L576 498"/>
+    <path d="M512 552 V648 M474 610 L512 648 L550 610"/>
   </g>
-
-  <!-- Classic and Legacy capture indicators, now integrated into the orbit. -->
-  <circle cx="744" cy="280" r="25" fill="#F2AA22"/>
-  <circle cx="280" cy="744" r="25" fill="#E95132"/>
-
-  <!-- Flat camera shutter: no pupil, glass, highlight, texture, or depth. -->
-  <circle cx="512" cy="512" r="148" fill="#232527"/>
-  <g fill="none" stroke="#FAF8F3" stroke-width="25" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M512 444 L454 410"/>
-    <path d="M571 478 L571 411"/>
-    <path d="M571 546 L629 512"/>
-    <path d="M512 580 L570 614"/>
-    <path d="M453 546 L453 613"/>
-    <path d="M453 478 L395 512"/>
-  </g>
+  <circle cx="474" cy="444" r="16" fill="url(#aperture)"/>
 </svg>
