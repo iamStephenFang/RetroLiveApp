@@ -1,6 +1,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <Foundation/Foundation.h>
 
+/// EXIF-compatible orientation values persisted in Manifest V1.
 typedef NS_ENUM(NSInteger, RLVCaptureOrientation) {
     RLVCaptureOrientationPortrait = 6,
     RLVCaptureOrientationPortraitUpsideDown = 8,
@@ -8,6 +9,7 @@ typedef NS_ENUM(NSInteger, RLVCaptureOrientation) {
     RLVCaptureOrientationLandscapeRight = 3
 };
 
+/// Immutable-in-practice snapshot of shutter-time metadata shared by capture and storage.
 @interface RLVCaptureEvent : NSObject
 
 @property (nonatomic, copy) NSString *assetId;

@@ -183,8 +183,8 @@ void RLVInstallCameraLayout(UIView *rootView, UIView *previewView,
           [NSString stringWithFormat:@"V:|[top(44)][preview][bottom(%.0f)]|", bottomHeight]]);
     RLVAddVisualConstraints(topChromeView,
         @{@"flash": flashButton, @"live": livePhotoButton, @"aspect": aspectRatioButton},
-        @[@"H:|-4-[flash(44)]", @"V:|[flash]|", @"H:[live(52)]", @"V:|[live]|",
-          @"H:[aspect(52)]-4-|", @"V:|[aspect]|"]);
+        @[@"H:|-4-[flash(44)]", @"V:|[flash]|", @"H:[live(44)]", @"V:|[live]|",
+          @"H:[aspect(44)]-4-|", @"V:|[aspect]|"]);
     RLVAlignViews(topChromeView, livePhotoButton, NSLayoutAttributeCenterX,
         topChromeView, NSLayoutAttributeCenterX);
     RLVAddVisualConstraints(bottomChromeView,

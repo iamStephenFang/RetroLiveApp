@@ -28,8 +28,10 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 @property (nonatomic, assign) BOOL pendingMotionRequested;
 @property (nonatomic, assign) AVCaptureVideoOrientation rollingOrientation;
 @property (nonatomic, assign) BOOL wantsSessionRunning;
+@property (nonatomic, assign) NSUInteger sessionStartGeneration;
 @property (nonatomic, assign) BOOL cameraSwitchPending;
 @property (nonatomic, assign) BOOL orientationRestartPending;
+- (void)startSessionOnSessionQueueForGeneration:(NSUInteger)generation remainingRetries:(NSUInteger)remainingRetries;
 - (void)resetFocusAndExposureForDevice:(AVCaptureDevice *)device;
 - (void)subjectAreaDidChange:(NSNotification *)notification;
 - (void)finishPointOfInterestRequest:(void (^)(RLVPointOfInterestResult result))completion
@@ -151,15 +153,39 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 {
     dispatch_async(_sessionQueue, ^{
         self.wantsSessionRunning = YES;
-        BOOL wasRunning = [self.session isRunning];
-        if (self.session && ![self.session isRunning]) {
-            [self.session startRunning];
-        }
-        if ([self.session isRunning]) {
-            if (!wasRunning) [self resetFocusAndExposureForDevice:self.videoInput.device];
-            [self startRollingRecording];
-            dispatch_async(dispatch_get_main_queue(), ^{ [self updateState:RLVCaptureStateRunning]; });
-        }
+        NSUInteger generation = ++self.sessionStartGeneration;
+        [self startSessionOnSessionQueueForGeneration:generation remainingRetries:1];
+    });
+}
+
+- (void)startSessionOnSessionQueueForGeneration:(NSUInteger)generation remainingRetries:(NSUInteger)remainingRetries
+{
+    if (!self.wantsSessionRunning || generation != self.sessionStartGeneration) return;
+    if (!self.session) return;
+
+    BOOL wasRunning = [self.session isRunning];
+    if (!wasRunning) [self.session startRunning];
+    if ([self.session isRunning]) {
+        AVCaptureConnection *previewConnection = self.previewLayer.connection;
+        if (previewConnection && ![previewConnection isEnabled]) previewConnection.enabled = YES;
+        if (!wasRunning) [self resetFocusAndExposureForDevice:self.videoInput.device];
+        [self startRollingRecording];
+        RLVCaptureState runningState = self.pendingEvent ? RLVCaptureStateCapturing : RLVCaptureStateRunning;
+        dispatch_async(dispatch_get_main_queue(), ^{ [self updateState:runningState]; });
+        return;
+    }
+
+    if (remainingRetries > 0) {
+        NSLog(@"RetroLive: capture session did not start; retrying once");
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)), _sessionQueue, ^{
+            [self startSessionOnSessionQueueForGeneration:generation remainingRetries:remainingRetries - 1];
+        });
+        return;
+    }
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self updateState:RLVCaptureStateFailed];
+        [self notifyError:[self errorWithCode:5 description:NSLocalizedString(@"capture.error.session_failed", nil)]];
     });
 }
 
@@ -167,6 +193,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 {
     dispatch_async(_sessionQueue, ^{
         self.wantsSessionRunning = NO;
+        self.sessionStartGeneration += 1;
         [self resetFocusAndExposureForDevice:self.videoInput.device];
         if ([self.movieFileOutput isRecording]) [self.movieFileOutput stopRecording];
         if ([self.session isRunning]) {
@@ -180,6 +207,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 {
     dispatch_async(_sessionQueue, ^{
         self.wantsSessionRunning = NO;
+        self.sessionStartGeneration += 1;
         [self resetFocusAndExposureForDevice:self.videoInput.device];
         if ([self.movieFileOutput isRecording]) [self.movieFileOutput stopRecording];
         if ([self.session isRunning]) [self.session stopRunning];
@@ -189,8 +217,19 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 
 - (void)resumeAfterInterruption
 {
-    if (self.state != RLVCaptureStateInterrupted) return;
     [self startRunning];
+}
+
+- (void)refreshPreviewLayer
+{
+    NSAssert([NSThread isMainThread], @"Preview layers must be refreshed on the main thread");
+    AVCaptureSession *session = self.session;
+    if (!session) return;
+    AVCaptureVideoPreviewLayer *previousLayer = self.previewLayer;
+    AVCaptureVideoPreviewLayer *replacementLayer = [AVCaptureVideoPreviewLayer layerWithSession:session];
+    replacementLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+    self.previewLayer = replacementLayer;
+    [previousLayer removeFromSuperlayer];
 }
 
 - (void)updateVideoOrientation:(AVCaptureVideoOrientation)videoOrientation

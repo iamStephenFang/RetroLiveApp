@@ -1,6 +1,7 @@
 #import "RLVCaptureEvent.h"
 #import <Foundation/Foundation.h>
 
+/// In-memory description of one validated, committed camera asset directory.
 @interface RLVAsset : NSObject
 
 @property (nonatomic, copy) NSString *assetId;
@@ -18,8 +19,11 @@
 @property (nonatomic, copy) NSString *captureDevice;
 @property (nonatomic, copy) NSString *aspectRatio;
 
+/// Returns whether the referenced still-image file is currently present.
 - (BOOL)hasPhoto;
+/// Returns whether the optional motion companion is currently present.
 - (BOOL)hasMotion;
+/// Returns whether all resources required by this asset representation are present.
 - (BOOL)isComplete;
 
 @end

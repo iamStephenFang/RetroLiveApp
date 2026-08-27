@@ -40,6 +40,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 @property (nonatomic, strong) UITapGestureRecognizer *focusTapGestureRecognizer;
 - (void)attachPreviewLayerIfNeeded;
 - (void)updatePreviewFrame;
+- (void)updateLiveCaptureIndicatorLayout;
 - (void)configureCameraActions;
 - (BOOL)isCameraInteractionAvailable;
 - (void)updateCameraControls;
@@ -127,17 +128,17 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 {
     (void)notification;
     if (!self.isViewVisible) return;
-    if (self.captureController.state == RLVCaptureStateInterrupted) {
-        [self.captureController resumeAfterInterruption];
-    } else {
-        [self.captureController startRunning];
-    }
+    [self.captureController refreshPreviewLayer];
+    [self attachPreviewLayerIfNeeded];
+    [self updatePreviewFrame];
+    [self.captureController resumeAfterInterruption];
 }
 
 - (void)viewDidLayoutSubviews
 {
     [super viewDidLayoutSubviews];
     [self updatePreviewFrame];
+    [self updateLiveCaptureIndicatorLayout];
 }
 
 - (void)updatePreviewFrame
@@ -255,7 +256,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 {
     self.liveCaptureIndicator = [[UIView alloc] initWithFrame:CGRectZero];
     self.liveCaptureIndicator.backgroundColor = [UIColor colorWithRed:1.0 green:0.80 blue:0.0 alpha:0.96];
-    self.liveCaptureIndicator.layer.cornerRadius = 14.0;
+    self.liveCaptureIndicator.layer.cornerRadius = 9.0;
     self.liveCaptureIndicator.hidden = YES;
     self.liveCaptureIndicator.isAccessibilityElement = YES;
     self.liveCaptureIndicator.accessibilityLabel = NSLocalizedString(@"camera.live.capturing", nil);
@@ -270,18 +271,29 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     [self.liveCaptureIndicator addSubview:label];
     [self.previewView addSubview:self.liveCaptureIndicator];
 
-    RLVPrepareViewsForAutoLayout(@[self.liveCaptureIndicator, label]);
+    RLVPrepareViewsForAutoLayout(@[label]);
     RLVAddVisualConstraints(self.liveCaptureIndicator, @{@"label": label},
         @[@"H:|-6-[label]-6-|", @"V:|[label]|"]);
     CGFloat indicatorWidth = ceil(RLVTextSizeWithFont(label.text, label.font).width + 12.0);
-    RLVAddVisualConstraints(self.previewView, @{@"live": self.liveCaptureIndicator},
-        @[[NSString stringWithFormat:@"H:[live(%.0f)]", indicatorWidth], @"V:|-12-[live(28)]"]);
-    RLVAlignViews(self.previewView, self.liveCaptureIndicator, NSLayoutAttributeCenterX,
-        self.previewView, NSLayoutAttributeCenterX);
+    self.liveCaptureIndicator.bounds = CGRectMake(0.0, 0.0, indicatorWidth, 28.0);
+    [self updateLiveCaptureIndicatorLayout];
 
     NSMutableArray *rotating = [NSMutableArray arrayWithArray:self.rotatingControls ?: [NSArray array]];
     [rotating addObject:self.liveCaptureIndicator];
     self.rotatingControls = rotating;
+}
+
+- (void)updateLiveCaptureIndicatorLayout
+{
+    if (!self.liveCaptureIndicator) return;
+    CGRect previewFrame = self.captureController.previewLayer.frame;
+    if (CGRectIsEmpty(previewFrame)) previewFrame = self.previewView.bounds;
+    CGPoint topDirection = CGPointApplyAffineTransform(
+        CGPointMake(0.0, -1.0), self.orientationCoordinator.controlTransform);
+    CGFloat edgeInset = 12.0 + CGRectGetHeight(self.liveCaptureIndicator.bounds) * 0.5;
+    self.liveCaptureIndicator.center = CGPointMake(
+        CGRectGetMidX(previewFrame) + topDirection.x * (CGRectGetWidth(previewFrame) * 0.5 - edgeInset),
+        CGRectGetMidY(previewFrame) + topDirection.y * (CGRectGetHeight(previewFrame) * 0.5 - edgeInset));
 }
 
 - (void)showLiveCaptureIndicator
@@ -549,15 +561,8 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     [self hideFocusReticle];
     [self.captureController updateVideoOrientation:coordinator.videoOrientation];
     [UIView animateWithDuration:0.22 animations:^{
-        for (UIView *control in self.rotatingControls) {
-            if ([control isKindOfClass:[UIButton class]]) {
-                UIButton *button = (UIButton *)control;
-                button.imageView.transform = transform;
-                button.titleLabel.transform = transform;
-            } else {
-                control.transform = transform;
-            }
-        }
+        for (UIView *control in self.rotatingControls) control.transform = transform;
+        [self updateLiveCaptureIndicatorLayout];
     }];
 }
 

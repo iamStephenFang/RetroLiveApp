@@ -1,6 +1,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <Foundation/Foundation.h>
 
+/// Read-only snapshot of hardware and OS capabilities used for capture and manifest metadata.
 @interface RLVDeviceCapabilities : NSObject
 
 @property (nonatomic, copy, readonly) NSString *systemVersion;
@@ -13,7 +14,14 @@
 @property (nonatomic, assign, readonly) BOOL supportsAudioCapture;
 @property (nonatomic, copy, readonly) NSArray *supportedPhotoResolutions;
 
+/// Probes the current device and returns a new capability snapshot.
+///
+/// - Returns: A new snapshot of the current device and OS capabilities.
 + (RLVDeviceCapabilities *)currentCapabilities;
+/// Returns the camera at the requested position, or nil when that camera is unavailable.
+///
+/// - Parameter position: Front or rear device position to resolve.
+/// - Returns: The matching video capture device, or `nil`.
 - (AVCaptureDevice *)cameraWithPosition:(AVCaptureDevicePosition)position;
 
 @end
