@@ -80,7 +80,13 @@ Host retrolive-air
     User retrolive-builder
     IdentityFile ~/.ssh/retrolive-air
     IdentitiesOnly yes
+    ControlMaster auto
+    ControlPersist 60
+    ControlPath ~/.ssh/retrolive-%C
 ```
+
+The short-lived control connection is scoped to this host and lets the two
+rsync operations share one SSH authentication.
 
 Verify the connection:
 
@@ -88,8 +94,28 @@ Verify the connection:
 ssh retrolive-air /usr/bin/sw_vers
 ```
 
-If Mavericks requires a legacy SSH algorithm, enable it only in this host entry
-after checking the exact error. Do not weaken the global SSH configuration.
+Mavericks ships an old SSH server. If a current SSH client reports that the
+server offers only `ssh-rsa`/`ssh-dss`, or closes the connection during key
+exchange, add the following compatibility options to this host entry:
+
+```sshconfig
+Host retrolive-air
+    HostKeyAlgorithms ssh-rsa
+    KexAlgorithms diffie-hellman-group14-sha1
+    Ciphers aes128-ctr
+    MACs hmac-sha1
+```
+
+This exact combination was required for a current OpenSSH client to complete a
+handshake with the OpenSSH 6.2 server on the Mavericks build Mac. Keep these
+weaker legacy algorithms inside the dedicated `Host retrolive-air` block; never
+place them under `Host *`. Confirm the negotiated settings and connection before
+running rsync:
+
+```sh
+ssh -G retrolive-air | grep -E '^(hostname|user|port|hostkeyalgorithms|kexalgorithms|ciphers|macs) '
+ssh -v retrolive-air /usr/bin/sw_vers
+```
 
 ## 2. Create the build mirror
 
@@ -119,12 +145,17 @@ RETROLIVE_SYNC_REMOTE=retrolive-air
 RETROLIVE_SYNC_ROOT=/Users/retrolive-builder/BuildMirror/RetroLive
 ```
 
-The root must be absolute, at least three path components deep, and contain no
-spaces or shell punctuation. Then synchronize:
+The root must be absolute, at least three path components deep, contain no
+spaces or shell punctuation, and contain no `.` or `..` path components. Preview
+the changes, then synchronize:
 
 ```sh
+./scripts/legacy-sync.sh --dry-run
 ./scripts/legacy-sync.sh
 ```
+
+The dry run lists additions, updates, and deletions without changing the legacy
+Mac. A normal run prints the same itemized change list while applying it.
 
 The script copies:
 
@@ -180,7 +211,14 @@ Build the Classic camera:
 ```
 
 The script invokes the selected archived Xcode directly and keeps Derived Data
-outside the synchronized source tree.
+outside the synchronized source tree. Each scheme uses a separate child
+directory so their Xcode build databases cannot collide.
+
+Build both schemes sequentially:
+
+```sh
+./scripts/legacy-build.sh build all
+```
 
 ## 6. Configure signing and run on iPhone
 

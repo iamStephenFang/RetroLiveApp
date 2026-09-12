@@ -21,7 +21,7 @@ Usage: scripts/legacy-build.sh <command> [scheme]
 
 Commands:
   doctor            Show macOS, Xcode, SDK, path, and signing information.
-  build [scheme]    Build RetroLiveCamera (default) or RetroLiveClassic.
+  build [scheme]    Build RetroLiveCamera (default), RetroLiveClassic, or all.
   help              Show this message.
 EOF
 }
@@ -55,7 +55,22 @@ case "$RETROLIVE_CODE_SIGNING_ALLOWED" in
     YES|NO) ;;
     *) fail "RETROLIVE_CODE_SIGNING_ALLOWED must be YES or NO" ;;
 esac
+case "$RETROLIVE_DEVELOPER_DIR" in
+    /*) ;;
+    *) fail "RETROLIVE_DEVELOPER_DIR must be an absolute path" ;;
+esac
+case "$RETROLIVE_DERIVED_DATA" in
+    /*) ;;
+    *) fail "RETROLIVE_DERIVED_DATA must be an absolute path" ;;
+esac
+case "$RETROLIVE_DERIVED_DATA" in
+    "$REPOSITORY_ROOT"|"$REPOSITORY_ROOT"/*)
+        fail "RETROLIVE_DERIVED_DATA must be outside the synchronized repository"
+        ;;
+esac
 [ -x /usr/bin/xcodebuild ] || fail "/usr/bin/xcodebuild is unavailable"
+[ -d "$RETROLIVE_DEVELOPER_DIR" ] ||
+    fail "archived toolchain does not exist: $RETROLIVE_DEVELOPER_DIR"
 [ -d "$REPOSITORY_ROOT/legacy-camera/RetroLiveCamera.xcodeproj" ] ||
     fail "the synchronized Xcode project is missing"
 
@@ -63,18 +78,46 @@ run_xcodebuild() {
     DEVELOPER_DIR="$RETROLIVE_DEVELOPER_DIR" /usr/bin/xcodebuild "$@"
 }
 
+validate_signing_config() {
+    if [ -n "$RETROLIVE_SIGNING_XCCONFIG" ]; then
+        [ -f "$RETROLIVE_SIGNING_XCCONFIG" ] ||
+            fail "signing xcconfig does not exist: $RETROLIVE_SIGNING_XCCONFIG"
+    fi
+}
+
+build_scheme() {
+    scheme=$1
+    scheme_derived_data="$RETROLIVE_DERIVED_DATA/$scheme"
+    /bin/mkdir -p "$scheme_derived_data" ||
+        fail "could not create Derived Data for $scheme"
+
+    printf 'Building %s with Derived Data at %s\n' "$scheme" "$scheme_derived_data"
+    if [ -n "$RETROLIVE_SIGNING_XCCONFIG" ]; then
+        set -- -project "$REPOSITORY_ROOT/legacy-camera/RetroLiveCamera.xcodeproj" \
+            -scheme "$scheme" -configuration "$RETROLIVE_CONFIGURATION" \
+            -sdk iphoneos -derivedDataPath "$scheme_derived_data" \
+            -xcconfig "$RETROLIVE_SIGNING_XCCONFIG" \
+            CODE_SIGNING_ALLOWED="$RETROLIVE_CODE_SIGNING_ALLOWED" build
+    else
+        set -- -project "$REPOSITORY_ROOT/legacy-camera/RetroLiveCamera.xcodeproj" \
+            -scheme "$scheme" -configuration "$RETROLIVE_CONFIGURATION" \
+            -sdk iphoneos -derivedDataPath "$scheme_derived_data" \
+            CODE_SIGNING_ALLOWED="$RETROLIVE_CODE_SIGNING_ALLOWED" build
+    fi
+    run_xcodebuild "$@" || fail "$scheme build failed"
+}
+
 case "$command_name" in
     doctor)
         [ "$#" -eq 1 ] || fail "doctor does not accept a scheme"
         /usr/bin/sw_vers
         printf '\nArchived toolchain:\n'
-        run_xcodebuild -version
-        run_xcodebuild -showsdks
-        printf '\nDerived Data: %s\n' "$RETROLIVE_DERIVED_DATA"
+        run_xcodebuild -version || fail "could not read the archived Xcode version"
+        run_xcodebuild -showsdks || fail "could not list SDKs from the archived Xcode"
+        printf '\nDerived Data root: %s\n' "$RETROLIVE_DERIVED_DATA"
         printf 'CODE_SIGNING_ALLOWED=%s\n' "$RETROLIVE_CODE_SIGNING_ALLOWED"
+        validate_signing_config
         if [ -n "$RETROLIVE_SIGNING_XCCONFIG" ]; then
-            [ -f "$RETROLIVE_SIGNING_XCCONFIG" ] ||
-                fail "signing xcconfig does not exist: $RETROLIVE_SIGNING_XCCONFIG"
             printf 'Signing xcconfig: %s\n' "$RETROLIVE_SIGNING_XCCONFIG"
         fi
         printf '\nCode signing identities:\n'
@@ -84,26 +127,16 @@ case "$command_name" in
         [ "$#" -le 2 ] || fail "build accepts at most one scheme"
         scheme=${2:-RetroLiveCamera}
         case "$scheme" in
-            RetroLiveCamera|RetroLiveClassic) ;;
-            *) fail "scheme must be RetroLiveCamera or RetroLiveClassic" ;;
+            RetroLiveCamera|RetroLiveClassic|all) ;;
+            *) fail "scheme must be RetroLiveCamera, RetroLiveClassic, or all" ;;
         esac
-        /bin/mkdir -p "$RETROLIVE_DERIVED_DATA" || fail "could not create Derived Data"
-
-        if [ -n "$RETROLIVE_SIGNING_XCCONFIG" ]; then
-            [ -f "$RETROLIVE_SIGNING_XCCONFIG" ] ||
-                fail "signing xcconfig does not exist: $RETROLIVE_SIGNING_XCCONFIG"
-            set -- -project "$REPOSITORY_ROOT/legacy-camera/RetroLiveCamera.xcodeproj" \
-                -scheme "$scheme" -configuration "$RETROLIVE_CONFIGURATION" \
-                -sdk iphoneos -derivedDataPath "$RETROLIVE_DERIVED_DATA" \
-                -xcconfig "$RETROLIVE_SIGNING_XCCONFIG" \
-                CODE_SIGNING_ALLOWED="$RETROLIVE_CODE_SIGNING_ALLOWED" build
+        validate_signing_config
+        if [ "$scheme" = all ]; then
+            build_scheme RetroLiveCamera
+            build_scheme RetroLiveClassic
         else
-            set -- -project "$REPOSITORY_ROOT/legacy-camera/RetroLiveCamera.xcodeproj" \
-                -scheme "$scheme" -configuration "$RETROLIVE_CONFIGURATION" \
-                -sdk iphoneos -derivedDataPath "$RETROLIVE_DERIVED_DATA" \
-                CODE_SIGNING_ALLOWED="$RETROLIVE_CODE_SIGNING_ALLOWED" build
+            build_scheme "$scheme"
         fi
-        run_xcodebuild "$@"
         ;;
     *)
         usage >&2
