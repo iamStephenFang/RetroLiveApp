@@ -17,7 +17,7 @@ fail() {
 
 usage() {
     cat <<'EOF'
-Usage: tools/legacy-build.sh <command> [scheme]
+Usage: scripts/legacy-build.sh <command> [scheme]
 
 Commands:
   doctor            Show macOS, Xcode, SDK, path, and signing information.
@@ -35,7 +35,7 @@ case "$command_name" in
 esac
 
 [ -f "$CONFIG_FILE" ] ||
-    fail "copy tools/legacy-build.env.example to .retrolive-legacy-build.env first"
+    fail "copy scripts/legacy-build.env.example to .retrolive-legacy-build.env first"
 
 # The config is a private shell fragment owned by the developer.
 # shellcheck disable=SC1090

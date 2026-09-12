@@ -119,7 +119,8 @@ If discovery fails, confirm that both devices are on the same Wi-Fi network, Loc
 legacy-camera/       Objective-C camera targets and their shared core
 modern-importer/     SwiftUI importer and XCTest target
 protocol/            JSON Schema, OpenAPI contract, examples, and fixtures
-tools/               Dependency-free host-side validation and integration runners
+tools/               Dependency-free host-side validation and test runners
+scripts/             Repository workflow and build automation
 docs/                Architecture, formats, build notes, delivery notes, and test plans
 design/              Source artwork and interface-icon tooling
 ```

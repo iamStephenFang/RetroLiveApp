@@ -42,11 +42,11 @@ UUID, or device identifier. Private `.env` files are ignored by Git.
 Public repository files:
 
 ```text
-tools/legacy-sync.sh                 # run on the modern Mac
-tools/legacy-sync.env.example
-tools/legacy-build.sh                # run locally on the legacy Mac
-tools/legacy-build.env.example
-tools/legacy-rsync-excludes.txt
+scripts/legacy-sync.sh               # run on the modern Mac
+scripts/legacy-sync.env.example
+scripts/legacy-build.sh              # run locally on the legacy Mac
+scripts/legacy-build.env.example
+scripts/legacy-rsync-excludes.txt
 ```
 
 Private files:
@@ -108,7 +108,7 @@ in a later build.
 On the modern Mac, from the repository root:
 
 ```sh
-cp tools/legacy-sync.env.example .retrolive-legacy-sync.env
+cp scripts/legacy-sync.env.example .retrolive-legacy-sync.env
 chmod 600 .retrolive-legacy-sync.env
 ```
 
@@ -123,14 +123,14 @@ The root must be absolute, at least three path components deep, and contain no
 spaces or shell punctuation. Then synchronize:
 
 ```sh
-./tools/legacy-sync.sh
+./scripts/legacy-sync.sh
 ```
 
 The script copies:
 
 - `legacy-camera/`, excluding build output, user state, and `.DS_Store`;
-- `tools/legacy-build.sh`;
-- `tools/legacy-build.env.example`.
+- `scripts/legacy-build.sh`;
+- `scripts/legacy-build.env.example`.
 
 It does not copy `.git`, modern-importer, credentials, or private configuration.
 Run the same command after each source change; `rsync` transfers only changed
@@ -142,7 +142,7 @@ On the legacy Mac:
 
 ```sh
 cd /Users/retrolive-builder/BuildMirror/RetroLive
-cp tools/legacy-build.env.example .retrolive-legacy-build.env
+cp scripts/legacy-build.env.example .retrolive-legacy-build.env
 chmod 600 .retrolive-legacy-build.env
 ```
 
@@ -159,7 +159,7 @@ RETROLIVE_SIGNING_XCCONFIG=
 Inspect the preserved environment:
 
 ```sh
-./tools/legacy-build.sh doctor
+./scripts/legacy-build.sh doctor
 ```
 
 This reports macOS, Xcode, installed SDKs, Derived Data, signing mode, and code
@@ -170,13 +170,13 @@ signing identities. It does not prove device installation or runtime behavior.
 Build the iOS 6 camera:
 
 ```sh
-./tools/legacy-build.sh build RetroLiveCamera
+./scripts/legacy-build.sh build RetroLiveCamera
 ```
 
 Build the Classic camera:
 
 ```sh
-./tools/legacy-build.sh build RetroLiveClassic
+./scripts/legacy-build.sh build RetroLiveClassic
 ```
 
 The script invokes the selected archived Xcode directly and keeps Derived Data
@@ -218,7 +218,7 @@ The script does not execute `mkdir` remotely.
 ### A removed source file remains on the legacy Mac
 
 Confirm it is under the synchronized `legacy-camera/` directory and is not
-listed in `tools/legacy-rsync-excludes.txt`. The build and configuration files
+listed in `scripts/legacy-rsync-excludes.txt`. The build and configuration files
 outside that directory are intentionally preserved.
 
 ### Xcode cannot be found

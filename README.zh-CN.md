@@ -117,7 +117,8 @@ cd RetroLive
 legacy-camera/       Objective-C 相机目标及其共享核心
 modern-importer/     SwiftUI 导入器和 XCTest 目标
 protocol/            JSON Schema、OpenAPI 协议、示例和测试数据
-tools/               无依赖的主机端验证和集成运行器
+tools/               无依赖的主机端验证与测试运行器
+scripts/             仓库工作流与构建自动化脚本
 docs/                架构、格式、构建说明、交付说明和测试计划
 design/              源图稿和界面图标工具
 ```

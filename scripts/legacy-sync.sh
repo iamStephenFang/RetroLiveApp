@@ -17,7 +17,7 @@ fail() {
 
 command -v rsync >/dev/null 2>&1 || fail "rsync is unavailable"
 [ -f "$CONFIG_FILE" ] ||
-    fail "copy tools/legacy-sync.env.example to .retrolive-legacy-sync.env first"
+    fail "copy scripts/legacy-sync.env.example to .retrolive-legacy-sync.env first"
 
 # The config is a private shell fragment owned by the developer.
 # shellcheck disable=SC1090
@@ -54,10 +54,10 @@ printf 'Synchronizing the local build script and its example config.\n'
 (
     cd "$REPOSITORY_ROOT" || exit 1
     rsync -aR \
-        tools/legacy-build.sh \
-        tools/legacy-build.env.example \
+        scripts/legacy-build.sh \
+        scripts/legacy-build.env.example \
         "$RETROLIVE_SYNC_REMOTE:$RETROLIVE_SYNC_ROOT/"
 ) || fail "build-script synchronization failed"
 
 printf 'Sync complete. Build locally on the legacy Mac with:\n'
-printf '  cd %s && ./tools/legacy-build.sh build RetroLiveCamera\n' "$RETROLIVE_SYNC_ROOT"
+printf '  cd %s && ./scripts/legacy-build.sh build RetroLiveCamera\n' "$RETROLIVE_SYNC_ROOT"
