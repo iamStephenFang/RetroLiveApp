@@ -7,7 +7,7 @@ The project has two parts:
 - a legacy Objective-C camera app that captures an independent JPEG and a short motion clip; and
 - a modern SwiftUI importer that discovers the camera over the local network, verifies the downloaded files, assembles a Live Photo, and saves it to Photos.
 
-RetroLive is under active development. The protocol, storage, transfer, and import paths are implemented and covered by host or simulator tests, but archived iOS toolchain builds and the complete two-device workflow still require physical-device acceptance. See [Project status](#project-status) before relying on it for irreplaceable photos.
+RetroLive is under active development. The protocol, storage, transfer, and import paths are implemented and covered by host or simulator tests, but archived iOS toolchain builds and the complete [...]
 
 ## Features
 
@@ -28,30 +28,22 @@ RetroLive is under active development. The protocol, storage, transfer, and impo
 
 ## Apps and compatibility
 
-| Target              | Purpose                                                            | Project setting | Development toolchain                                                 |
-| ------------------- | ------------------------------------------------------------------ | --------------- | --------------------------------------------------------------------- |
-| `RetroLiveCamera`   | iOS 6-style camera and local asset server                          | iOS 6.0         | An archived Xcode/iOS 6 SDK is required for an authentic device build |
-| `RetroLiveClassic`  | iOS 7/8-era camera using the same capture and storage core         | iOS 7.0         | Use a toolchain that can build and sign for the target device         |
-| `RetroLiveImporter` | Discovers a camera, downloads assets, and imports them into Photos | iOS 17.0        | Current Xcode with Swift 6 support                                    |
+| Icon | Target              | Purpose                                                            | Project setting | Development toolchain                                                 |
+| ---- | ------------------- | ------------------------------------------------------------------ | --------------- | --------------------------------------------------------------------- |
+| <img src="design/app-icons/RetroLiveCamera-Legacy-master.png" alt="RetroLiveCamera app icon" width="96"> | `RetroLiveCamera`   | iOS 6-style camera and local asset server                          | iOS 6.0         | An archived Xcode/iOS 6 SDK is required for an authentic device build |
+| <img src="design/app-icons/RetroLiveClassic-master.png" alt="RetroLiveClassic app icon" width="96"> | `RetroLiveClassic`  | iOS 7/8-era camera using the same capture and storage core         | iOS 7.0         | Use a toolchain that can build and sign for the target device         |
+| <img src="design/app-icons/RetroLiveImporter-master.png" alt="RetroLiveImporter app icon" width="96"> | `RetroLiveImporter` | Discovers a camera, downloads assets, and imports them into Photos | iOS 17.0        | Current Xcode with Swift 6 support                                    |
 
-## App icons
-
-| Target              | Icon                                                                                                     |
-| ------------------- | -------------------------------------------------------------------------------------------------------- |
-| `RetroLiveCamera`   | <img src="design/app-icons/RetroLiveCamera-Legacy-master.png" alt="RetroLiveCamera app icon" width="96"> |
-| `RetroLiveClassic`  | <img src="design/app-icons/RetroLiveClassic-master.png" alt="RetroLiveClassic app icon" width="96">      |
-| `RetroLiveImporter` | <img src="design/app-icons/RetroLiveImporter-master.png" alt="RetroLiveImporter app icon" width="96">    |
-
-Both camera targets use Objective-C and ARC. The importer is a SwiftUI application. A modern Xcode installation can inspect and host-check much of the camera source, but it cannot prove that the iOS 6 binary builds, installs, or behaves correctly on period hardware.
+Both camera targets use Objective-C and ARC. The importer is a SwiftUI application. A modern Xcode installation can inspect and host-check much of the camera source, but it cannot prove that the i[...]
 
 ## How it works
 
 1. The camera captures `photo.jpg` and, when available, a short `motion.mov` around the shutter event.
 2. It writes the media and `manifest.json` into a temporary asset directory, validates them, and atomically commits the asset.
 3. The importer pairs with the camera, downloads immutable resources, and verifies their declared byte lengths and SHA-256 hashes.
-4. For a motion asset, the importer writes a shared content identifier and still-image-time metadata into a separate working copy before submitting the pair to PhotoKit. A photo-only asset is imported as a normal photo.
+4. For a motion asset, the importer writes a shared content identifier and still-image-time metadata into a separate working copy before submitting the pair to PhotoKit. A photo-only asset is impo[...]
 
-The original files on the camera and the verified download cache are never edited in place. The cross-device contract is described by [Protocol V1](docs/reference/protocol-v1.md), with [`protocol/manifest.schema.json`](protocol/manifest.schema.json) as the normative Manifest specification.
+The original files on the camera and the verified download cache are never edited in place. The cross-device contract is described by [Protocol V1](docs/reference/protocol-v1.md), with [`protocol/[...]
 
 ## Build from source
 
@@ -106,7 +98,7 @@ Captured assets stay inside RetroLive. The camera app does not add them directly
 3. Tap the transfer button in the navigation bar.
 4. Tap **Start Sharing** and keep this screen open. Note the six-digit pairing code.
 
-Sharing advertises a `_retrolive._tcp.` Bonjour service and exposes only committed assets. The camera shows the paired device after it connects. Stopping sharing or sending the camera app to the background invalidates the temporary session token; when you return, RetroLive explains that sharing stopped and you must start it again.
+Sharing advertises a `_retrolive._tcp.` Bonjour service and exposes only committed assets. The camera shows the paired device after it connects. Stopping sharing or sending the camera app to the [...]
 
 ### Import on the modern iPhone
 
@@ -120,7 +112,7 @@ The importer uses system tabs for Devices, Library, and Settings. On iOS 26 and
 later they adopt the system Liquid Glass appearance; earlier systems render them
 as ordinary tabs.
 
-If discovery fails, confirm that both devices are on the same Wi-Fi network, Local Network permission is enabled for both apps, sharing is still running, and the network does not isolate wireless clients.
+If discovery fails, confirm that both devices are on the same Wi-Fi network, Local Network permission is enabled for both apps, sharing is still running, and the network does not isolate wireless[...]
 
 > [!IMPORTANT]
 > Camera transfer uses authenticated but unencrypted HTTP. Use it only on a trusted local network, stop sharing when finished, and do not expose its port to the internet.
@@ -153,7 +145,7 @@ Bonjour + paired read-only HTTP
 CameraAPIClient -> DownloadStore -> LivePhotoAssembler -> PhotoLibraryImporter
 ```
 
-For component ownership and data boundaries, read [Architecture](docs/reference/architecture.md). For the on-disk representation, read [Asset storage](docs/reference/asset-storage.md) and the [Live Photo assembly contract](docs/reference/live-photo-assembly.md).
+For component ownership and data boundaries, read [Architecture](docs/reference/architecture.md). For the on-disk representation, read [Asset storage](docs/reference/asset-storage.md) and the [Li[...]
 The [documentation guide](docs/README.md) identifies current specifications,
 acceptance criteria, build notes, and historical phase records.
 
@@ -230,11 +222,11 @@ find legacy-camera/RetroLiveCamera modern-importer/RetroLiveImporter \
 git diff --check
 ```
 
-The verification levels and feature-specific acceptance indexes are in the [verification guide](docs/reference/verification-guide.md). When building both camera schemes in parallel, give them different `-derivedDataPath` values to avoid Xcode's build-database lock.
+The verification levels and feature-specific acceptance indexes are in the [verification guide](docs/reference/verification-guide.md). When building both camera schemes in parallel, give them dif[...]
 
 ## Project status
 
-The repository contains the implemented protocol, capture/storage, local transfer, verified download, assembly, and import paths. Current automated coverage includes the shared Manifest fixture catalog, asset transactions, transfer routing, pagination and byte ranges, checksum-verified/resumable downloads, aspect-ratio geometry, generated JPEG/MOV assembly, and import-history recovery.
+The repository contains the implemented protocol, capture/storage, local transfer, verified download, assembly, and import paths. Current automated coverage includes the shared Manifest fixture c[...]
 
 The following checks remain hardware- or environment-dependent:
 
@@ -248,9 +240,9 @@ Detailed acceptance criteria are owned by the feature specifications linked from
 
 ## Contributing and support
 
-Bug reports and focused pull requests are welcome through [GitHub Issues](https://github.com/iamStephenFang/RetroLive/issues). Include the target, Xcode build, iPhone model, iOS version, reproduction steps, and relevant logs. For camera, network, or Live Photo changes, describe which simulator, host, or physical-device checks you actually performed.
+Bug reports and focused pull requests are welcome through [GitHub Issues](https://github.com/iamStephenFang/RetroLive/issues). Include the target, Xcode build, iPhone model, iOS version, reproduc[...]
 
-Protocol changes should start with an issue so compatibility and fixture changes can be agreed before implementation. Keep pull requests scoped, preserve legacy-device compatibility, and update the documentation and test catalog with behavior changes.
+Protocol changes should start with an issue so compatibility and fixture changes can be agreed before implementation. Keep pull requests scoped, preserve legacy-device compatibility, and update t[...]
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing a change. Report
 security issues through the private process in [SECURITY.md](SECURITY.md), not
@@ -260,4 +252,4 @@ through a public issue containing exploit details or personal media.
 
 RetroLive's original source code and documentation are available under the [MIT License](LICENSE).
 
-Third-party materials are not automatically covered by the MIT License. In particular, Apple system-provided interface images have separate license terms; see [Third-Party Notices](THIRD_PARTY_NOTICES.md).
+Third-party materials are not automatically covered by the MIT License. In particular, Apple system-provided interface images have separate license terms; see [Third-Party Notices](THIRD_PARTY_NO[...]
