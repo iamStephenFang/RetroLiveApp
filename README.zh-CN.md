@@ -1,4 +1,4 @@
-# RetroLive
+# RetroLiveApp
 
 RetroLive 为旧款 iPhone 带来实况照片拍摄功能，并允许将其导入到现代 iPhone 中。
 
@@ -33,6 +33,14 @@ RetroLive 仍在积极开发中。协议、存储、传输和导入路径已实�
 | `RetroLiveClassic`  | 使用相同拍摄和存储核心的 iOS 7/8 时代相机 | iOS 7.0  | 使用能够为目标设备构建和签名的工具链          |
 | `RetroLiveImporter` | 发现相机、下载资源并将其导入照片库        | iOS 17.0 | 支持 Swift 6 的当前 Xcode                     |
 
+## App 图标
+
+| 目标                | 图标                                                                                                     |
+| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| `RetroLiveCamera`   | <img src="design/app-icons/RetroLiveCamera-Legacy-master.png" alt="RetroLiveCamera 应用图标" width="96"> |
+| `RetroLiveClassic`  | <img src="design/app-icons/RetroLiveClassic-master.png" alt="RetroLiveClassic 应用图标" width="96">      |
+| `RetroLiveImporter` | <img src="design/app-icons/RetroLiveImporter-master.png" alt="RetroLiveImporter 应用图标" width="96">    |
+
 两个相机目标都使用 Objective-C 和 ARC。
 导入器是一个 SwiftUI 应用，现代 Xcode 安装可以检查和主机检查相机源代码的大部分内容，但无法证明 iOS 6 二进制文件能否正确地在旧硬件上构建、安装或运行。
 
@@ -55,6 +63,8 @@ cd RetroLive
 ```
 
 ### 现代导入器
+
+目前暂不提供 `RetroLiveImporter` 的预编译 IPA。请使用你自己的 Apple 开发者账户从源代码自行构建并签名，然后再安装到 iPhone 上。
 
 1. 用当前版本的 Xcode 打开 `modern-importer/RetroLiveImporter.xcodeproj`。
 2. 选择 `RetroLiveImporter` 目标。

@@ -1,4 +1,4 @@
-# RetroLive
+# RetroLiveApp
 
 RetroLive brings motion-photo capture to older iPhones and imports the result as a Live Photo on a modern iPhone.
 
@@ -28,11 +28,19 @@ RetroLive is under active development. The protocol, storage, transfer, and impo
 
 ## Apps and compatibility
 
-| Target | Purpose | Project setting | Development toolchain |
-| --- | --- | --- | --- |
-| `RetroLiveCamera` | iOS 6-style camera and local asset server | iOS 6.0 | An archived Xcode/iOS 6 SDK is required for an authentic device build |
-| `RetroLiveClassic` | iOS 7/8-era camera using the same capture and storage core | iOS 7.0 | Use a toolchain that can build and sign for the target device |
-| `RetroLiveImporter` | Discovers a camera, downloads assets, and imports them into Photos | iOS 17.0 | Current Xcode with Swift 6 support |
+| Target              | Purpose                                                            | Project setting | Development toolchain                                                 |
+| ------------------- | ------------------------------------------------------------------ | --------------- | --------------------------------------------------------------------- |
+| `RetroLiveCamera`   | iOS 6-style camera and local asset server                          | iOS 6.0         | An archived Xcode/iOS 6 SDK is required for an authentic device build |
+| `RetroLiveClassic`  | iOS 7/8-era camera using the same capture and storage core         | iOS 7.0         | Use a toolchain that can build and sign for the target device         |
+| `RetroLiveImporter` | Discovers a camera, downloads assets, and imports them into Photos | iOS 17.0        | Current Xcode with Swift 6 support                                    |
+
+## App icons
+
+| Target              | Icon                                                                                                     |
+| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| `RetroLiveCamera`   | <img src="design/app-icons/RetroLiveCamera-Legacy-master.png" alt="RetroLiveCamera app icon" width="96"> |
+| `RetroLiveClassic`  | <img src="design/app-icons/RetroLiveClassic-master.png" alt="RetroLiveClassic app icon" width="96">      |
+| `RetroLiveImporter` | <img src="design/app-icons/RetroLiveImporter-master.png" alt="RetroLiveImporter app icon" width="96">    |
 
 Both camera targets use Objective-C and ARC. The importer is a SwiftUI application. A modern Xcode installation can inspect and host-check much of the camera source, but it cannot prove that the iOS 6 binary builds, installs, or behaves correctly on period hardware.
 
@@ -57,6 +65,10 @@ cd RetroLive
 The repository has no external dependency bootstrap step.
 
 ### Modern importer
+
+No prebuilt IPA is currently provided for `RetroLiveImporter`. Build and sign
+the app from source with your own Apple developer account before installing it
+on an iPhone.
 
 1. Open `modern-importer/RetroLiveImporter.xcodeproj` in a current version of Xcode.
 2. Select the `RetroLiveImporter` target.
