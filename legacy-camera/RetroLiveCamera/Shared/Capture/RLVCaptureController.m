@@ -1,4 +1,5 @@
 #import "RLVCaptureController.h"
+#import "RLVZoomMath.h"
 #import <math.h>
 
 NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
@@ -6,6 +7,7 @@ NSString * const RLVCaptureControllerErrorDomain = @"com.retrolive.capture";
 static const NSTimeInterval RLVTargetPreRollSeconds = 1.5;
 static const NSTimeInterval RLVTargetPostRollSeconds = 1.5;
 static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
+static const CGFloat RLVMaximumUserZoomFactor = 3.0;
 
 @interface RLVCaptureController () <AVCaptureFileOutputRecordingDelegate> {
     dispatch_queue_t _sessionQueue;
@@ -18,7 +20,11 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 @property (nonatomic, strong) AVCaptureDeviceInput *audioInput;
 @property (nonatomic, strong, readwrite) AVCaptureVideoPreviewLayer *previewLayer;
 @property (nonatomic, assign, readwrite) AVCaptureDevicePosition cameraPosition;
+@property (nonatomic, assign, readwrite, getter=isSwitchingCamera) BOOL switchingCamera;
 @property (nonatomic, assign, readwrite) AVCaptureFlashMode flashMode;
+@property (nonatomic, assign, readwrite) CGFloat zoomFactor;
+@property (nonatomic, assign, readwrite) CGFloat requestedZoomFactor;
+@property (nonatomic, assign, readwrite) CGFloat maximumZoomFactor;
 @property (nonatomic, strong) NSURL *rollingURL;
 @property (nonatomic, strong) NSDate *rollingStartedAt;
 @property (nonatomic, strong) RLVCaptureEvent *pendingEvent;
@@ -31,12 +37,24 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 @property (nonatomic, assign) NSUInteger sessionStartGeneration;
 @property (nonatomic, assign) BOOL cameraSwitchPending;
 @property (nonatomic, assign) BOOL orientationRestartPending;
+@property (nonatomic, assign) CGFloat pendingZoomFactor;
+@property (nonatomic, assign) NSUInteger pendingZoomRequestGeneration;
+@property (nonatomic, assign) BOOL zoomUpdateScheduled;
+@property (nonatomic, assign) NSUInteger zoomRequestGeneration;
+@property (nonatomic, assign) NSUInteger cameraSwitchZoomRequestGeneration;
 - (void)startSessionOnSessionQueueForGeneration:(NSUInteger)generation remainingRetries:(NSUInteger)remainingRetries;
 - (void)resetFocusAndExposureForDevice:(AVCaptureDevice *)device;
 - (void)subjectAreaDidChange:(NSNotification *)notification;
 - (void)finishPointOfInterestRequest:(void (^)(RLVPointOfInterestResult result))completion
                               result:(RLVPointOfInterestResult)result;
 - (void)removeAbandonedRollingFilesBeforeDate:(NSDate *)cutoffDate;
+- (CGFloat)maximumZoomFactorForActiveCapturePipeline;
+- (void)applyZoomFactorOnSessionQueue:(CGFloat)zoomFactor requestGeneration:(NSUInteger)requestGeneration;
+- (NSUInteger)recordZoomTargetOnMainThread:(CGFloat)zoomFactor;
+- (void)finishZoomRequestWithAppliedFactor:(CGFloat)zoomFactor
+                             maximumFactor:(CGFloat)maximumFactor
+                          requestGeneration:(NSUInteger)requestGeneration;
+- (void)drainPendingZoomUpdates;
 @end
 
 @implementation RLVCaptureController
@@ -48,6 +66,9 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
         _state = RLVCaptureStateIdle;
         _cameraPosition = AVCaptureDevicePositionBack;
         _flashMode = AVCaptureFlashModeAuto;
+        _zoomFactor = 1.0;
+        _requestedZoomFactor = 1.0;
+        _maximumZoomFactor = 1.0;
         _motionCaptureEnabled = YES;
         _rollingOrientation = AVCaptureVideoOrientationPortrait;
         _sessionQueue = dispatch_queue_create("com.retrolive.capture.session", DISPATCH_QUEUE_SERIAL);
@@ -128,6 +149,8 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
                 [device unlockForConfiguration];
             }
             [self resetFocusAndExposureForDevice:device];
+            self.maximumZoomFactor = [self maximumZoomFactorForActiveCapturePipeline];
+            [self applyZoomFactorOnSessionQueue:1.0 requestGeneration:0];
             [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(sessionRuntimeError:)
                                                          name:AVCaptureSessionRuntimeErrorNotification object:session];
         }
@@ -191,10 +214,12 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
 
 - (void)stopRunning
 {
+    NSUInteger zoomGeneration = [self recordZoomTargetOnMainThread:1.0];
     dispatch_async(_sessionQueue, ^{
         self.wantsSessionRunning = NO;
         self.sessionStartGeneration += 1;
         [self resetFocusAndExposureForDevice:self.videoInput.device];
+        [self applyZoomFactorOnSessionQueue:1.0 requestGeneration:zoomGeneration];
         if ([self.movieFileOutput isRecording]) [self.movieFileOutput stopRecording];
         if ([self.session isRunning]) {
             [self.session stopRunning];
@@ -230,6 +255,7 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
     replacementLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
     self.previewLayer = replacementLayer;
     [previousLayer removeFromSuperlayer];
+    [self requestZoomFactor:self.requestedZoomFactor];
 }
 
 - (void)updateVideoOrientation:(AVCaptureVideoOrientation)videoOrientation
@@ -340,6 +366,8 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
     if (self.state != RLVCaptureStateRunning) {
         return;
     }
+    self.switchingCamera = YES;
+    self.cameraSwitchZoomRequestGeneration = [self recordZoomTargetOnMainThread:1.0];
     dispatch_async(_sessionQueue, ^{
         if ([self.movieFileOutput isRecording]) {
             self.cameraSwitchPending = YES;
@@ -359,7 +387,13 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
         NSError *error = nil;
         AVCaptureDeviceInput *input = device ? [AVCaptureDeviceInput deviceInputWithDevice:device error:&error] : nil;
         if (!input) {
-            dispatch_async(dispatch_get_main_queue(), ^{ [self notifyError:error ?: [self errorWithCode:4 description:NSLocalizedString(@"capture.error.unavailable", nil)]]; });
+            [self finishZoomRequestWithAppliedFactor:self.zoomFactor
+                                       maximumFactor:self.maximumZoomFactor
+                                    requestGeneration:self.cameraSwitchZoomRequestGeneration];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                self.switchingCamera = NO;
+                [self notifyError:error ?: [self errorWithCode:4 description:NSLocalizedString(@"capture.error.unavailable", nil)]];
+            });
             self.cameraSwitchPending = NO;
             return;
         }
@@ -377,10 +411,22 @@ static const NSTimeInterval RLVMaximumRollingSegmentSeconds = 30.0;
         [self.session commitConfiguration];
         if (self.cameraPosition == desired) {
             [self resetFocusAndExposureForDevice:device];
+            self.maximumZoomFactor = [self maximumZoomFactorForActiveCapturePipeline];
+            [self applyZoomFactorOnSessionQueue:1.0
+                              requestGeneration:self.cameraSwitchZoomRequestGeneration];
             dispatch_async(dispatch_get_main_queue(), ^{
+                self.switchingCamera = NO;
                 if ([self.delegate respondsToSelector:@selector(captureController:didChangeCameraPosition:)]) {
                     [self.delegate captureController:self didChangeCameraPosition:desired];
                 }
+            });
+        } else {
+            [self finishZoomRequestWithAppliedFactor:self.zoomFactor
+                                       maximumFactor:self.maximumZoomFactor
+                                    requestGeneration:self.cameraSwitchZoomRequestGeneration];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                self.switchingCamera = NO;
+                [self updateState:self.state];
             });
         }
         self.cameraSwitchPending = NO;
@@ -624,6 +670,133 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
     }
 }
 
+- (NSUInteger)recordZoomTargetOnMainThread:(CGFloat)zoomFactor
+{
+    NSAssert([NSThread isMainThread], @"Zoom targets must be requested on the main thread");
+    CGFloat clampedFactor = RLVClampZoomFactor(zoomFactor, self.maximumZoomFactor);
+    self.requestedZoomFactor = clampedFactor;
+    self.zoomRequestGeneration += 1;
+    return self.zoomRequestGeneration;
+}
+
+- (NSUInteger)requestZoomFactor:(CGFloat)zoomFactor
+{
+    if (!isfinite(zoomFactor) || zoomFactor <= 0.0) return self.zoomRequestGeneration;
+    NSUInteger requestGeneration = [self recordZoomTargetOnMainThread:zoomFactor];
+
+    @synchronized (self) {
+        self.pendingZoomFactor = self.requestedZoomFactor;
+        self.pendingZoomRequestGeneration = requestGeneration;
+        if (self.zoomUpdateScheduled) return requestGeneration;
+        self.zoomUpdateScheduled = YES;
+    }
+    dispatch_async(_sessionQueue, ^{ [self drainPendingZoomUpdates]; });
+    return requestGeneration;
+}
+
+- (void)drainPendingZoomUpdates
+{
+    while (YES) {
+        CGFloat requestedFactor = 1.0;
+        NSUInteger requestGeneration = 0;
+        @synchronized (self) {
+            requestedFactor = self.pendingZoomFactor;
+            requestGeneration = self.pendingZoomRequestGeneration;
+            self.pendingZoomFactor = 0.0;
+            self.pendingZoomRequestGeneration = 0;
+        }
+        [self applyZoomFactorOnSessionQueue:requestedFactor requestGeneration:requestGeneration];
+
+        @synchronized (self) {
+            if (self.pendingZoomFactor > 0.0) continue;
+            self.zoomUpdateScheduled = NO;
+            break;
+        }
+    }
+}
+
+- (CGFloat)maximumZoomFactorForActiveCapturePipeline
+{
+    AVCaptureDevice *device = self.videoInput.device;
+    if (!device) return 1.0;
+
+    CGFloat maximum = 1.0;
+    if ([device respondsToSelector:@selector(videoZoomFactor)]) {
+        maximum = device.activeFormat.videoMaxZoomFactor;
+    } else {
+        NSArray *connections = @[
+            self.previewLayer.connection ?: [NSNull null],
+            [self.stillImageOutput connectionWithMediaType:AVMediaTypeVideo] ?: [NSNull null],
+            [self.movieFileOutput connectionWithMediaType:AVMediaTypeVideo] ?: [NSNull null]
+        ];
+        maximum = CGFLOAT_MAX;
+        BOOL foundConnection = NO;
+        for (id value in connections) {
+            if (value == [NSNull null]) continue;
+            AVCaptureConnection *connection = value;
+            maximum = MIN(maximum, connection.videoMaxScaleAndCropFactor);
+            foundConnection = YES;
+        }
+        if (!foundConnection || maximum == CGFLOAT_MAX) maximum = 1.0;
+    }
+    if (!isfinite(maximum)) maximum = 1.0;
+    return MAX(1.0, MIN(maximum, RLVMaximumUserZoomFactor));
+}
+
+- (void)applyZoomFactorOnSessionQueue:(CGFloat)zoomFactor requestGeneration:(NSUInteger)requestGeneration
+{
+    CGFloat maximum = [self maximumZoomFactorForActiveCapturePipeline];
+    CGFloat clampedFactor = RLVClampZoomFactor(zoomFactor, maximum);
+    AVCaptureDevice *device = self.videoInput.device;
+    if (!device) {
+        [self finishZoomRequestWithAppliedFactor:self.zoomFactor maximumFactor:1.0
+                               requestGeneration:requestGeneration];
+        return;
+    }
+
+    if ([device respondsToSelector:@selector(videoZoomFactor)]) {
+        NSError *error = nil;
+        if (![device lockForConfiguration:&error]) {
+            NSLog(@"RetroLive: unable to configure zoom: %@", [error localizedDescription]);
+            [self finishZoomRequestWithAppliedFactor:self.zoomFactor maximumFactor:maximum
+                                   requestGeneration:requestGeneration];
+            return;
+        }
+        device.videoZoomFactor = clampedFactor;
+        [device unlockForConfiguration];
+    } else {
+        NSArray *connections = @[
+            self.previewLayer.connection ?: [NSNull null],
+            [self.stillImageOutput connectionWithMediaType:AVMediaTypeVideo] ?: [NSNull null],
+            [self.movieFileOutput connectionWithMediaType:AVMediaTypeVideo] ?: [NSNull null]
+        ];
+        for (id value in connections) {
+            if (value == [NSNull null]) continue;
+            AVCaptureConnection *connection = value;
+            connection.videoScaleAndCropFactor = MIN(clampedFactor, connection.videoMaxScaleAndCropFactor);
+        }
+    }
+    self.maximumZoomFactor = maximum;
+    self.zoomFactor = clampedFactor;
+    [self finishZoomRequestWithAppliedFactor:clampedFactor maximumFactor:maximum
+                           requestGeneration:requestGeneration];
+}
+
+- (void)finishZoomRequestWithAppliedFactor:(CGFloat)zoomFactor
+                             maximumFactor:(CGFloat)maximumFactor
+                          requestGeneration:(NSUInteger)requestGeneration
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!RLVZoomRequestGenerationIsCurrent(requestGeneration, self.zoomRequestGeneration)) return;
+        self.requestedZoomFactor = zoomFactor;
+        if ([self.delegate respondsToSelector:@selector(captureController:didChangeZoomFactor:maximumZoomFactor:requestGeneration:)]) {
+            [self.delegate captureController:self didChangeZoomFactor:zoomFactor
+                           maximumZoomFactor:maximumFactor
+                            requestGeneration:requestGeneration];
+        }
+    });
+}
+
 - (void)focusAndExposeAtDevicePoint:(CGPoint)devicePoint
                          completion:(void (^)(RLVPointOfInterestResult result))completion
 {
@@ -812,7 +985,11 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
 @synthesize audioInput = _audioInput;
 @synthesize previewLayer = _previewLayer;
 @synthesize cameraPosition = _cameraPosition;
+@synthesize switchingCamera = _switchingCamera;
 @synthesize flashMode = _flashMode;
+@synthesize zoomFactor = _zoomFactor;
+@synthesize requestedZoomFactor = _requestedZoomFactor;
+@synthesize maximumZoomFactor = _maximumZoomFactor;
 @synthesize rollingURL = _rollingURL;
 @synthesize rollingStartedAt = _rollingStartedAt;
 @synthesize pendingEvent = _pendingEvent;
@@ -825,5 +1002,10 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
 @synthesize orientationRestartPending = _orientationRestartPending;
 @synthesize motionCaptureEnabled = _motionCaptureEnabled;
 @synthesize pendingMotionRequested = _pendingMotionRequested;
+@synthesize pendingZoomFactor = _pendingZoomFactor;
+@synthesize pendingZoomRequestGeneration = _pendingZoomRequestGeneration;
+@synthesize zoomUpdateScheduled = _zoomUpdateScheduled;
+@synthesize zoomRequestGeneration = _zoomRequestGeneration;
+@synthesize cameraSwitchZoomRequestGeneration = _cameraSwitchZoomRequestGeneration;
 
 @end

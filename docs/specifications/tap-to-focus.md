@@ -33,9 +33,9 @@ The shared camera implements this path:
 4. `RLVCaptureController` serializes the request on its session queue, configures
    supported focus and exposure independently while holding the device lock, and
    reports the accepted capabilities to the UI.
-5. The shared camera UI shows one clipped yellow reticle only for an accepted
-   request. Camera switching, capture, and leaving the view invalidate pending
-   reticle feedback.
+5. The shared camera UI shows one clipped yellow reticle immediately after a
+   geometrically valid tap. A rejected device request dismisses it; camera
+   switching, capture, and leaving the view invalidate pending feedback.
 6. Subject-area changes, camera switching, interruption recovery, and session
    restart restore centered continuous automatic behavior.
 
@@ -96,7 +96,8 @@ Swift-only APIs into the shared implementation.
 - Center a square reticle on the accepted tap and keep it clipped to the visible
   preview-layer frame. Suggested provisional size: 72 points with a 1-point
   yellow stroke.
-- Start slightly enlarged, animate to its normal size in about 0.15 seconds,
+- Start immediately after a valid preview tap, slightly enlarged, then animate
+  to its normal size in about 0.15 seconds,
   hold briefly, then fade out. A newer tap cancels the previous animation and
   moves the same view; do not accumulate reticle views.
 - The reticle must not intercept touches and must stay above the preview layer

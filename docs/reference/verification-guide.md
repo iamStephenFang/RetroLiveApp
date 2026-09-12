@@ -44,6 +44,7 @@ parallel, use separate `-derivedDataPath` values to avoid build-database locking
 | Manifest V1 and parser agreement | `python3 tools/test-manifest-fixtures/run.py` | [Protocol V1](protocol-v1.md) and shared fixture catalog |
 | Camera asset transactions and capture | `tools/test-asset-store/main.m`; both camera source builds | [Capture and Storage](../specifications/capture-and-storage.md) |
 | Tap to focus and exposure | Both camera source builds and focused seams | [Tap to Focus](../specifications/tap-to-focus.md) |
+| Camera pinch zoom | Both camera source builds and focused seams | [Camera Zoom](../specifications/camera-zoom.md) |
 | Camera layout fidelity | Screenshot and overlay record | [Camera UI Measurements](../specifications/camera-ui-measurements.md) |
 | Asset detail paging, zoom, and motion preview | Both camera source builds | [Asset Preview Paging](../specifications/asset-preview-paging.md) |
 | Read-only LAN service | `tools/test-transfer-router/main.m` | [LAN Transfer](../specifications/lan-transfer.md) |

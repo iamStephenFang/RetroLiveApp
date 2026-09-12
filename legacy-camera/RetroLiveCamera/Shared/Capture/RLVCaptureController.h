@@ -33,7 +33,13 @@ typedef NS_OPTIONS(NSUInteger, RLVPointOfInterestResult) {
 /// Layer attached to the current session; it may be replaced during foreground recovery.
 @property (nonatomic, strong, readonly) AVCaptureVideoPreviewLayer *previewLayer;
 @property (nonatomic, assign, readonly) AVCaptureDevicePosition cameraPosition;
+@property (nonatomic, assign, readonly, getter=isSwitchingCamera) BOOL switchingCamera;
 @property (nonatomic, assign, readonly) AVCaptureFlashMode flashMode;
+/// Committed magnification and the effective limit for the active camera.
+@property (nonatomic, assign, readonly) CGFloat zoomFactor;
+/// Latest clamped target requested on the main thread.
+@property (nonatomic, assign, readonly) CGFloat requestedZoomFactor;
+@property (nonatomic, assign, readonly) CGFloat maximumZoomFactor;
 @property (nonatomic, assign, readonly, getter=isRecordingMotion) BOOL recordingMotion;
 /// Whether rolling motion should accompany stills when the device supports it.
 @property (nonatomic, assign, getter=isMotionCaptureEnabled) BOOL motionCaptureEnabled;
@@ -65,6 +71,10 @@ typedef NS_OPTIONS(NSUInteger, RLVPointOfInterestResult) {
 - (void)switchCamera;
 /// Applies a supported flash mode to the active camera; unsupported modes are ignored.
 - (void)setFlashMode:(AVCaptureFlashMode)flashMode;
+/// Requests a continuous capture-pipeline zoom update. Values are clamped to
+/// the active camera's effective range and device work is coalesced. Returns a
+/// generation that identifies the eventual applied-factor delegate callback.
+- (NSUInteger)requestZoomFactor:(CGFloat)zoomFactor;
 /// Requests focus and exposure at an AVFoundation device-coordinate point in the unit square.
 /// The completion value identifies which independently supported operations were applied.
 ///
@@ -81,6 +91,10 @@ typedef NS_OPTIONS(NSUInteger, RLVPointOfInterestResult) {
 /// Reports lifecycle changes on the main thread.
 - (void)captureController:(RLVCaptureController *)controller didChangeState:(RLVCaptureState)state;
 - (void)captureController:(RLVCaptureController *)controller didChangeCameraPosition:(AVCaptureDevicePosition)position;
+- (void)captureController:(RLVCaptureController *)controller
+       didChangeZoomFactor:(CGFloat)zoomFactor
+         maximumZoomFactor:(CGFloat)maximumZoomFactor
+          requestGeneration:(NSUInteger)requestGeneration;
 - (void)captureController:(RLVCaptureController *)controller didChangeMotionCaptureEnabled:(BOOL)enabled;
 /// Delivers capture output for validation and permanent storage; motionURL may be nil.
 - (void)captureController:(RLVCaptureController *)controller

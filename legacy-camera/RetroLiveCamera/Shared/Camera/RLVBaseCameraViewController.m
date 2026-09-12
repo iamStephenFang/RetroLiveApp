@@ -4,6 +4,7 @@
 #import "RLVLibraryTabBarController.h"
 #import "RLVLayout.h"
 #import "RLVShutterButton.h"
+#import "RLVZoomMath.h"
 #import <ImageIO/ImageIO.h>
 #import <QuartzCore/QuartzCore.h>
 #import <math.h>
@@ -22,7 +23,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 
 @end
 
-@interface RLVBaseCameraViewController () <UIAlertViewDelegate>
+@interface RLVBaseCameraViewController () <UIAlertViewDelegate, UIGestureRecognizerDelegate>
 @property (nonatomic, strong) RLVCaptureController *captureController;
 @property (nonatomic, strong) RLVCameraOrientationCoordinator *orientationCoordinator;
 @property (nonatomic, strong, readwrite) RLVDeviceCapabilities *capabilities;
@@ -30,6 +31,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 @property (nonatomic, strong) UIView *liveCaptureIndicator;
 @property (nonatomic, strong) UIView *focusOverlayView;
 @property (nonatomic, strong) UIView *focusReticleView;
+@property (nonatomic, strong) UILabel *zoomIndicatorLabel;
 @property (nonatomic, assign, getter=isViewVisible) BOOL viewVisible;
 @property (nonatomic, assign) NSUInteger focusRequestGeneration;
 @property (nonatomic, copy) NSString *thumbnailRequestAssetId;
@@ -38,9 +40,15 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 @property (nonatomic, assign, getter=isSavingAsset) BOOL savingAsset;
 @property (nonatomic, strong) UIAlertView *errorAlertView;
 @property (nonatomic, strong) UITapGestureRecognizer *focusTapGestureRecognizer;
+@property (nonatomic, strong) UITapGestureRecognizer *zoomDoubleTapGestureRecognizer;
+@property (nonatomic, strong) UIPinchGestureRecognizer *zoomPinchGestureRecognizer;
+@property (nonatomic, assign) CGFloat previousPinchScale;
+@property (nonatomic, assign, getter=isZoomGestureActive) BOOL zoomGestureActive;
+@property (nonatomic, assign) NSUInteger zoomDiscreteFeedbackGeneration;
 - (void)attachPreviewLayerIfNeeded;
 - (void)updatePreviewFrame;
 - (void)updateLiveCaptureIndicatorLayout;
+- (void)updateZoomIndicatorLayout;
 - (void)configureCameraActions;
 - (BOOL)isCameraInteractionAvailable;
 - (void)updateCameraControls;
@@ -48,6 +56,9 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 - (void)requestFocusAtPreviewPoint:(CGPoint)point;
 - (void)showFocusReticleAtPreviewPoint:(CGPoint)point;
 - (void)hideFocusReticle;
+- (void)configureZoomIndicator;
+- (void)showZoomIndicator;
+- (void)hideZoomIndicator;
 - (void)updateThumbnail;
 - (void)loadThumbnailForAsset:(RLVAsset *)asset generation:(NSUInteger)generation retry:(BOOL)retry;
 @end
@@ -76,6 +87,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     RLVPinViewToEdges(self.shutterOverlay, self.previewView);
     [self configureFocusReticle];
     [self configureLiveCaptureIndicator];
+    [self configureZoomIndicator];
 
     __weak RLVBaseCameraViewController *controller = self;
     [self.captureController prepareWithCompletion:^(NSError *error) {
@@ -113,6 +125,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
     self.focusRequestGeneration += 1;
     [self hideFocusReticle];
+    [self hideZoomIndicator];
     [self.captureController stopRunning];
 }
 
@@ -139,6 +152,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     [super viewDidLayoutSubviews];
     [self updatePreviewFrame];
     [self updateLiveCaptureIndicatorLayout];
+    [self updateZoomIndicatorLayout];
 }
 
 - (void)updatePreviewFrame
@@ -203,7 +217,19 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     [self updateLivePhotoButton];
     [self updateAspectRatioButton];
     self.focusTapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(previewTapped:)];
+    self.focusTapGestureRecognizer.numberOfTouchesRequired = 1;
+    self.focusTapGestureRecognizer.delegate = self;
     [self.previewView addGestureRecognizer:self.focusTapGestureRecognizer];
+    self.zoomDoubleTapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
+        action:@selector(previewDoubleTapped:)];
+    self.zoomDoubleTapGestureRecognizer.numberOfTapsRequired = 2;
+    self.zoomDoubleTapGestureRecognizer.numberOfTouchesRequired = 1;
+    self.zoomDoubleTapGestureRecognizer.delegate = self;
+    [self.previewView addGestureRecognizer:self.zoomDoubleTapGestureRecognizer];
+    [self.focusTapGestureRecognizer requireGestureRecognizerToFail:self.zoomDoubleTapGestureRecognizer];
+    self.zoomPinchGestureRecognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(previewPinched:)];
+    self.zoomPinchGestureRecognizer.delegate = self;
+    [self.previewView addGestureRecognizer:self.zoomPinchGestureRecognizer];
     self.previewView.isAccessibilityElement = YES;
     self.previewView.accessibilityTraits = UIAccessibilityTraitButton;
     self.previewView.accessibilityLabel = NSLocalizedString(@"camera.preview", nil);
@@ -215,7 +241,8 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 
 - (BOOL)isCameraInteractionAvailable
 {
-    return self.captureController.state == RLVCaptureStateRunning && !self.isSavingAsset;
+    return self.captureController.state == RLVCaptureStateRunning &&
+        !self.captureController.isSwitchingCamera && !self.isSavingAsset;
 }
 
 - (void)updateCameraControls
@@ -229,6 +256,8 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     self.flashButton.enabled = available;
     self.aspectRatioButton.enabled = available;
     self.focusTapGestureRecognizer.enabled = available;
+    self.zoomDoubleTapGestureRecognizer.enabled = available && self.captureController.maximumZoomFactor > 1.0;
+    self.zoomPinchGestureRecognizer.enabled = available && self.captureController.maximumZoomFactor > 1.0;
     self.previewView.accessibilityTraits = UIAccessibilityTraitButton |
         (available ? 0 : UIAccessibilityTraitNotEnabled);
 }
@@ -281,6 +310,37 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     NSMutableArray *rotating = [NSMutableArray arrayWithArray:self.rotatingControls ?: [NSArray array]];
     [rotating addObject:self.liveCaptureIndicator];
     self.rotatingControls = rotating;
+}
+
+- (void)configureZoomIndicator
+{
+    self.zoomIndicatorLabel = [[UILabel alloc] initWithFrame:CGRectMake(0.0, 0.0, 36.0, 36.0)];
+    self.zoomIndicatorLabel.backgroundColor = [UIColor colorWithWhite:0.05 alpha:0.72];
+    self.zoomIndicatorLabel.textColor = [UIColor colorWithRed:1.0 green:0.80 blue:0.0 alpha:1.0];
+    self.zoomIndicatorLabel.font = [UIFont boldSystemFontOfSize:12.0];
+    self.zoomIndicatorLabel.textAlignment = NSTextAlignmentCenter;
+    self.zoomIndicatorLabel.layer.cornerRadius = 18.0;
+    self.zoomIndicatorLabel.clipsToBounds = YES;
+    self.zoomIndicatorLabel.userInteractionEnabled = NO;
+    self.zoomIndicatorLabel.hidden = YES;
+    self.zoomIndicatorLabel.isAccessibilityElement = YES;
+    self.zoomIndicatorLabel.accessibilityLabel = NSLocalizedString(@"camera.zoom", nil);
+    [self.previewView addSubview:self.zoomIndicatorLabel];
+    [self updateZoomIndicatorLayout];
+
+    NSMutableArray *rotating = [NSMutableArray arrayWithArray:self.rotatingControls ?: [NSArray array]];
+    [rotating addObject:self.zoomIndicatorLabel];
+    self.rotatingControls = rotating;
+}
+
+- (void)updateZoomIndicatorLayout
+{
+    if (!self.zoomIndicatorLabel) return;
+    CGRect previewFrame = self.captureController.previewLayer.frame;
+    if (CGRectIsEmpty(previewFrame)) previewFrame = self.previewView.bounds;
+    CGFloat edgeInset = 18.0 + CGRectGetHeight(self.zoomIndicatorLabel.bounds) * 0.5;
+    self.zoomIndicatorLabel.center = CGPointMake(
+        CGRectGetMidX(previewFrame), CGRectGetMaxY(previewFrame) - edgeInset);
 }
 
 - (void)updateLiveCaptureIndicatorLayout
@@ -399,6 +459,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     self.focusRequestGeneration += 1;
     [self hideFocusReticle];
     [self.captureController switchCamera];
+    [self updateCameraControls];
 }
 
 - (void)flashPressed:(id)sender
@@ -417,6 +478,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     (void)controller;
     self.flashButton.hidden = position != AVCaptureDevicePositionBack || !self.capabilities.supportsFlash;
     [self updateFlashButton];
+    [self updateCameraControls];
 }
 
 - (void)captureController:(RLVCaptureController *)controller didChangeMotionCaptureEnabled:(BOOL)enabled
@@ -445,7 +507,94 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 
 - (void)previewTapped:(UITapGestureRecognizer *)recognizer
 {
+    if (self.isZoomGestureActive) return;
     [self requestFocusAtPreviewPoint:[recognizer locationInView:self.previewView]];
+}
+
+- (void)previewDoubleTapped:(UITapGestureRecognizer *)recognizer
+{
+    if (![self isCameraInteractionAvailable]) return;
+    CGPoint point = [recognizer locationInView:self.previewView];
+    if (!CGRectContainsPoint(self.captureController.previewLayer.frame, point)) return;
+
+    CGFloat targetFactor = RLVZoomFactorForDoubleTap(self.captureController.requestedZoomFactor,
+        self.captureController.maximumZoomFactor);
+    self.focusRequestGeneration += 1;
+    [self hideFocusReticle];
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideZoomIndicator) object:nil];
+    self.zoomDiscreteFeedbackGeneration = [self.captureController requestZoomFactor:targetFactor];
+}
+
+- (void)previewPinched:(UIPinchGestureRecognizer *)recognizer
+{
+    if (![self isCameraInteractionAvailable]) return;
+    CGPoint point = [recognizer locationInView:self.previewView];
+    CGRect previewFrame = self.captureController.previewLayer.frame;
+    if (recognizer.state == UIGestureRecognizerStateBegan) {
+        if (!CGRectContainsPoint(previewFrame, point)) {
+            recognizer.enabled = NO;
+            recognizer.enabled = YES;
+            return;
+        }
+        [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideZoomIndicator) object:nil];
+        self.zoomGestureActive = YES;
+        self.focusRequestGeneration += 1;
+        [self hideFocusReticle];
+        self.previousPinchScale = recognizer.scale;
+    }
+    if (recognizer.state == UIGestureRecognizerStateBegan ||
+        recognizer.state == UIGestureRecognizerStateChanged) {
+        CGFloat scaleDelta = self.previousPinchScale > 0.0
+            ? recognizer.scale / self.previousPinchScale : 1.0;
+        CGFloat requestedFactor = RLVZoomFactorForGesture(
+            self.captureController.requestedZoomFactor, scaleDelta,
+            self.captureController.maximumZoomFactor);
+        [self.captureController requestZoomFactor:requestedFactor];
+        self.previousPinchScale = recognizer.scale;
+    }
+    if (recognizer.state == UIGestureRecognizerStateEnded ||
+        recognizer.state == UIGestureRecognizerStateCancelled ||
+        recognizer.state == UIGestureRecognizerStateFailed) {
+        self.zoomGestureActive = NO;
+        if (!RLVZoomFactorRequiresPersistentFeedback(self.captureController.zoomFactor)) {
+            [NSObject cancelPreviousPerformRequestsWithTarget:self
+                                                     selector:@selector(hideZoomIndicator)
+                                                       object:nil];
+            [self performSelector:@selector(hideZoomIndicator) withObject:nil afterDelay:0.75];
+        }
+    }
+}
+
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
+{
+    if (gestureRecognizer == self.focusTapGestureRecognizer ||
+        gestureRecognizer == self.zoomDoubleTapGestureRecognizer) return !self.isZoomGestureActive;
+    if (gestureRecognizer == self.zoomPinchGestureRecognizer) {
+        CGPoint point = [gestureRecognizer locationInView:self.previewView];
+        return [self isCameraInteractionAvailable] &&
+            CGRectContainsPoint(self.captureController.previewLayer.frame, point);
+    }
+    return YES;
+}
+
+- (void)showZoomIndicator
+{
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideZoomIndicator) object:nil];
+    [self.zoomIndicatorLabel.layer removeAllAnimations];
+    self.zoomIndicatorLabel.hidden = NO;
+    self.zoomIndicatorLabel.alpha = 1.0;
+}
+
+- (void)hideZoomIndicator
+{
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideZoomIndicator) object:nil];
+    self.zoomGestureActive = NO;
+    self.zoomDiscreteFeedbackGeneration = 0;
+    if (self.zoomIndicatorLabel.hidden) return;
+    [UIView animateWithDuration:0.18 animations:^{ self.zoomIndicatorLabel.alpha = 0.0; }
+                     completion:^(BOOL finished) {
+        if (finished) self.zoomIndicatorLabel.hidden = YES;
+    }];
 }
 
 - (BOOL)focusPreviewViewDidRequestCenterFocus:(RLVFocusPreviewView *)previewView
@@ -472,12 +621,13 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
         devicePoint.y < 0.0 || devicePoint.y > 1.0) return;
 
     NSUInteger requestGeneration = ++self.focusRequestGeneration;
+    [self showFocusReticleAtPreviewPoint:point];
     __weak RLVBaseCameraViewController *controller = self;
     [self.captureController focusAndExposeAtDevicePoint:devicePoint
                                              completion:^(RLVPointOfInterestResult result) {
         if (!controller || requestGeneration != controller.focusRequestGeneration ||
-            result == RLVPointOfInterestResultNone || !controller.isViewVisible) return;
-        [controller showFocusReticleAtPreviewPoint:point];
+            !controller.isViewVisible) return;
+        if (result == RLVPointOfInterestResultNone) [controller hideFocusReticle];
     }];
 }
 
@@ -530,6 +680,29 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     }
 }
 
+- (void)captureController:(RLVCaptureController *)controller
+       didChangeZoomFactor:(CGFloat)zoomFactor
+         maximumZoomFactor:(CGFloat)maximumZoomFactor
+          requestGeneration:(NSUInteger)requestGeneration
+{
+    (void)controller;
+    (void)maximumZoomFactor;
+    self.zoomIndicatorLabel.text = [NSString stringWithFormat:@"%.1f\u00d7", zoomFactor];
+    self.zoomIndicatorLabel.accessibilityValue = [NSString stringWithFormat:
+        NSLocalizedString(@"camera.zoom.value", nil), zoomFactor];
+    BOOL persistentFeedback = RLVZoomFactorRequiresPersistentFeedback(zoomFactor);
+    if (self.isZoomGestureActive || persistentFeedback) {
+        self.zoomDiscreteFeedbackGeneration = 0;
+        [self showZoomIndicator];
+    } else if (!self.zoomIndicatorLabel.hidden ||
+               (self.zoomDiscreteFeedbackGeneration == requestGeneration && requestGeneration > 0)) {
+        self.zoomDiscreteFeedbackGeneration = 0;
+        [self showZoomIndicator];
+        [self performSelector:@selector(hideZoomIndicator) withObject:nil afterDelay:0.75];
+    }
+    [self updateCameraControls];
+}
+
 - (void)captureController:(RLVCaptureController *)controller didCapturePhotoData:(NSData *)photoData motionURL:(NSURL *)motionURL event:(RLVCaptureEvent *)event
 {
     (void)controller;
@@ -552,6 +725,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 - (void)captureController:(RLVCaptureController *)controller didFailWithError:(NSError *)error
 {
     (void)controller;
+    [self updateCameraControls];
     [self showError:error];
 }
 
@@ -563,6 +737,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     [UIView animateWithDuration:0.22 animations:^{
         for (UIView *control in self.rotatingControls) control.transform = transform;
         [self updateLiveCaptureIndicatorLayout];
+        [self updateZoomIndicatorLayout];
     }];
 }
 

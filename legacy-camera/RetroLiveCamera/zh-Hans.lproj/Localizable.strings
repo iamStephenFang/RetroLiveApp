@@ -13,7 +13,9 @@
 "camera.shutter" = "快门";
 "camera.switch" = "切换相机";
 "camera.preview" = "相机取景画面";
-"camera.focus.hint" = "轻点两下以调整画面中央的对焦和曝光。";
+"camera.focus.hint" = "轻点两下以调整画面中央的对焦和曝光。双指捏合可缩放画面。";
+"camera.zoom" = "缩放";
+"camera.zoom.value" = "%.1f 倍";
 "asset.unknown_device" = "未知设备";
 "asset.share" = "分享";
 "asset.info" = "照片信息";

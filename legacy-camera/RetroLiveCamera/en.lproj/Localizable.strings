@@ -13,7 +13,9 @@
 "camera.shutter" = "Shutter";
 "camera.switch" = "Switch Camera";
 "camera.preview" = "Camera preview";
-"camera.focus.hint" = "Double tap to adjust focus and exposure at the center.";
+"camera.focus.hint" = "Double tap to adjust focus and exposure at the center. Pinch with two fingers to zoom.";
+"camera.zoom" = "Zoom";
+"camera.zoom.value" = "%.1f times";
 "asset.unknown_device" = "Unknown device";
 "asset.share" = "Share";
 "asset.info" = "Photo Information";

@@ -13,7 +13,9 @@
 "camera.shutter" = "快門";
 "camera.switch" = "切換相機";
 "camera.preview" = "相機取景畫面";
-"camera.focus.hint" = "點兩下以調整畫面中央的對焦和曝光。";
+"camera.focus.hint" = "點兩下以調整畫面中央的對焦和曝光。雙指撥動可縮放畫面。";
+"camera.zoom" = "縮放";
+"camera.zoom.value" = "%.1f 倍";
 "asset.unknown_device" = "未知裝置";
 "asset.share" = "分享";
 "asset.info" = "相片資訊";
