@@ -95,6 +95,7 @@ printf 'Synchronizing the local build script and its example config.\n'
     cd "$REPOSITORY_ROOT" || exit 1
     run_rsync -iR \
         scripts/legacy-build.sh \
+    scripts/legacy-package.sh \
         scripts/legacy-build.env.example \
         "$RETROLIVE_SYNC_REMOTE:$RETROLIVE_SYNC_ROOT/"
 ) || fail "build-script synchronization failed"

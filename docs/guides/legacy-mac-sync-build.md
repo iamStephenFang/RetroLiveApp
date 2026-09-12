@@ -12,13 +12,16 @@ Mac with OS X Mavericks and Xcode 6.2 for authentic legacy builds:
 ```text
 Modern Mac: edit and run legacy-sync.sh
     -> SSH transport and rsync
-Legacy Mac: run legacy-build.sh locally
-    -> Xcode 6.2 Product > Run
-iPhone: install over USB
+Legacy Mac: choose one local workflow
+    -> Xcode Product > Run -> USB iPhone
+    -> legacy-package.sh -> unsigned IPA and metadata
+Modern Mac: legacy-package-fetch.sh -> rsync artifacts back
+GitHub release: upload manually
 ```
 
-The modern Mac does not remotely execute `xcodebuild`, install an application,
-or launch the iPhone. The only network operation is the one-way file sync. Read
+The run workflow and package workflow are separate. The modern Mac may invoke
+the package script remotely to produce a release artifact, but it never
+remotely installs an application or launches the iPhone. Read
 [`ios-6-build-environment.md`](ios-6-build-environment.md) for the distinction
 between current-SDK checks, archived-toolchain builds, and physical-device
 acceptance.
@@ -45,6 +48,8 @@ Public repository files:
 scripts/legacy-sync.sh               # run on the modern Mac
 scripts/legacy-sync.env.example
 scripts/legacy-build.sh              # run locally on the legacy Mac
+scripts/legacy-package.sh            # run locally on the legacy Mac
+scripts/legacy-package-fetch.sh      # run on the modern Mac
 scripts/legacy-build.env.example
 scripts/legacy-rsync-excludes.txt
 ```
@@ -62,9 +67,10 @@ or `jq` on the legacy Mac.
 
 ## 1. Prepare SSH
 
-On the legacy Mac, create a dedicated standard user such as
-`retrolive-builder`. Enable **System Preferences > Sharing > Remote Login** only
-for that user. Give the Mac a stable DHCP address or `.local` hostname.
+On the legacy Mac, use a dedicated standard user when possible. Enable
+**System Preferences > Sharing > Remote Login** only for that user. Give the
+Mac a stable DHCP address or `.local` hostname. The examples below use
+`your-user`; replace it with the actual account name on the legacy Mac.
 
 Create a dedicated key on the modern Mac:
 
@@ -77,7 +83,7 @@ Install only its public key for the build user, then configure the modern Mac:
 ```sshconfig
 Host retrolive-air
     HostName 192.168.1.50
-    User retrolive-builder
+    User your-user
     IdentityFile ~/.ssh/retrolive-air
     IdentitiesOnly yes
     ControlMaster auto
@@ -122,7 +128,7 @@ ssh -v retrolive-air /usr/bin/sw_vers
 On the legacy Mac, create the destination once:
 
 ```sh
-mkdir -p /Users/retrolive-builder/BuildMirror/RetroLive
+mkdir -p /Users/your-user/Developer/RetroLive
 ```
 
 This must be a dedicated directory. The sync script uses `rsync --delete` inside
@@ -142,7 +148,7 @@ Edit the private file:
 
 ```sh
 RETROLIVE_SYNC_REMOTE=retrolive-air
-RETROLIVE_SYNC_ROOT=/Users/retrolive-builder/BuildMirror/RetroLive
+RETROLIVE_SYNC_ROOT=/Users/your-user/Developer/RetroLive
 ```
 
 The root must be absolute, at least three path components deep, contain no
@@ -172,7 +178,7 @@ data.
 On the legacy Mac:
 
 ```sh
-cd /Users/retrolive-builder/BuildMirror/RetroLive
+cd /Users/your-user/Developer/RetroLive
 cp scripts/legacy-build.env.example .retrolive-legacy-build.env
 chmod 600 .retrolive-legacy-build.env
 ```
@@ -181,8 +187,10 @@ For an unsigned compile check:
 
 ```sh
 RETROLIVE_DEVELOPER_DIR='/Applications/Xcode 6.2.app/Contents/Developer'
-RETROLIVE_DERIVED_DATA=/Users/retrolive-builder/BuildData/RetroLive
+RETROLIVE_DERIVED_DATA=/Users/your-user/Library/Developer/Xcode/DerivedData
+RETROLIVE_PACKAGE_ROOT=/Users/your-user/Developer/RetroLive/Artifacts
 RETROLIVE_CONFIGURATION=Debug
+RETROLIVE_PACKAGE_CONFIGURATION=Release
 RETROLIVE_CODE_SIGNING_ALLOWED=NO
 RETROLIVE_SIGNING_XCCONFIG=
 ```
@@ -211,8 +219,8 @@ Build the Classic camera:
 ```
 
 The script invokes the selected archived Xcode directly and keeps Derived Data
-outside the synchronized source tree. Each scheme uses a separate child
-directory so their Xcode build databases cannot collide.
+under the user's standard Xcode data directory. Each scheme uses a separate
+child directory so their Xcode build databases cannot collide.
 
 Build both schemes sequentially:
 
@@ -220,7 +228,37 @@ Build both schemes sequentially:
 ./scripts/legacy-build.sh build all
 ```
 
-## 6. Configure signing and run on iPhone
+## 6. Create and fetch an unsigned IPA
+
+For a GitHub release, the archived Mac can create a standard IPA container
+without a certificate, private key, or provisioning profile. The resulting
+application is not installable as-is on a physical iPhone; whoever installs it
+must sign it for the target device or use an appropriate sideloading workflow.
+
+Set the same artifact path in both private configuration files:
+
+```sh
+# .retrolive-legacy-build.env on the legacy Mac
+RETROLIVE_PACKAGE_ROOT=/Users/your-user/Developer/RetroLive/Artifacts/Legacy
+
+# .retrolive-legacy-sync.env on the modern Mac
+RETROLIVE_REMOTE_PACKAGE_ROOT=/Users/your-user/Developer/RetroLive/Artifacts
+RETROLIVE_LOCAL_PACKAGE_ROOT=Artifacts
+```
+
+After synchronizing the source, run this on the modern Mac:
+
+```sh
+./scripts/legacy-package-fetch.sh RetroLiveCamera
+```
+
+The command invokes the package script over SSH and fetches the IPA, SHA-256
+file, and build metadata into `Artifacts/Legacy/`. Build both legacy targets
+with `./scripts/legacy-package-fetch.sh all`. The package script always passes
+`CODE_SIGNING_ALLOWED=NO` and `CODE_SIGNING_REQUIRED=NO`; it assembles the IPA
+as `Payload/<App>.app` and validates the ZIP before writing the checksum.
+
+## 7. Run on a physical iPhone (separate from packaging)
 
 The Debug project settings intentionally disable signing for compile-only
 checks. A physical-device build needs a valid development certificate and
@@ -239,12 +277,15 @@ Then set:
 
 ```sh
 RETROLIVE_CODE_SIGNING_ALLOWED=YES
-RETROLIVE_SIGNING_XCCONFIG=/Users/retrolive-builder/RetroLivePrivate/LegacySigning.xcconfig
+RETROLIVE_SIGNING_XCCONFIG=/Users/your-user/Developer/RetroLivePrivate/LegacySigning.xcconfig
 ```
 
-Run `doctor` and `build` again. Finally, open the synchronized Xcode project on
-the legacy Mac, select the USB-connected iPhone, and use **Product > Run**. The
-scripts intentionally do not automate installation or launch yet.
+Run `doctor` and `build` again if you want a command-line build check. Then,
+separately, open the synchronized Xcode project on the legacy Mac, select the
+USB-connected iPhone, and use **Product > Run**. This Xcode action builds,
+signs, installs, and launches the app for device testing; it does not consume
+or produce the unsigned GitHub-release IPA. The scripts intentionally do not
+automate device installation or launch.
 
 ## Troubleshooting
 
