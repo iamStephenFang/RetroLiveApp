@@ -236,8 +236,11 @@ git diff --check
 
 协议更改应该从问题开始，以便可以在实现前同意兼容性和测试数据变化。保持拉取请求的范围限制，保留传统设备兼容性，并使用行为更改更新文档和测试目录。
 
-仓库尚未包含单独的 `CONTRIBUTING.md`、`CODE_OF_CONDUCT.md` 或 `SECURITY.md` 文件。在扩大公开贡献者社区前应添加这些文件。
+提出更改前请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请按照
+[SECURITY.md](SECURITY.md) 中的私下报告流程提交，不要在公开 Issue 中附上漏洞细节或个人媒体。
 
 ## 许可证
 
-尚未添加开源许可证。在仓库所有者选择并添加许可证之前，源代码是公开可见的，但未授予使用、修改或重新分发的权限。在将 RetroLive 作为开源版本发布前添加符合 OSI 的许可证。
+RetroLive 的原创源代码和文档采用 [MIT License](LICENSE) 开源。
+
+第三方材料不会自动纳入 MIT License。特别是 Apple 系统界面图像适用单独的许可条款，详见[第三方声明](THIRD_PARTY_NOTICES.md)。

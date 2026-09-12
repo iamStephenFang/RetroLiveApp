@@ -30,6 +30,7 @@
 		A10000000000000000000033 /* MediaViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000033 /* MediaViews.swift */; };
 		A10000000000000000000034 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000034 /* SettingsView.swift */; };
 		A10000000000000000000035 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000035 /* OnboardingView.swift */; };
+		A10000000000000000000036 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000036 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,6 +73,7 @@
 		A20000000000000000000033 /* MediaViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaViews.swift; sourceTree = "<group>"; };
 		A20000000000000000000034 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A20000000000000000000035 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A20000000000000000000036 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,6 +115,7 @@
 				A20000000000000000000020 /* Assets.xcassets */,
 				A4000000000000000000001A /* Localizable.strings */,
 				A4000000000000000000001B /* InfoPlist.strings */,
+				A20000000000000000000036 /* PrivacyInfo.xcprivacy */,
 			);
 			path = RetroLiveImporter;
 			sourceTree = "<group>";
@@ -281,6 +284,7 @@
 				A10000000000000000000020 /* Assets.xcassets in Resources */,
 				A10000000000000000000021 /* Localizable.strings in Resources */,
 				A10000000000000000000022 /* InfoPlist.strings in Resources */,
+				A10000000000000000000036 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

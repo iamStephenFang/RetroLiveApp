@@ -240,8 +240,12 @@ Bug reports and focused pull requests are welcome through [GitHub Issues](https:
 
 Protocol changes should start with an issue so compatibility and fixture changes can be agreed before implementation. Keep pull requests scoped, preserve legacy-device compatibility, and update the documentation and test catalog with behavior changes.
 
-The repository does not yet include separate `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, or `SECURITY.md` files. These should be added before growing a public contributor community.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing a change. Report
+security issues through the private process in [SECURITY.md](SECURITY.md), not
+through a public issue containing exploit details or personal media.
 
 ## License
 
-No open-source license has been added yet. Until the repository owner selects and adds one, the source is publicly visible but no permission to use, modify, or redistribute it is granted. Add an OSI-approved license before presenting RetroLive as an open-source release.
+RetroLive's original source code and documentation are available under the [MIT License](LICENSE).
+
+Third-party materials are not automatically covered by the MIT License. In particular, Apple system-provided interface images have separate license terms; see [Third-Party Notices](THIRD_PARTY_NOTICES.md).
