@@ -233,7 +233,9 @@ static NSInteger const RLVBatchDeleteConfirmationAlertTag = 920;
     RLVAsset *asset = [self.assets objectAtIndex:indexPath.item];
     BOOL preservesAspectRatio = RLVLibraryPreservesThumbnailAspectRatio();
     cell.imageView.contentMode = preservesAspectRatio ? UIViewContentModeScaleAspectFit : UIViewContentModeScaleAspectFill;
-    cell.imageView.backgroundColor = preservesAspectRatio ? [UIColor blackColor] : [UIColor clearColor];
+    // Aspect-fit thumbnails should read as the photo's own outline rather than
+    // as a photo placed inside a black square tile.
+    cell.imageView.backgroundColor = [UIColor clearColor];
     UIImage *cachedImage = [self.thumbnailCache objectForKey:asset.assetId];
     cell.imageView.image = cachedImage;
     if (!cachedImage) {

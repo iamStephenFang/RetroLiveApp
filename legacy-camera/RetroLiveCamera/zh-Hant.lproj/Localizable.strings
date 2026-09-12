@@ -98,11 +98,10 @@
 "settings.section.live" = "原況相片";
 "settings.section.about" = "關於";
 "settings.library.original_ratio" = "在格狀檢視中完整顯示相片";
-"settings.library.original_ratio.footer" = "依相片原始比例顯示。無法填滿正方形縮圖的相片會保留黑邊。";
+"settings.library.original_ratio.footer" = "依相片原始比例顯示，不加入正方形黑色背景。";
 "settings.live.autoplay" = "自動播放原況相片";
 "settings.live.autoplay.footer" = "關閉後，仍可長按原況相片播放。";
 "settings.about.changes" = "更新記錄";
-"settings.about.changes.detail" = "後續版本將在此顯示更新內容。";
 "settings.about.privacy" = "隱私權政策";
-"settings.about.privacy.detail" = "相片和動態片段只儲存在 RetroLive 本機，RetroLive 不會上傳這些內容。區域網路傳輸只會在你主動開始共享時執行；停止共享後，目前的工作階段會立即失效。";
+"settings.about.website" = "官方網站";
 "settings.about.version" = "RetroLive %@（%@）";

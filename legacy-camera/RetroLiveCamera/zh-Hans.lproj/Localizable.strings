@@ -98,11 +98,10 @@
 "settings.section.live" = "实况照片";
 "settings.section.about" = "关于";
 "settings.library.original_ratio" = "网格中完整显示照片";
-"settings.library.original_ratio.footer" = "按照片原始比例显示。无法铺满方形缩略图的照片会保留黑边。";
+"settings.library.original_ratio.footer" = "按照片原始比例显示，不添加正方形黑色背景。";
 "settings.live.autoplay" = "自动播放实况照片";
 "settings.live.autoplay.footer" = "关闭后，仍可长按实况照片进行播放。";
 "settings.about.changes" = "更新日志";
-"settings.about.changes.detail" = "后续版本将在这里展示更新内容。";
 "settings.about.privacy" = "隐私政策";
-"settings.about.privacy.detail" = "照片和动态片段仅存储在 RetroLive 本地，RetroLive 不会上传这些内容。局域网传输仅在你主动开始共享时运行，停止共享后当前会话立即失效。";
+"settings.about.website" = "官方网站";
 "settings.about.version" = "RetroLive %@（%@）";

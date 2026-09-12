@@ -31,8 +31,8 @@ The importer is a system `TabView` application with three destinations:
 2. **Library** shows only Photos assets whose local identifiers are present in
    RetroLive's successful import history.
 3. **Settings** owns preview preferences, global cache usage and cleanup, system
-   access, and version details. Release notes and privacy entries remain visible
-   but have no action until their HTML destinations are available.
+   access, and version details. The About section links to the release notes,
+   privacy policy, and official RetroLive website.
 
 On iOS 26 and later, the system provides the Liquid Glass tab appearance.
 Earlier systems render the same three destinations as ordinary tabs.

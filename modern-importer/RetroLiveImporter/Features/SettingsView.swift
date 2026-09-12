@@ -43,8 +43,18 @@ struct ImporterSettingsView: View {
             }
 
             Section(L10n.text("settings.about")) {
-                placeholderLinkRow("settings.whats_new")
-                placeholderLinkRow("settings.privacy")
+                linkRow(
+                    "settings.whats_new",
+                    destination: URL(string: "https://github.com/iamStephenFang/RetroLive/releases")!
+                )
+                linkRow(
+                    "settings.privacy",
+                    destination: URL(string: "https://retrolive.pages.dev/privacy")!
+                )
+                linkRow(
+                    "settings.website",
+                    destination: URL(string: "https://retrolive.pages.dev")!
+                )
                 HStack {
                     Text(L10n.text("settings.version"))
                     Spacer()
@@ -97,13 +107,16 @@ struct ImporterSettingsView: View {
         }
     }
 
-    private func placeholderLinkRow(_ key: String) -> some View {
-        HStack {
-            Text(L10n.text(key))
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
+    private func linkRow(_ key: String, destination: URL) -> some View {
+        Link(destination: destination) {
+            HStack {
+                Text(L10n.text(key))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .foregroundStyle(.primary)
         }
     }
 }

@@ -152,6 +152,7 @@
 "settings.about" = "关于";
 "settings.whats_new" = "版本日志";
 "settings.privacy" = "隐私政策";
+"settings.website" = "官方网站";
 "settings.version" = "版本";
 "onboarding.connect.title" = "连接你的旧 iPhone";
 "onboarding.connect.description" = "在同一 Wi-Fi 网络中找到 RetroLive 相机，再输入相机上显示的配对码。";

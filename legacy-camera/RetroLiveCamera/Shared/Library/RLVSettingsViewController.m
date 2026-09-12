@@ -27,13 +27,15 @@ typedef NS_ENUM(NSInteger, RLVSettingsSection) {
 typedef NS_ENUM(NSInteger, RLVAboutRow) {
     RLVAboutRowChanges = 0,
     RLVAboutRowPrivacy,
+    RLVAboutRowWebsite,
     RLVAboutRowCount
 };
 
 @interface RLVSettingsViewController ()
 - (UITableViewCell *)switchCellWithTitle:(NSString *)title enabled:(BOOL)enabled
     action:(SEL)action reuseIdentifier:(NSString *)reuseIdentifier;
-- (void)showInformationWithTitle:(NSString *)title message:(NSString *)message;
+- (NSString *)titleForAboutRow:(RLVAboutRow)row;
+- (NSURL *)URLForAboutRow:(RLVAboutRow)row;
 @end
 
 @implementation RLVSettingsViewController
@@ -107,11 +109,27 @@ typedef NS_ENUM(NSInteger, RLVAboutRow) {
 
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"AboutCell"];
     if (!cell) cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"AboutCell"];
-    cell.textLabel.text = indexPath.row == RLVAboutRowChanges
-        ? NSLocalizedString(@"settings.about.changes", nil)
-        : NSLocalizedString(@"settings.about.privacy", nil);
+    cell.textLabel.text = [self titleForAboutRow:(RLVAboutRow)indexPath.row];
     cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     return cell;
+}
+
+- (NSString *)titleForAboutRow:(RLVAboutRow)row
+{
+    if (row == RLVAboutRowChanges) return NSLocalizedString(@"settings.about.changes", nil);
+    if (row == RLVAboutRowPrivacy) return NSLocalizedString(@"settings.about.privacy", nil);
+    return NSLocalizedString(@"settings.about.website", nil);
+}
+
+- (NSURL *)URLForAboutRow:(RLVAboutRow)row
+{
+    if (row == RLVAboutRowChanges) {
+        return [NSURL URLWithString:@"https://github.com/iamStephenFang/RetroLive/releases"];
+    }
+    if (row == RLVAboutRowPrivacy) {
+        return [NSURL URLWithString:@"https://retrolive.pages.dev/privacy"];
+    }
+    return [NSURL URLWithString:@"https://retrolive.pages.dev"];
 }
 
 - (UITableViewCell *)switchCellWithTitle:(NSString *)title enabled:(BOOL)enabled
@@ -186,20 +204,8 @@ typedef NS_ENUM(NSInteger, RLVAboutRow) {
 {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     if (indexPath.section != RLVSettingsSectionAbout) return;
-    if (indexPath.row == RLVAboutRowChanges) {
-        [self showInformationWithTitle:NSLocalizedString(@"settings.about.changes", nil)
-            message:NSLocalizedString(@"settings.about.changes.detail", nil)];
-    } else {
-        [self showInformationWithTitle:NSLocalizedString(@"settings.about.privacy", nil)
-            message:NSLocalizedString(@"settings.about.privacy.detail", nil)];
-    }
-}
-
-- (void)showInformationWithTitle:(NSString *)title message:(NSString *)message
-{
-    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:title message:message delegate:nil
-        cancelButtonTitle:NSLocalizedString(@"common.ok", nil) otherButtonTitles:nil];
-    [alert show];
+    NSURL *URL = [self URLForAboutRow:(RLVAboutRow)indexPath.row];
+    if (URL) [[UIApplication sharedApplication] openURL:URL];
 }
 
 @end
