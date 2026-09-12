@@ -188,7 +188,7 @@ For an unsigned compile check:
 ```sh
 RETROLIVE_DEVELOPER_DIR='/Applications/Xcode 6.2.app/Contents/Developer'
 RETROLIVE_DERIVED_DATA=/Users/your-user/Library/Developer/Xcode/DerivedData
-RETROLIVE_PACKAGE_ROOT=/Users/your-user/Developer/RetroLive/Artifacts
+RETROLIVE_PACKAGE_ROOT=/Users/your-user/Developer/RetroLive/artifacts
 RETROLIVE_CONFIGURATION=Debug
 RETROLIVE_PACKAGE_CONFIGURATION=Release
 RETROLIVE_CODE_SIGNING_ALLOWED=NO
@@ -239,11 +239,11 @@ Set the same artifact path in both private configuration files:
 
 ```sh
 # .retrolive-legacy-build.env on the legacy Mac
-RETROLIVE_PACKAGE_ROOT=/Users/your-user/Developer/RetroLive/Artifacts/Legacy
+RETROLIVE_PACKAGE_ROOT=/Users/your-user/Developer/RetroLive/artifacts
 
 # .retrolive-legacy-sync.env on the modern Mac
-RETROLIVE_REMOTE_PACKAGE_ROOT=/Users/your-user/Developer/RetroLive/Artifacts
-RETROLIVE_LOCAL_PACKAGE_ROOT=Artifacts
+RETROLIVE_REMOTE_PACKAGE_ROOT=/Users/your-user/Developer/RetroLive/artifacts
+RETROLIVE_LOCAL_PACKAGE_ROOT=artifacts
 ```
 
 After synchronizing the source, run this on the modern Mac:
@@ -253,7 +253,7 @@ After synchronizing the source, run this on the modern Mac:
 ```
 
 The command invokes the package script over SSH and fetches the IPA, SHA-256
-file, and build metadata into `Artifacts/Legacy/`. Build both legacy targets
+file, and build metadata into `artifacts/`. Build both legacy targets
 with `./scripts/legacy-package-fetch.sh all`. The package script always passes
 `CODE_SIGNING_ALLOWED=NO` and `CODE_SIGNING_REQUIRED=NO`; it assembles the IPA
 as `Payload/<App>.app` and validates the ZIP before writing the checksum.
