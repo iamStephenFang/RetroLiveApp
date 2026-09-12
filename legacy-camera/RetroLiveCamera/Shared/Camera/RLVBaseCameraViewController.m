@@ -31,7 +31,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 @property (nonatomic, strong) UIView *liveCaptureIndicator;
 @property (nonatomic, strong) UIView *focusOverlayView;
 @property (nonatomic, strong) UIView *focusReticleView;
-@property (nonatomic, strong) UILabel *zoomIndicatorLabel;
+@property (nonatomic, strong) UIButton *zoomIndicatorButton;
 @property (nonatomic, assign, getter=isViewVisible) BOOL viewVisible;
 @property (nonatomic, assign) NSUInteger focusRequestGeneration;
 @property (nonatomic, copy) NSString *thumbnailRequestAssetId;
@@ -57,6 +57,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 - (void)showFocusReticleAtPreviewPoint:(CGPoint)point;
 - (void)hideFocusReticle;
 - (void)configureZoomIndicator;
+- (void)zoomIndicatorPressed:(id)sender;
 - (void)showZoomIndicator;
 - (void)hideZoomIndicator;
 - (void)updateThumbnail;
@@ -258,6 +259,7 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     self.focusTapGestureRecognizer.enabled = available;
     self.zoomDoubleTapGestureRecognizer.enabled = available && self.captureController.maximumZoomFactor > 1.0;
     self.zoomPinchGestureRecognizer.enabled = available && self.captureController.maximumZoomFactor > 1.0;
+    self.zoomIndicatorButton.enabled = available;
     self.previewView.accessibilityTraits = UIAccessibilityTraitButton |
         (available ? 0 : UIAccessibilityTraitNotEnabled);
 }
@@ -314,32 +316,36 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 
 - (void)configureZoomIndicator
 {
-    self.zoomIndicatorLabel = [[UILabel alloc] initWithFrame:CGRectMake(0.0, 0.0, 36.0, 36.0)];
-    self.zoomIndicatorLabel.backgroundColor = [UIColor colorWithWhite:0.05 alpha:0.72];
-    self.zoomIndicatorLabel.textColor = [UIColor colorWithRed:1.0 green:0.80 blue:0.0 alpha:1.0];
-    self.zoomIndicatorLabel.font = [UIFont boldSystemFontOfSize:12.0];
-    self.zoomIndicatorLabel.textAlignment = NSTextAlignmentCenter;
-    self.zoomIndicatorLabel.layer.cornerRadius = 18.0;
-    self.zoomIndicatorLabel.clipsToBounds = YES;
-    self.zoomIndicatorLabel.userInteractionEnabled = NO;
-    self.zoomIndicatorLabel.hidden = YES;
-    self.zoomIndicatorLabel.isAccessibilityElement = YES;
-    self.zoomIndicatorLabel.accessibilityLabel = NSLocalizedString(@"camera.zoom", nil);
-    [self.previewView addSubview:self.zoomIndicatorLabel];
+    self.zoomIndicatorButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    self.zoomIndicatorButton.frame = CGRectMake(0.0, 0.0, 40.0, 40.0);
+    self.zoomIndicatorButton.backgroundColor = [UIColor colorWithWhite:0.05 alpha:0.72];
+    [self.zoomIndicatorButton setTitleColor:[UIColor colorWithRed:1.0 green:0.80 blue:0.0 alpha:1.0]
+                                  forState:UIControlStateNormal];
+    self.zoomIndicatorButton.titleLabel.font = [UIFont boldSystemFontOfSize:12.0];
+    self.zoomIndicatorButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
+    self.zoomIndicatorButton.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+    self.zoomIndicatorButton.titleEdgeInsets = UIEdgeInsetsMake(1.0, 0.0, -1.0, 0.0);
+    self.zoomIndicatorButton.layer.cornerRadius = 20.0;
+    self.zoomIndicatorButton.clipsToBounds = YES;
+    self.zoomIndicatorButton.hidden = YES;
+    self.zoomIndicatorButton.accessibilityLabel = NSLocalizedString(@"camera.zoom.reset", nil);
+    [self.zoomIndicatorButton addTarget:self action:@selector(zoomIndicatorPressed:)
+                       forControlEvents:UIControlEventTouchUpInside];
+    [self.previewView addSubview:self.zoomIndicatorButton];
     [self updateZoomIndicatorLayout];
 
     NSMutableArray *rotating = [NSMutableArray arrayWithArray:self.rotatingControls ?: [NSArray array]];
-    [rotating addObject:self.zoomIndicatorLabel];
+    [rotating addObject:self.zoomIndicatorButton];
     self.rotatingControls = rotating;
 }
 
 - (void)updateZoomIndicatorLayout
 {
-    if (!self.zoomIndicatorLabel) return;
+    if (!self.zoomIndicatorButton) return;
     CGRect previewFrame = self.captureController.previewLayer.frame;
     if (CGRectIsEmpty(previewFrame)) previewFrame = self.previewView.bounds;
-    CGFloat edgeInset = 18.0 + CGRectGetHeight(self.zoomIndicatorLabel.bounds) * 0.5;
-    self.zoomIndicatorLabel.center = CGPointMake(
+    CGFloat edgeInset = 18.0 + CGRectGetHeight(self.zoomIndicatorButton.bounds) * 0.5;
+    self.zoomIndicatorButton.center = CGPointMake(
         CGRectGetMidX(previewFrame), CGRectGetMaxY(previewFrame) - edgeInset);
 }
 
@@ -525,6 +531,16 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     self.zoomDiscreteFeedbackGeneration = [self.captureController requestZoomFactor:targetFactor];
 }
 
+- (void)zoomIndicatorPressed:(id)sender
+{
+    (void)sender;
+    if (![self isCameraInteractionAvailable]) return;
+    self.focusRequestGeneration += 1;
+    [self hideFocusReticle];
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideZoomIndicator) object:nil];
+    self.zoomDiscreteFeedbackGeneration = [self.captureController requestZoomFactor:1.0];
+}
+
 - (void)previewPinched:(UIPinchGestureRecognizer *)recognizer
 {
     if (![self isCameraInteractionAvailable]) return;
@@ -577,12 +593,18 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     return YES;
 }
 
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch
+{
+    (void)gestureRecognizer;
+    return ![touch.view isDescendantOfView:self.zoomIndicatorButton];
+}
+
 - (void)showZoomIndicator
 {
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideZoomIndicator) object:nil];
-    [self.zoomIndicatorLabel.layer removeAllAnimations];
-    self.zoomIndicatorLabel.hidden = NO;
-    self.zoomIndicatorLabel.alpha = 1.0;
+    [self.zoomIndicatorButton.layer removeAllAnimations];
+    self.zoomIndicatorButton.hidden = NO;
+    self.zoomIndicatorButton.alpha = 1.0;
 }
 
 - (void)hideZoomIndicator
@@ -590,10 +612,10 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideZoomIndicator) object:nil];
     self.zoomGestureActive = NO;
     self.zoomDiscreteFeedbackGeneration = 0;
-    if (self.zoomIndicatorLabel.hidden) return;
-    [UIView animateWithDuration:0.18 animations:^{ self.zoomIndicatorLabel.alpha = 0.0; }
+    if (self.zoomIndicatorButton.hidden) return;
+    [UIView animateWithDuration:0.18 animations:^{ self.zoomIndicatorButton.alpha = 0.0; }
                      completion:^(BOOL finished) {
-        if (finished) self.zoomIndicatorLabel.hidden = YES;
+        if (finished) self.zoomIndicatorButton.hidden = YES;
     }];
 }
 
@@ -687,14 +709,15 @@ static NSString * const RLVAspectRatioDefaultsKey = @"RLVCameraAspectRatio";
 {
     (void)controller;
     (void)maximumZoomFactor;
-    self.zoomIndicatorLabel.text = [NSString stringWithFormat:@"%.1f\u00d7", zoomFactor];
-    self.zoomIndicatorLabel.accessibilityValue = [NSString stringWithFormat:
+    [self.zoomIndicatorButton setTitle:[NSString stringWithFormat:@"%.1f\u00d7", zoomFactor]
+                              forState:UIControlStateNormal];
+    self.zoomIndicatorButton.accessibilityValue = [NSString stringWithFormat:
         NSLocalizedString(@"camera.zoom.value", nil), zoomFactor];
     BOOL persistentFeedback = RLVZoomFactorRequiresPersistentFeedback(zoomFactor);
     if (self.isZoomGestureActive || persistentFeedback) {
         self.zoomDiscreteFeedbackGeneration = 0;
         [self showZoomIndicator];
-    } else if (!self.zoomIndicatorLabel.hidden ||
+    } else if (!self.zoomIndicatorButton.hidden ||
                (self.zoomDiscreteFeedbackGeneration == requestGeneration && requestGeneration > 0)) {
         self.zoomDiscreteFeedbackGeneration = 0;
         [self showZoomIndicator];

@@ -79,6 +79,10 @@ maximum is not greater than `1.0x` silently leaves pinch disabled.
   baseline. The applied controller factor is the only source used to decide
   this visibility; capture, camera-switch, and application lifecycle states do
   not add separate visibility rules. Leaving the camera clears the UI feedback.
+- Treat the visible factor as a button. A single tap requests `1.0×`; keep the
+  old value visible until the controller commits the reset, then show `1.0×`
+  briefly and fade it out. Tapping this button must not also focus or trigger
+  the preview's double-tap gesture.
 - Keep the label centered on the preview's physical lower edge and rotate only
   its contents with the other controls. Orientation must not move it sideways.
 
